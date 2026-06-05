@@ -5,6 +5,12 @@ CREATE TABLE IF NOT EXISTS chats (
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+ALTER TABLE chats
+  ADD COLUMN IF NOT EXISTS archived_at TIMESTAMPTZ;
+
+CREATE INDEX IF NOT EXISTS chats_archived_updated_at_idx
+  ON chats(archived_at, updated_at);
+
 CREATE TABLE IF NOT EXISTS chat_messages (
   id UUID PRIMARY KEY,
   chat_id UUID NOT NULL REFERENCES chats(id) ON DELETE CASCADE,
