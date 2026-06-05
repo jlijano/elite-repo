@@ -20,7 +20,7 @@ The `web/` directory contains a Render-ready Express app that serves a plain HTM
 - Optional PostgreSQL support through `DATABASE_URL`; the app uses storage-only in-memory mode when no database URL is configured.
 - Storage-only chat behavior when `OPENAI_API_KEY` is missing, including a friendly pending-review assistant response.
 - Durable knowledge entries produced by review runs as `pending_review` entries and reused in future AI context only after approval.
-- Backend management dashboard at `/admin.html` for inspecting chats, reviewing knowledge entries, running reviews, and checking review history.
+- Backend management dashboard at `/admin.html` for inspecting chats, searching chat and knowledge lists, reviewing knowledge entries, running reviews, and checking review history.
 - Chat failure responses distinguish between saved messages awaiting review and storage failures that could not save the message.
 - Agent Directory status indicator backed by the `/api/status` endpoint.
 - Render health check support through `/health`.
@@ -58,6 +58,32 @@ Without `DATABASE_URL`, the app starts in in-memory storage mode for local testi
 - `REVIEW_RUN_INTERVAL_MS`: optional. Enables the backend scheduled review runner when set to at least `60000`.
 
 Do not commit secrets, API keys, deploy hooks, database URLs, passwords, session cookies, or Render credentials. Configure secrets only in Render environment variables or another approved secret store.
+
+### Admin dashboard deployment checklist
+
+Use GitHub as the deployment source of truth and let Render auto-deploy from the approved branch.
+
+1. Confirm Render is watching the repository deployment branch, usually `main`.
+2. Confirm the service root directory is `web/`.
+3. Confirm the build command installs dependencies for `web/`.
+4. Confirm the start command is `npm start` from `web/`.
+5. Confirm the service uses Render's `PORT` environment variable; `server.js` already listens on `process.env.PORT`.
+6. Confirm `/health` returns a healthy response after deployment.
+7. Confirm `/admin.html` loads and that all `/api/admin/*` data requests require `ADMIN_TOKEN`.
+8. Confirm only environment variable names are documented in GitHub; secret values stay in Render or another approved secret store.
+
+### Database deployment checklist
+
+The current database layer is intentionally small and additive. PostgreSQL is enabled by configuring `DATABASE_URL` in Render.
+
+1. Create or attach a PostgreSQL database for the Render service.
+2. Set `DATABASE_URL` in Render. Do not paste or commit the value into this repository.
+3. Set `DATABASE_SSL=true` only when the database provider requires SSL.
+4. Deploy the app. On startup, the server reads `web/db/schema.sql` and creates missing tables with `CREATE TABLE IF NOT EXISTS`.
+5. Confirm admin summary counts load from `/api/admin/summary` after entering `ADMIN_TOKEN` on `/admin.html`.
+6. Confirm chat creation writes to `chats` and `chat_messages`.
+7. Confirm review runs write to `review_runs` and create `pending_review` rows in `knowledge_entries`.
+8. Treat future user-account work as a separate access-control migration, adding tables such as `users`, `roles`, `sessions`, and `audit_logs` only after the login model is chosen.
 
 ### API routes
 
