@@ -2,6 +2,9 @@
 
 ## [Unreleased]
 
+- Fixed the chat UI so the active chat title refreshes after the first user message renames a new chat.
+- Hardened `/api/chat` fallback responses so storage failures no longer claim an unsaved message was saved for review.
+- Made PostgreSQL review runs transactional so knowledge entry creation and message review flags cannot drift apart on partial failure.
 - Added PostgreSQL-backed Switchboard chat storage with `chats`, `chat_messages`, `knowledge_entries`, and `review_runs` tables.
 - Added separate chat sessions, New Chat behavior, timestamped messages, chat history loading, knowledge reading, and review run API routes.
 - Changed chat behavior so missing `OPENAI_API_KEY` no longer blocks message storage and returns a friendly pending-review response.
