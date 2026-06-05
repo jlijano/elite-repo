@@ -4,6 +4,23 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Switchboard Agent</title>
+    <script>
+      (() => {
+        const storageKey = "switchboard-theme";
+        const systemPrefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+        let storedTheme = null;
+
+        try {
+          storedTheme = localStorage.getItem(storageKey);
+        } catch (error) {
+          storedTheme = null;
+        }
+
+        const theme = storedTheme || (systemPrefersDark ? "dark" : "light");
+
+        document.documentElement.dataset.theme = theme;
+      })();
+    </script>
     <link rel="stylesheet" href="style.css" />
   </head>
   <body>
@@ -32,9 +49,21 @@
             <p class="eyebrow">Live chat</p>
             <h2>Switchboard Agent</h2>
           </div>
-          <div class="compact-status">
-            <span class="status-dot" aria-hidden="true"></span>
-            <span id="mobileStatusText">Online</span>
+          <div class="header-actions">
+            <button
+              class="theme-toggle"
+              id="themeToggle"
+              type="button"
+              aria-label="Switch to dark mode"
+              aria-pressed="false"
+            >
+              <span class="theme-toggle-icon" aria-hidden="true">☾</span>
+              <span id="themeToggleText">Dark Mode</span>
+            </button>
+            <div class="compact-status">
+              <span class="status-dot" aria-hidden="true"></span>
+              <span id="mobileStatusText">Online</span>
+            </div>
           </div>
         </header>
 

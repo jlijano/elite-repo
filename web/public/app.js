@@ -6,10 +6,50 @@ const statusDot = document.getElementById("statusDot");
 const statusText = document.getElementById("statusText");
 const mobileStatusText = document.getElementById("mobileStatusText");
 const filesLoaded = document.getElementById("filesLoaded");
+const themeToggle = document.getElementById("themeToggle");
+const themeToggleText = document.getElementById("themeToggleText");
+const themeToggleIcon = document.querySelector(".theme-toggle-icon");
 
 const chatHistory = [];
+const themeStorageKey = "switchboard-theme";
 let isSending = false;
 let typingEl = null;
+
+function getCurrentTheme() {
+  return document.documentElement.dataset.theme === "dark" ? "dark" : "light";
+}
+
+function saveThemePreference(theme) {
+  try {
+    localStorage.setItem(themeStorageKey, theme);
+  } catch (error) {
+    return;
+  }
+}
+
+function updateThemeToggle(theme) {
+  const isDark = theme === "dark";
+
+  themeToggle.setAttribute("aria-pressed", String(isDark));
+  themeToggle.setAttribute("aria-label", isDark ? "Switch to light mode" : "Switch to dark mode");
+  themeToggleText.textContent = isDark ? "Light Mode" : "Dark Mode";
+  themeToggleIcon.textContent = isDark ? "☀" : "☾";
+}
+
+function applyTheme(theme) {
+  document.documentElement.dataset.theme = theme;
+  saveThemePreference(theme);
+  updateThemeToggle(theme);
+}
+
+function initializeThemeToggle() {
+  updateThemeToggle(getCurrentTheme());
+
+  themeToggle.addEventListener("click", () => {
+    const nextTheme = getCurrentTheme() === "dark" ? "light" : "dark";
+    applyTheme(nextTheme);
+  });
+}
 
 function setStatus({ directoryAvailable, filesLoaded: loadedFiles, error } = {}) {
   const compactDot = document.querySelector(".compact-status .status-dot");
@@ -192,5 +232,6 @@ inputEl.addEventListener("keydown", (event) => {
 
 inputEl.addEventListener("input", resizeInput);
 
+initializeThemeToggle();
 loadStatus();
 resizeInput();
