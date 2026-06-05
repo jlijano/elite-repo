@@ -4,85 +4,429 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Switchboard Admin</title>
+    <script>
+      (() => {
+        const storageKey = "switchboard-theme";
+        const systemPrefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+        let storedTheme = null;
+
+        try {
+          storedTheme = localStorage.getItem(storageKey);
+        } catch (error) {
+          storedTheme = null;
+        }
+
+        const theme = storedTheme || (systemPrefersDark ? "dark" : "light");
+        document.documentElement.dataset.theme = theme;
+      })();
+    </script>
+    <link rel="stylesheet" href="style.css" />
     <style>
-      :root { --bg: #f4f6f8; --panel: #fff; --soft: #f8fafc; --text: #172033; --muted: #667085; --line: #d9e1ea; --primary: #12b76a; --error: #b42318; --radius: 8px; }
-      * { box-sizing: border-box; }
-      body { margin: 0; background: var(--bg); color: var(--text); font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
-      main { width: min(1180px, calc(100vw - 32px)); margin: 16px auto; }
-      header, .auth, .summary, section { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); }
-      header { display: flex; justify-content: space-between; align-items: center; gap: 16px; padding: 18px; margin-bottom: 12px; }
-      h1, h2 { margin: 0; }
-      h1 { font-size: 1.35rem; }
-      h2 { font-size: 1rem; }
-      a, button { min-height: 38px; border-radius: var(--radius); font-weight: 800; }
-      a { display: inline-flex; align-items: center; padding: 0 12px; color: var(--text); border: 1px solid var(--line); text-decoration: none; background: var(--soft); }
-      button { padding: 0 12px; color: #fff; background: var(--primary); border: 0; cursor: pointer; }
-      input, select { min-height: 38px; min-width: 0; padding: 0 10px; border: 1px solid var(--line); border-radius: var(--radius); background: #fff; color: var(--text); }
-      .auth { display: grid; grid-template-columns: auto minmax(180px, 1fr) auto auto; align-items: center; gap: 10px; padding: 14px; margin-bottom: 12px; }
-      .status { margin: 0 0 12px; padding: 10px 14px; color: var(--muted); }
-      .status.error { color: var(--error); }
-      .summary { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 10px; padding: 12px; margin-bottom: 12px; }
-      .metric { padding: 10px; background: var(--soft); border: 1px solid var(--line); border-radius: var(--radius); }
-      .metric span { display: block; color: var(--muted); font-size: .75rem; font-weight: 800; text-transform: uppercase; }
-      .metric strong { display: block; margin-top: 4px; font-size: 1.2rem; }
-      .grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
-      section { min-height: 280px; overflow: hidden; }
-      .section-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 12px; border-bottom: 1px solid var(--line); background: var(--soft); }
-      .list, .detail { max-height: 460px; overflow: auto; padding: 12px; }
-      .item { display: grid; gap: 8px; padding: 12px; border: 1px solid var(--line); border-radius: var(--radius); }
-      .item + .item { margin-top: 10px; }
-      .row { display: flex; justify-content: space-between; gap: 10px; font-weight: 800; }
-      p { margin: 0; color: var(--muted); line-height: 1.45; overflow-wrap: anywhere; }
-      .actions { display: flex; flex-wrap: wrap; gap: 8px; }
-      .actions button { min-height: 34px; color: var(--text); background: var(--soft); border: 1px solid var(--line); }
-      @media (max-width: 820px) { main { width: 100vw; margin: 0; padding: 10px; } .auth, .summary, .grid { grid-template-columns: 1fr; } header { align-items: flex-start; flex-direction: column; } }
+      .admin-shell .sidebar {
+        grid-template-rows: auto auto minmax(0, 1fr) auto;
+      }
+
+      .admin-shell .nav-item {
+        text-decoration: none;
+      }
+
+      .admin-panel {
+        min-width: 0;
+        display: grid;
+        grid-template-rows: 64px minmax(0, 1fr);
+        background: var(--panel);
+      }
+
+      .admin-header-title {
+        min-width: 0;
+        display: grid;
+        gap: 2px;
+      }
+
+      .admin-header-title h1 {
+        margin: 0;
+        color: var(--text);
+        font-size: 1.05rem;
+        line-height: 1.2;
+      }
+
+      .admin-header-title p {
+        margin: 0;
+        color: var(--muted);
+        font-size: 0.86rem;
+        line-height: 1.35;
+      }
+
+      .admin-scroll {
+        min-height: 0;
+        overflow: auto;
+        padding: 20px 24px 28px;
+        background: var(--panel);
+      }
+
+      .admin-layout {
+        width: min(1180px, 100%);
+        display: grid;
+        gap: 14px;
+        margin: 0 auto;
+      }
+
+      .admin-auth,
+      .summary,
+      .admin-card,
+      .admin-status {
+        border: 1px solid var(--line);
+        border-radius: var(--radius);
+        background: var(--panel);
+      }
+
+      .admin-auth {
+        display: grid;
+        grid-template-columns: auto minmax(220px, 1fr) auto auto;
+        align-items: end;
+        gap: 10px;
+        padding: 12px;
+      }
+
+      label {
+        color: var(--muted);
+        font-size: 0.78rem;
+        font-weight: 800;
+        text-transform: uppercase;
+      }
+
+      input,
+      select {
+        width: 100%;
+        min-width: 0;
+        min-height: 38px;
+        padding: 0 10px;
+        border: 1px solid var(--composer-border);
+        border-radius: var(--radius);
+        background: var(--composer);
+        color: var(--text);
+        font: inherit;
+      }
+
+      input:focus-visible,
+      select:focus-visible {
+        outline: 3px solid var(--focus-ring);
+        outline-offset: 2px;
+      }
+
+      .admin-panel button {
+        min-height: 38px;
+        padding: 0 12px;
+        border: 1px solid var(--line);
+        border-radius: var(--radius);
+        background: var(--panel-soft);
+        color: var(--text);
+        font-weight: 800;
+      }
+
+      .admin-panel button:hover:not(:disabled),
+      .admin-panel button:focus-visible:not(:disabled) {
+        border-color: var(--composer-border);
+        background: var(--sidebar-card);
+      }
+
+      .admin-panel .primary-action {
+        border-color: var(--primary);
+        background: var(--primary);
+        color: #ffffff;
+      }
+
+      .admin-status {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        min-height: 42px;
+        margin: 0;
+        padding: 10px 12px;
+        color: var(--muted);
+        font-size: 0.9rem;
+        font-weight: 650;
+      }
+
+      .admin-status::before {
+        content: "";
+        width: 0.55rem;
+        height: 0.55rem;
+        flex: 0 0 auto;
+        border-radius: 50%;
+        background: var(--success);
+        box-shadow: 0 0 0 4px rgba(25, 195, 125, 0.18);
+      }
+
+      .admin-status.error {
+        color: var(--error);
+        border-color: var(--error-line);
+        background: var(--error-bg);
+      }
+
+      .admin-status.error::before {
+        background: var(--error);
+        box-shadow: 0 0 0 4px rgba(180, 35, 24, 0.18);
+      }
+
+      .summary {
+        display: grid;
+        grid-template-columns: repeat(6, minmax(0, 1fr));
+        gap: 10px;
+        padding: 12px;
+      }
+
+      .metric {
+        min-width: 0;
+        padding: 12px;
+        border: 1px solid var(--line);
+        border-radius: var(--radius);
+        background: var(--panel-soft);
+      }
+
+      .metric span {
+        display: block;
+        overflow: hidden;
+        color: var(--muted);
+        font-size: 0.72rem;
+        font-weight: 800;
+        text-overflow: ellipsis;
+        text-transform: uppercase;
+        white-space: nowrap;
+      }
+
+      .metric strong {
+        display: block;
+        margin-top: 4px;
+        color: var(--text);
+        font-size: 1.2rem;
+        line-height: 1.2;
+      }
+
+      .admin-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 14px;
+      }
+
+      .admin-card {
+        min-height: 280px;
+        overflow: hidden;
+      }
+
+      .section-head {
+        min-height: 52px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        padding: 12px;
+        border-bottom: 1px solid var(--line);
+        background: var(--panel-soft);
+      }
+
+      .section-head h2 {
+        margin: 0;
+        color: var(--text);
+        font-size: 0.95rem;
+        line-height: 1.2;
+      }
+
+      .list,
+      .detail {
+        max-height: 460px;
+        overflow: auto;
+        padding: 12px;
+        color: var(--muted);
+      }
+
+      .item {
+        min-width: 0;
+        display: grid;
+        gap: 8px;
+        padding: 12px;
+        border: 1px solid var(--line);
+        border-radius: var(--radius);
+        background: var(--panel);
+      }
+
+      .item + .item {
+        margin-top: 10px;
+      }
+
+      .row {
+        min-width: 0;
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 10px;
+        color: var(--text);
+        font-weight: 800;
+      }
+
+      .row span {
+        min-width: 0;
+        overflow-wrap: anywhere;
+      }
+
+      .row small,
+      .item p,
+      .admin-message-meta {
+        color: var(--muted);
+      }
+
+      .item p {
+        margin: 0;
+        line-height: 1.45;
+        overflow-wrap: anywhere;
+      }
+
+      .actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+
+      .admin-message {
+        display: grid;
+        gap: 4px;
+        padding-top: 10px;
+      }
+
+      .admin-message + .admin-message {
+        border-top: 1px solid var(--line);
+      }
+
+      .admin-message-content {
+        margin: 0;
+        color: var(--text);
+        line-height: 1.5;
+        overflow-wrap: anywhere;
+        white-space: pre-wrap;
+      }
+
+      @media (max-width: 1060px) {
+        .summary {
+          grid-template-columns: repeat(3, minmax(0, 1fr));
+        }
+      }
+
+      @media (max-width: 900px) {
+        .admin-panel {
+          grid-template-rows: auto minmax(0, 1fr);
+        }
+
+        .admin-scroll {
+          padding: 14px 16px 22px;
+        }
+      }
+
+      @media (max-width: 760px) {
+        .admin-auth,
+        .summary,
+        .admin-grid {
+          grid-template-columns: 1fr;
+        }
+
+        .admin-header-title p {
+          display: none;
+        }
+      }
     </style>
   </head>
   <body>
-    <main>
-      <header>
-        <div>
-          <h1>Switchboard Admin</h1>
-          <p>Inspect chats, review knowledge, and run durable review jobs.</p>
+    <main class="app-shell admin-shell" aria-label="Switchboard Admin dashboard">
+      <aside class="sidebar" aria-label="Admin navigation and status">
+        <div class="sidebar-topbar">
+          <a class="brand-lockup" href="/" aria-label="Switchboard Agent home">
+            <span class="brand-mark" aria-hidden="true">★</span>
+            <span>Switchboard</span>
+          </a>
         </div>
-        <a href="/">Back to chat</a>
-      </header>
 
-      <div class="auth">
-        <label for="token">Admin token</label>
-        <input id="token" type="password" autocomplete="off" placeholder="Enter ADMIN_TOKEN" />
-        <button id="load" type="button">Load</button>
-        <button id="run" type="button">Run Review</button>
-      </div>
-      <p class="status" id="status">Admin routes require the backend ADMIN_TOKEN.</p>
-      <div class="summary" id="summary"></div>
+        <nav class="primary-nav" aria-label="Admin navigation">
+          <a class="nav-item" href="/"><span aria-hidden="true">←</span>Back to chat</a>
+          <a class="nav-item" href="/admin.html"><span aria-hidden="true">▣</span>Admin dashboard</a>
+        </nav>
 
-      <div class="grid">
-        <section>
-          <div class="section-head"><h2>Chats</h2></div>
-          <div class="list" id="chats">No data loaded.</div>
-        </section>
-        <section>
-          <div class="section-head"><h2>Chat Detail</h2></div>
-          <div class="detail" id="chatDetail">Select a chat to inspect messages.</div>
-        </section>
-        <section>
-          <div class="section-head">
-            <h2>Knowledge</h2>
-            <select id="knowledgeStatus">
-              <option value="all">All</option>
-              <option value="pending_review">Pending</option>
-              <option value="approved">Approved</option>
-              <option value="archived">Archived</option>
-            </select>
+        <section class="agents-panel" aria-label="Admin tools">
+          <h2>Tools</h2>
+          <div class="agent-pill active">
+            <span class="brand-mark small" aria-hidden="true">★</span>
+            <span>Switchboard_Admin</span>
           </div>
-          <div class="list" id="knowledge">No data loaded.</div>
         </section>
-        <section>
-          <div class="section-head"><h2>Review Runs</h2></div>
-          <div class="list" id="runs">No data loaded.</div>
-        </section>
-      </div>
+
+        <div class="directory-card">
+          <div class="status-row">
+            <span class="status-dot online" aria-hidden="true"></span>
+            <span>Protected admin area</span>
+          </div>
+          <p id="filesLoaded">Chat and knowledge review tools</p>
+          <p id="storageStatus">Requires ADMIN_TOKEN</p>
+        </div>
+      </aside>
+
+      <section class="admin-panel" aria-label="Admin controls">
+        <header class="chat-header admin-header">
+          <div class="admin-header-title">
+            <h1>Switchboard Admin</h1>
+            <p>Inspect chats, review knowledge, and run durable review jobs.</p>
+          </div>
+          <div class="header-actions">
+            <button
+              class="theme-toggle"
+              id="themeToggle"
+              type="button"
+              aria-label="Switch to dark mode"
+              aria-pressed="false"
+            >
+              <span class="theme-toggle-icon" aria-hidden="true">☾</span>
+              <span id="themeToggleText">Dark Mode</span>
+            </button>
+          </div>
+        </header>
+
+        <div class="admin-scroll">
+          <div class="admin-layout">
+            <div class="admin-auth">
+              <label for="token">Admin token</label>
+              <input id="token" type="password" autocomplete="off" placeholder="Enter ADMIN_TOKEN" />
+              <button id="load" class="primary-action" type="button">Load</button>
+              <button id="run" type="button">Run Review</button>
+            </div>
+            <p class="admin-status" id="status">Admin routes require the backend ADMIN_TOKEN.</p>
+            <div class="summary" id="summary"></div>
+
+            <div class="admin-grid">
+              <section class="admin-card">
+                <div class="section-head"><h2>Chats</h2></div>
+                <div class="list" id="chats">No data loaded.</div>
+              </section>
+              <section class="admin-card">
+                <div class="section-head"><h2>Chat Detail</h2></div>
+                <div class="detail" id="chatDetail">Select a chat to inspect messages.</div>
+              </section>
+              <section class="admin-card">
+                <div class="section-head">
+                  <h2>Knowledge</h2>
+                  <select id="knowledgeStatus" aria-label="Knowledge status filter">
+                    <option value="all">All</option>
+                    <option value="pending_review">Pending</option>
+                    <option value="approved">Approved</option>
+                    <option value="archived">Archived</option>
+                  </select>
+                </div>
+                <div class="list" id="knowledge">No data loaded.</div>
+              </section>
+              <section class="admin-card">
+                <div class="section-head"><h2>Review Runs</h2></div>
+                <div class="list" id="runs">No data loaded.</div>
+              </section>
+            </div>
+          </div>
+        </div>
+      </section>
     </main>
 
     <script>
@@ -96,8 +440,12 @@
         chatDetail: document.getElementById("chatDetail"),
         knowledgeStatus: document.getElementById("knowledgeStatus"),
         knowledge: document.getElementById("knowledge"),
-        runs: document.getElementById("runs")
+        runs: document.getElementById("runs"),
+        themeToggle: document.getElementById("themeToggle"),
+        themeToggleText: document.getElementById("themeToggleText"),
+        themeToggleIcon: document.querySelector(".theme-toggle-icon")
       };
+      const themeStorageKey = "switchboard-theme";
       let token = sessionStorage.getItem("switchboard-admin-token") || "";
       els.token.value = token;
 
@@ -105,6 +453,19 @@
       const time = (value) => value ? new Intl.DateTimeFormat(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }).format(new Date(value)) : "";
       const setStatus = (message, error = false) => { els.status.textContent = message; els.status.classList.toggle("error", error); };
       const headers = () => ({ "Content-Type": "application/json", "x-admin-token": token });
+      const getCurrentTheme = () => document.documentElement.dataset.theme === "dark" ? "dark" : "light";
+      function updateThemeToggle(theme) {
+        const isDark = theme === "dark";
+        els.themeToggle.setAttribute("aria-pressed", String(isDark));
+        els.themeToggle.setAttribute("aria-label", isDark ? "Switch to light mode" : "Switch to dark mode");
+        els.themeToggleText.textContent = isDark ? "Light Mode" : "Dark Mode";
+        els.themeToggleIcon.textContent = isDark ? "☀" : "☾";
+      }
+      function applyTheme(theme) {
+        document.documentElement.dataset.theme = theme;
+        try { localStorage.setItem(themeStorageKey, theme); } catch (error) { return; }
+        updateThemeToggle(theme);
+      }
       async function api(url, options = {}) {
         const res = await fetch(url, { ...options, headers: { ...headers(), ...(options.headers || {}) } });
         const data = await res.json().catch(() => ({}));
@@ -152,7 +513,7 @@
       }
       async function loadChat(chatId) {
         const data = await api(`/api/admin/chats/${encodeURIComponent(chatId)}`);
-        els.chatDetail.innerHTML = `<article class="item"><div class="row"><span>${html(data.chat.title)}</span><small>${html(data.chat.messages.length)} messages</small></div>${data.chat.messages.map((m) => `<p><strong>${html(m.role)}</strong> ${html(time(m.createdAt))}</p><p>${html(m.content)}</p>`).join("")}</article>`;
+        els.chatDetail.innerHTML = `<article class="item"><div class="row"><span>${html(data.chat.title)}</span><small>${html(data.chat.messages.length)} messages</small></div>${data.chat.messages.map((m) => `<div class="admin-message"><p class="admin-message-meta"><strong>${html(m.role)}</strong> ${html(time(m.createdAt))}</p><p class="admin-message-content">${html(m.content)}</p></div>`).join("")}</article>`;
       }
       async function updateKnowledge(entryId, status) {
         await api(`/api/admin/knowledge/${encodeURIComponent(entryId)}`, { method: "PATCH", body: JSON.stringify({ status }) });
@@ -169,6 +530,8 @@
           setStatus(error.message, true);
         }
       }
+      updateThemeToggle(getCurrentTheme());
+      els.themeToggle.addEventListener("click", () => applyTheme(getCurrentTheme() === "dark" ? "light" : "dark"));
       els.load.addEventListener("click", loadDashboard);
       els.run.addEventListener("click", runReview);
       els.knowledgeStatus.addEventListener("change", loadDashboard);
