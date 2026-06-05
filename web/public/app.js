@@ -132,7 +132,7 @@ function createMessageElement(role, content, options = {}) {
     const avatar = document.createElement("div");
     avatar.className = "avatar";
     avatar.setAttribute("aria-hidden", "true");
-    avatar.textContent = "S";
+    avatar.textContent = "★";
     article.appendChild(avatar);
   }
   const bubble = document.createElement("div");
@@ -173,7 +173,7 @@ function addMessage(role, content, options = {}) {
 function showTyping() {
   typingEl = document.createElement("article");
   typingEl.className = "message assistant typing";
-  typingEl.innerHTML = `<div class="avatar" aria-hidden="true">S</div><div class="bubble" aria-label="Switchboard Agent is typing"><span class="typing-dot"></span><span class="typing-dot"></span><span class="typing-dot"></span></div>`;
+  typingEl.innerHTML = `<div class="avatar" aria-hidden="true">★</div><div class="bubble" aria-label="Switchboard Agent is typing"><span class="typing-dot"></span><span class="typing-dot"></span><span class="typing-dot"></span></div>`;
   messagesEl.appendChild(typingEl);
   scrollToBottom();
 }
@@ -187,7 +187,7 @@ function setSending(nextValue) {
   isSending = nextValue;
   inputEl.disabled = nextValue;
   sendButton.disabled = nextValue;
-  sendButton.textContent = nextValue ? "Sending" : "Send";
+  sendButton.textContent = nextValue ? "..." : "↑";
 }
 
 function resizeInput() {
