@@ -127,6 +127,72 @@ test("stores chat messages and returns the pending-review chat fallback", async 
   assert.equal(loaded.data.chat.messages.length, 3);
 });
 
+test("archives chats without deleting history", async () => {
+  const created = await jsonFetch("/api/chats", {
+    method: "POST",
+    body: JSON.stringify({ title: "Archive test chat" })
+  });
+  assert.equal(created.response.status, 201);
+  const chatId = created.data.chat.id;
+
+  const saved = await jsonFetch(`/api/chats/${chatId}/messages`, {
+    method: "POST",
+    body: JSON.stringify({ role: "user", content: "Please archive this later" })
+  });
+  assert.equal(saved.response.status, 201);
+
+  const archived = await jsonFetch(`/api/chats/${chatId}/archive`, {
+    method: "POST",
+    body: JSON.stringify({ archived: true })
+  });
+  assert.equal(archived.response.status, 200);
+  assert.ok(archived.data.chat.archivedAt);
+
+  const visibleChats = await jsonFetch("/api/chats");
+  assert.equal(visibleChats.response.status, 200);
+  assert.equal(visibleChats.data.chats.some((chat) => chat.id === chatId), false);
+
+  const allChats = await jsonFetch("/api/chats?includeArchived=true");
+  assert.equal(allChats.response.status, 200);
+  assert.equal(allChats.data.chats.some((chat) => chat.id === chatId && chat.archivedAt), true);
+
+  const blocked = await jsonFetch(`/api/chats/${chatId}/messages`, {
+    method: "POST",
+    body: JSON.stringify({ role: "user", content: "Do not save this" })
+  });
+  assert.equal(blocked.response.status, 409);
+
+  const loaded = await jsonFetch(`/api/chats/${chatId}`);
+  assert.equal(loaded.response.status, 200);
+  assert.equal(loaded.data.chat.messages.length, 1);
+});
+
+test("stores text attachments with chat messages", async () => {
+  const created = await jsonFetch("/api/chats", {
+    method: "POST",
+    body: JSON.stringify({ title: "Attachment test chat" })
+  });
+  assert.equal(created.response.status, 201);
+  const chatId = created.data.chat.id;
+
+  const reply = await jsonFetch("/api/chat", {
+    method: "POST",
+    body: JSON.stringify({
+      chatId,
+      message: "Review this upload",
+      attachments: [
+        { name: "notes.txt", type: "text/plain", size: 33, content: "api_key=secret-value\nUseful note" }
+      ]
+    })
+  });
+  assert.equal(reply.response.status, 200);
+  assert.equal(reply.data.pendingReview, true);
+  assert.equal(reply.data.messages[0].context.attachments.length, 1);
+  assert.equal(reply.data.messages[0].context.attachments[0].name, "notes.txt");
+  assert.match(reply.data.messages[0].context.attachments[0].content, /\[REDACTED\]/);
+  assert.doesNotMatch(reply.data.messages[0].context.attachments[0].content, /secret-value/);
+});
+
 test("protects review/admin routes and supports knowledge approval", async () => {
   await createReviewedMessage("Knowledge approval test message");
 
