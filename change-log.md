@@ -2,6 +2,13 @@
 
 ## [Unreleased]
 
+- Improved the admin dashboard with searchable chat and knowledge lists, clearer loading and empty states, and visible admin-token handling guidance.
+- Added admin dashboard and database deployment checklists for Render/GitHub auto-deploy.
+- Updated the Switchboard Agent web app with a ChatGPT-inspired full-height sidebar, centered conversation stream, and rounded bottom composer.
+- Added a 40-second frontend refresh for status, chat lists, and active chat history.
+- Added protected admin routes and `/admin.html` backend management dashboard for chats, knowledge entries, and review runs.
+- Changed review-created knowledge entries to `pending_review` so admins approve them before reuse.
+- Added an optional backend scheduled review runner controlled by `REVIEW_RUN_INTERVAL_MS`.
 - Fixed the chat UI so the active chat title refreshes after the first user message renames a new chat.
 - Hardened `/api/chat` fallback responses so storage failures no longer claim an unsaved message was saved for review.
 - Made PostgreSQL review runs transactional so knowledge entry creation and message review flags cannot drift apart on partial failure.
