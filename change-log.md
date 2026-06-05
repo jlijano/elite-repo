@@ -4,7 +4,7 @@
 
 - Removed the visible admin dashboard login token controls and manual Run Review button so the admin screen opens directly into the review sections.
 - Fixed the admin dashboard cleanup so chat and knowledge search controls render, filtering works from cached dashboard data, selected chats stay highlighted, and loading/error states are shown during admin actions.
-- Expanded the admin dashboard sidebar with Login, Chat Review, User Management, File Management, Logs, Files Management, and Logout navigation.
+- Expanded the admin dashboard sidebar with Chat Review, User Management, File Management, Logs, Files Management, and Logout navigation.
 - Added honest placeholder admin sections for user and broader file management where backend endpoints are not configured yet.
 - Restyled the admin dashboard so it shares the Switchboard chat UI shell, theme tokens, dark/light mode behavior, and denser operational layout.
 - Added chat archiving so users can hide finished chats without deleting stored message history.
