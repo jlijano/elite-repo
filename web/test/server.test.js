@@ -49,6 +49,20 @@ async function jsonFetch(pathname, options = {}) {
   return { response, data };
 }
 
+async function createReviewedMessage(message = "Review me") {
+  const created = await jsonFetch("/api/chats", {
+    method: "POST",
+    body: JSON.stringify({ title: "Review test chat" })
+  });
+  assert.equal(created.response.status, 201);
+  const saved = await jsonFetch(`/api/chats/${created.data.chat.id}/messages`, {
+    method: "POST",
+    body: JSON.stringify({ role: "user", content: message })
+  });
+  assert.equal(saved.response.status, 201);
+  return created.data.chat.id;
+}
+
 before(async () => {
   const port = await getFreePort();
   baseUrl = `http://127.0.0.1:${port}`;
@@ -114,6 +128,8 @@ test("stores chat messages and returns the pending-review chat fallback", async 
 });
 
 test("protects review/admin routes and supports knowledge approval", async () => {
+  await createReviewedMessage("Knowledge approval test message");
+
   const blockedReview = await jsonFetch("/api/reviews/run", { method: "POST", body: "{}" });
   assert.equal(blockedReview.response.status, 401);
 
