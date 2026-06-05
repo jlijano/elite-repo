@@ -274,6 +274,26 @@
         line-height: 1.35;
       }
 
+      .section-tools {
+        min-width: min(320px, 100%);
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .section-tools input,
+      .section-tools select {
+        min-width: 0;
+      }
+
+      .section-tools input {
+        flex: 1 1 170px;
+      }
+
+      .section-tools select {
+        flex: 0 0 150px;
+      }
+
       .list,
       .detail {
         max-height: 460px;
@@ -298,6 +318,11 @@
 
       .item + .item {
         margin-top: 10px;
+      }
+
+      .item.active {
+        border-color: var(--primary);
+        box-shadow: inset 3px 0 0 var(--primary);
       }
 
       .row {
@@ -351,8 +376,39 @@
         white-space: pre-wrap;
       }
 
+      .tag {
+        display: inline-flex;
+        align-items: center;
+        width: fit-content;
+        min-height: 24px;
+        padding: 0 8px;
+        border-radius: 999px;
+        background: rgba(25, 195, 125, 0.14);
+        color: var(--success);
+        font-size: 0.75rem;
+        font-weight: 800;
+      }
+
+      .tag.pending_review {
+        color: var(--warning);
+        background: rgba(242, 166, 13, 0.14);
+      }
+
+      .tag.archived {
+        color: var(--muted);
+        background: var(--panel-soft);
+      }
+
+      .empty,
       .empty-note {
         color: var(--muted);
+      }
+
+      .empty {
+        padding: 12px;
+        border: 1px dashed var(--line);
+        border-radius: var(--radius);
+        background: var(--panel-soft);
       }
 
       @media (max-width: 1060px) {
@@ -380,6 +436,21 @@
 
         .admin-card.wide {
           grid-column: auto;
+        }
+
+        .section-head {
+          align-items: stretch;
+          flex-direction: column;
+        }
+
+        .section-tools {
+          width: 100%;
+          flex-direction: column;
+          align-items: stretch;
+        }
+
+        .section-tools select {
+          flex-basis: auto;
         }
 
         .admin-header-title p {
@@ -476,6 +547,7 @@
                     <h2>Chat Review</h2>
                     <p class="section-subtitle">Recent chats available for admin inspection.</p>
                   </div>
+                  <input id="chatSearch" type="search" placeholder="Search chats" autocomplete="off" aria-label="Search chats" />
                 </div>
                 <div class="list" id="chats">No data loaded.</div>
               </section>
@@ -511,12 +583,15 @@
                     <h2>Knowledge</h2>
                     <p class="section-subtitle">Approve, return to pending, or archive review-created knowledge.</p>
                   </div>
-                  <select id="knowledgeStatus" aria-label="Knowledge status filter">
-                    <option value="all">All</option>
-                    <option value="pending_review">Pending</option>
-                    <option value="approved">Approved</option>
-                    <option value="archived">Archived</option>
-                  </select>
+                  <div class="section-tools">
+                    <input id="knowledgeSearch" type="search" placeholder="Search knowledge" autocomplete="off" aria-label="Search knowledge" />
+                    <select id="knowledgeStatus" aria-label="Knowledge status filter">
+                      <option value="all">All</option>
+                      <option value="pending_review">Pending</option>
+                      <option value="approved">Approved</option>
+                      <option value="archived">Archived</option>
+                    </select>
+                  </div>
                 </div>
                 <div class="list" id="knowledge">No data loaded.</div>
               </section>
@@ -559,7 +634,9 @@
         status: document.getElementById("status"),
         summary: document.getElementById("summary"),
         chats: document.getElementById("chats"),
+        chatSearch: document.getElementById("chatSearch"),
         chatDetail: document.getElementById("chatDetail"),
+        knowledgeSearch: document.getElementById("knowledgeSearch"),
         knowledgeStatus: document.getElementById("knowledgeStatus"),
         knowledge: document.getElementById("knowledge"),
         runs: document.getElementById("runs"),
@@ -575,10 +652,14 @@
       const themeStorageKey = "switchboard-theme";
       const adminTokenStorageKey = "switchboard-admin-token";
       let token = sessionStorage.getItem(adminTokenStorageKey) || "";
+      let chatsCache = [];
+      let knowledgeCache = [];
+      let selectedChatId = "";
       els.token.value = token;
 
       const html = (value) => String(value ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
       const time = (value) => value ? new Intl.DateTimeFormat(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }).format(new Date(value)) : "";
+      const textMatch = (value, query) => String(value || "").toLowerCase().includes(query.trim().toLowerCase());
       const setStatus = (message, error = false) => { els.status.textContent = message; els.status.classList.toggle("error", error); };
       const headers = () => ({ "Content-Type": "application/json", "x-admin-token": token });
       const getCurrentTheme = () => document.documentElement.dataset.theme === "dark" ? "dark" : "light";
@@ -591,7 +672,7 @@
       }
       function applyTheme(theme) {
         document.documentElement.dataset.theme = theme;
-        try { localStorage.setItem(themeStorageKey, theme); } catch (error) { return; }
+        try { localStorage.setItem(themeStorageKey, theme); } catch (error) {}
         updateThemeToggle(theme);
       }
       async function api(url, options = {}) {
@@ -610,8 +691,19 @@
         els.token.value = "";
         window.location.href = "/";
       }
+      function setBusy(isBusy) {
+        els.load.disabled = isBusy;
+        els.run.disabled = isBusy;
+      }
       function renderSummary(summary = {}, runtime = {}) {
-        const metrics = [["Chats", summary.chats], ["Messages", summary.messages], ["Unreviewed", summary.unreviewedMessages], ["Pending KB", summary.pendingKnowledge], ["Approved KB", summary.approvedKnowledge], ["Storage", runtime.storageMode]];
+        const metrics = [
+          ["Chats", summary.chats],
+          ["Messages", summary.messages],
+          ["Unreviewed", summary.unreviewedMessages],
+          ["Pending KB", summary.pendingKnowledge],
+          ["Approved KB", summary.approvedKnowledge],
+          ["Storage", runtime.storageMode || "unknown"]
+        ];
         els.summary.innerHTML = metrics.map(([label, value]) => `<div class="metric"><span>${html(label)}</span><strong>${html(value ?? 0)}</strong></div>`).join("");
       }
       function renderUsers(summary = {}, runtime = {}) {
@@ -627,21 +719,26 @@
           ? attachments.map((attachment) => `<article class="item"><div class="row"><span>${html(attachment.name || "Attachment")}</span><small>${html(attachment.role || "message")}</small></div><p>${html(attachment.type || "text attachment")} ${attachment.size ? `· ${html(attachment.size)} bytes` : ""}</p><p>Stored in sanitized chat message context ${attachment.createdAt ? `on ${html(time(attachment.createdAt))}` : ""}.</p></article>`).join("")
           : `<article class="item"><div class="row"><span>No attachments in selected chat</span><small>Empty</small></div><p>Text file uploads are stored per message when users attach files in the chat composer.</p></article>`;
       }
-      function renderChats(chats = []) {
-        els.chats.innerHTML = chats.length ? chats.map((chat) => `<article class="item"><div class="row"><span>${html(chat.title || "New chat")}</span><small>${html(chat.messageCount)} msg</small></div><p>Updated ${html(time(chat.updatedAt))}</p><div class="actions"><button data-chat="${html(chat.id)}">Inspect</button></div></article>`).join("") : "No chats found.";
+      function renderChats() {
+        const query = els.chatSearch.value;
+        const filteredChats = chatsCache.filter((chat) => textMatch(chat.title, query) || textMatch(chat.id, query));
+        els.chats.innerHTML = filteredChats.length ? filteredChats.map((chat) => `<article class="item${chat.id === selectedChatId ? " active" : ""}"><div class="row"><span>${html(chat.title || "New chat")}</span><small>${html(chat.messageCount)} msg</small></div><p>Updated ${html(time(chat.updatedAt))}</p><div class="actions"><button data-chat="${html(chat.id)}">Inspect</button></div></article>`).join("") : `<div class="empty">No chats match this search.</div>`;
         els.chats.querySelectorAll("[data-chat]").forEach((button) => button.addEventListener("click", () => loadChat(button.dataset.chat)));
       }
-      function renderKnowledge(entries = []) {
-        els.knowledge.innerHTML = entries.length ? entries.map((entry) => `<article class="item"><div class="row"><span>${html(entry.title)}</span><small>${html(entry.status)}</small></div><p>${html(entry.content.slice(0, 700))}</p><p>Created ${html(time(entry.createdAt))}</p><div class="actions"><button data-id="${html(entry.id)}" data-status="approved">Approve</button><button data-id="${html(entry.id)}" data-status="pending_review">Pending</button><button data-id="${html(entry.id)}" data-status="archived">Archive</button></div></article>`).join("") : "No knowledge entries found.";
+      function renderKnowledge() {
+        const query = els.knowledgeSearch.value;
+        const entries = knowledgeCache.filter((entry) => textMatch(entry.title, query) || textMatch(entry.content, query) || textMatch(entry.status, query));
+        els.knowledge.innerHTML = entries.length ? entries.map((entry) => `<article class="item"><div class="row"><span>${html(entry.title)}</span><small class="tag ${html(entry.status)}">${html(entry.status)}</small></div><p>${html(entry.content.slice(0, 700))}</p><p>Created ${html(time(entry.createdAt))}</p><div class="actions"><button data-id="${html(entry.id)}" data-status="approved">Approve</button><button data-id="${html(entry.id)}" data-status="pending_review">Pending</button><button data-id="${html(entry.id)}" data-status="archived">Archive</button></div></article>`).join("") : `<div class="empty">No knowledge entries match this filter.</div>`;
         els.knowledge.querySelectorAll("[data-id]").forEach((button) => button.addEventListener("click", () => updateKnowledge(button.dataset.id, button.dataset.status)));
       }
       function renderRuns(runs = []) {
-        els.runs.innerHTML = runs.length ? runs.map((run) => `<article class="item"><div class="row"><span>${html(run.status)}</span><small>${html(time(run.startedAt))}</small></div><p>${html(run.messagesReviewed)} messages reviewed, ${html(run.knowledgeEntriesCreated)} KB entries created.</p>${run.error ? `<p>${html(run.error)}</p>` : ""}</article>`).join("") : "No review runs yet.";
+        els.runs.innerHTML = runs.length ? runs.map((run) => `<article class="item"><div class="row"><span>${html(run.status)}</span><small>${html(time(run.startedAt))}</small></div><p>${html(run.messagesReviewed)} messages reviewed, ${html(run.knowledgeEntriesCreated)} KB entries created.</p>${run.error ? `<p>${html(run.error)}</p>` : ""}</article>`).join("") : `<div class="empty">No review runs yet.</div>`;
       }
       async function loadDashboard() {
         saveToken();
         if (!token) return setStatus("Enter ADMIN_TOKEN to load management data.", true);
         setStatus("Loading admin data...");
+        setBusy(true);
         try {
           const [summary, chats, knowledge, runs] = await Promise.all([
             api("/api/admin/summary"),
@@ -649,35 +746,56 @@
             api(`/api/admin/knowledge?status=${encodeURIComponent(els.knowledgeStatus.value)}`),
             api("/api/admin/review-runs")
           ]);
+          chatsCache = chats.chats || [];
+          knowledgeCache = knowledge.entries || [];
           renderSummary(summary.summary, summary.status);
           renderUsers(summary.summary, summary.status);
-          renderChats(chats.chats || []);
-          renderKnowledge(knowledge.entries || []);
+          renderChats();
+          renderKnowledge();
           renderRuns(runs.runs || []);
-          setStatus("Admin data loaded.");
+          setStatus(`Admin data loaded. ${chatsCache.length} chats and ${knowledgeCache.length} knowledge entries available.`);
+        } catch (error) {
+          setStatus(error.message, true);
+        } finally {
+          setBusy(false);
+        }
+      }
+      async function loadChat(chatId) {
+        selectedChatId = chatId;
+        renderChats();
+        els.chatDetail.innerHTML = `<div class="empty">Loading chat...</div>`;
+        try {
+          const data = await api(`/api/admin/chats/${encodeURIComponent(chatId)}`);
+          const messages = data.chat.messages || [];
+          els.chatDetail.innerHTML = `<article class="item"><div class="row"><span>${html(data.chat.title)}</span><small>${html(messages.length)} messages</small></div>${messages.map((m) => `<div class="admin-message"><p class="admin-message-meta"><strong>${html(m.role)}</strong> ${html(time(m.createdAt))}</p><p class="admin-message-content">${html(m.content)}</p></div>`).join("")}</article>`;
+          renderFileManagementFromMessages(messages);
+          document.getElementById("chatDetailSection").scrollIntoView({ behavior: "smooth", block: "start" });
+        } catch (error) {
+          els.chatDetail.innerHTML = `<div class="empty">${html(error.message)}</div>`;
+        }
+      }
+      async function updateKnowledge(entryId, status) {
+        setStatus(`Updating knowledge entry to ${status}...`);
+        try {
+          await api(`/api/admin/knowledge/${encodeURIComponent(entryId)}`, { method: "PATCH", body: JSON.stringify({ status }) });
+          await loadDashboard();
         } catch (error) {
           setStatus(error.message, true);
         }
       }
-      async function loadChat(chatId) {
-        const data = await api(`/api/admin/chats/${encodeURIComponent(chatId)}`);
-        els.chatDetail.innerHTML = `<article class="item"><div class="row"><span>${html(data.chat.title)}</span><small>${html(data.chat.messages.length)} messages</small></div>${data.chat.messages.map((m) => `<div class="admin-message"><p class="admin-message-meta"><strong>${html(m.role)}</strong> ${html(time(m.createdAt))}</p><p class="admin-message-content">${html(m.content)}</p></div>`).join("")}</article>`;
-        renderFileManagementFromMessages(data.chat.messages || []);
-        document.getElementById("chatDetailSection").scrollIntoView({ behavior: "smooth", block: "start" });
-      }
-      async function updateKnowledge(entryId, status) {
-        await api(`/api/admin/knowledge/${encodeURIComponent(entryId)}`, { method: "PATCH", body: JSON.stringify({ status }) });
-        await loadDashboard();
-      }
       async function runReview() {
         saveToken();
+        if (!token) return setStatus("Enter ADMIN_TOKEN before running a review.", true);
         setStatus("Running review...");
+        setBusy(true);
         try {
           const data = await api("/api/admin/reviews/run", { method: "POST", body: "{}" });
           setStatus(`Review ${data.run.status}: ${data.run.messagesReviewed} messages reviewed, ${data.run.knowledgeEntriesCreated} KB entries created.`);
           await loadDashboard();
         } catch (error) {
           setStatus(error.message, true);
+        } finally {
+          setBusy(false);
         }
       }
       updateThemeToggle(getCurrentTheme());
@@ -688,6 +806,8 @@
       });
       els.load.addEventListener("click", loadDashboard);
       els.run.addEventListener("click", runReview);
+      els.chatSearch.addEventListener("input", renderChats);
+      els.knowledgeSearch.addEventListener("input", renderKnowledge);
       els.knowledgeStatus.addEventListener("change", loadDashboard);
       setInterval(() => token && loadDashboard().catch(() => {}), 40000);
     </script>
