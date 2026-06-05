@@ -326,6 +326,13 @@ async function ensureChatSession() {
   }
 }
 
+function syncCurrentChatTitle(chats = []) {
+  const activeChat = chats.find((chat) => chat.id === currentChatId);
+  if (activeChat) {
+    currentChatTitle.textContent = activeChat.title || "New chat";
+  }
+}
+
 async function sendMessage() {
   const message = inputEl.value.trim();
 
@@ -367,7 +374,8 @@ async function sendMessage() {
     addMessage("assistant", data.reply || "I could not produce a response.", {
       createdAt: assistantMessage?.createdAt
     });
-    await loadChats();
+    const chats = await loadChats();
+    syncCurrentChatTitle(chats);
   } catch (error) {
     hideTyping();
     addMessage(
