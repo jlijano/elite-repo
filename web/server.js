@@ -17,6 +17,9 @@ const schemaPath = path.join(__dirname, "db", "schema.sql");
 const knowledgeFiles = ["agent-directory.md", "routing-rules.md", "memory-rules.md", "handoff-template.md", "change-log.md"];
 const scheduledReviewIntervalMs = Number(process.env.REVIEW_RUN_INTERVAL_MS || 0);
 const minReviewIntervalMs = 60000;
+const maxAttachments = 4;
+const maxAttachmentChars = 50000;
+const maxAttachmentNameLength = 160;
 const pendingReviewReply =
   "I saved your message for Switchboard review. The AI responder is unavailable right now, so this chat is in storage-only mode and can be reviewed later.";
 
@@ -32,7 +35,7 @@ Missing skill or agent needed:
 Risk level:`;
 
 app.use(cors());
-app.use(express.json({ limit: "1mb" }));
+app.use(express.json({ limit: "2mb" }));
 app.use(express.static(publicDir));
 
 const db = createStore();
@@ -53,6 +56,29 @@ function redact(value) {
     .replace(/\bBearer\s+[A-Za-z0-9._~+/=-]{16,}/gi, "Bearer [REDACTED]");
 }
 
+function cleanAttachment(attachment = {}) {
+  const name = typeof attachment.name === "string" && attachment.name.trim()
+    ? attachment.name.trim().slice(0, maxAttachmentNameLength)
+    : "Untitled file";
+  const type = typeof attachment.type === "string" ? attachment.type.slice(0, 120) : "";
+  const size = Number.isFinite(Number(attachment.size)) ? Math.max(0, Number(attachment.size)) : 0;
+  const content = typeof attachment.content === "string" ? redact(attachment.content).slice(0, maxAttachmentChars) : "";
+  if (!content.trim()) return null;
+  return { name, type, size, content };
+}
+
+function cleanAttachments(value) {
+  if (!Array.isArray(value)) return [];
+  return value.slice(0, maxAttachments).map(cleanAttachment).filter(Boolean);
+}
+
+function attachmentSummary(attachments = []) {
+  if (!attachments.length) return "";
+  return attachments.map((attachment, index) => {
+    return `Attachment ${index + 1}: ${attachment.name}\n${attachment.content}`;
+  }).join("\n\n");
+}
+
 function cleanContext(context = {}) {
   if (!context || typeof context !== "object" || Array.isArray(context)) return {};
   return Object.fromEntries(
@@ -60,6 +86,7 @@ function cleanContext(context = {}) {
       .slice(0, 20)
       .map(([key, value]) => {
         if (/secret|token|password|cookie|key/i.test(key)) return [key, "[REDACTED]"];
+        if (key === "attachments") return [key, cleanAttachments(value)];
         if (typeof value === "string") return [key, redact(value).slice(0, 2000)];
         if (typeof value === "number" || typeof value === "boolean" || value === null) return [key, value];
         return [key, "[unsupported]"];
@@ -85,11 +112,13 @@ function readKnowledgeFiles() {
 }
 
 function chatRow(row) {
+  const archivedValue = row.archived_at || row.archivedAt || null;
   return {
     id: row.id,
     title: row.title,
     createdAt: new Date(row.created_at || row.createdAt).toISOString(),
     updatedAt: new Date(row.updated_at || row.updatedAt).toISOString(),
+    archivedAt: archivedValue ? new Date(archivedValue).toISOString() : null,
     messageCount: Number(row.message_count || row.messageCount || 0)
   };
 }
@@ -157,7 +186,11 @@ function buildKnowledge(group) {
   const bullets = group.messages
     .filter((message) => message.role === "user")
     .slice(-8)
-    .map((message) => `- ${message.content.slice(0, 600)}`);
+    .map((message) => {
+      const attachments = cleanAttachments(message.context?.attachments);
+      const names = attachments.length ? ` Attachments: ${attachments.map((attachment) => attachment.name).join(", ")}.` : "";
+      return `- ${message.content.slice(0, 600)}${names}`;
+    });
   return bullets.length ? `Pending Switchboard knowledge from chat "${group.title}".\n\nUseful user-provided context:\n${bullets.join("\n")}` : "";
 }
 
@@ -179,9 +212,10 @@ function createStore() {
       const result = await pool.query("INSERT INTO chats (id, title) VALUES ($1, $2) RETURNING *", [id(), title.slice(0, 120)]);
       return chatRow(result.rows[0]);
     },
-    async listChats() {
+    async listChats(options = {}) {
       await ready();
-      const result = await pool.query("SELECT c.*, COUNT(m.id)::int AS message_count FROM chats c LEFT JOIN chat_messages m ON m.chat_id = c.id GROUP BY c.id ORDER BY c.updated_at DESC LIMIT 100");
+      const includeArchived = Boolean(options.includeArchived);
+      const result = await pool.query("SELECT c.*, COUNT(m.id)::int AS message_count FROM chats c LEFT JOIN chat_messages m ON m.chat_id = c.id WHERE ($1::boolean OR c.archived_at IS NULL) GROUP BY c.id ORDER BY c.updated_at DESC LIMIT 100", [includeArchived]);
       return result.rows.map(chatRow);
     },
     async getChat(chatId) {
@@ -190,6 +224,11 @@ function createStore() {
       if (!chat.rows[0]) return null;
       const messages = await pool.query("SELECT * FROM chat_messages WHERE chat_id = $1 ORDER BY created_at ASC", [chatId]);
       return { ...chatRow(chat.rows[0]), messages: messages.rows.map(messageRow) };
+    },
+    async archiveChat(chatId, archived = true) {
+      await ready();
+      const result = await pool.query("UPDATE chats SET archived_at = CASE WHEN $2 THEN COALESCE(archived_at, NOW()) ELSE NULL END, updated_at = NOW() WHERE id = $1 RETURNING *", [chatId, Boolean(archived)]);
+      return result.rows[0] ? chatRow(result.rows[0]) : null;
     },
     async saveMessage(chatId, role, content, context = {}) {
       await ready();
@@ -231,7 +270,7 @@ function createStore() {
     async getAdminSummary() {
       await ready();
       const result = await pool.query(`SELECT
-        (SELECT COUNT(*)::int FROM chats) AS chats,
+        (SELECT COUNT(*)::int FROM chats WHERE archived_at IS NULL) AS chats,
         (SELECT COUNT(*)::int FROM chat_messages) AS messages,
         (SELECT COUNT(*)::int FROM chat_messages WHERE reviewed = FALSE) AS unreviewed_messages,
         (SELECT COUNT(*)::int FROM knowledge_entries WHERE status = 'pending_review') AS pending_knowledge,
@@ -278,14 +317,25 @@ function createMemoryStore() {
     async ready() {},
     async health() {},
     async createChat(title = "New chat") {
-      const chat = { id: id(), title: title.slice(0, 120), createdAt: now(), updatedAt: now(), messageCount: 0 };
+      const chat = { id: id(), title: title.slice(0, 120), createdAt: now(), updatedAt: now(), archivedAt: null, messageCount: 0 };
       chats.set(chat.id, chat);
       return chat;
     },
-    async listChats() { return [...chats.values()].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt)); },
+    async listChats(options = {}) {
+      return [...chats.values()]
+        .filter((chat) => options.includeArchived || !chat.archivedAt)
+        .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+    },
     async getChat(chatId) {
       const chat = chats.get(chatId);
       return chat ? { ...chat, messages: messages.filter((message) => message.chatId === chatId) } : null;
+    },
+    async archiveChat(chatId, archived = true) {
+      const chat = chats.get(chatId);
+      if (!chat) return null;
+      chat.archivedAt = archived ? chat.archivedAt || now() : null;
+      chat.updatedAt = now();
+      return chat;
     },
     async saveMessage(chatId, role, content, context = {}) {
       const chat = chats.get(chatId);
@@ -313,7 +363,7 @@ function createMemoryStore() {
     async listReviewRuns() { return runs.slice(-100).reverse(); },
     async getAdminSummary() {
       return {
-        chats: chats.size,
+        chats: [...chats.values()].filter((chat) => !chat.archivedAt).length,
         messages: messages.length,
         unreviewedMessages: messages.filter((message) => !message.reviewed).length,
         pendingKnowledge: byStatus("pending_review").length,
@@ -341,6 +391,11 @@ function historyForAi(history) {
   return Array.isArray(history)
     ? history.filter((message) => ["user", "assistant"].includes(message?.role) && typeof message.content === "string" && message.content.trim()).slice(-16).map((message) => ({ role: message.role, content: redact(message.content).slice(0, 6000) }))
     : [];
+}
+
+function userMessageForAi(message, attachments) {
+  const files = attachmentSummary(attachments);
+  return files ? `${message}\n\nAttached files:\n${files}`.slice(0, 12000) : message.slice(0, 12000);
 }
 
 async function aiContext(knowledge) {
@@ -382,7 +437,7 @@ app.post("/api/chats", async (req, res) => {
 });
 
 app.get("/api/chats", async (req, res) => {
-  try { res.json({ chats: await db.listChats() }); }
+  try { res.json({ chats: await db.listChats({ includeArchived: req.query.includeArchived === "true" }) }); }
   catch { res.status(500).json({ error: "Could not load chats." }); }
 });
 
@@ -394,12 +449,22 @@ app.get("/api/chats/:chatId", async (req, res) => {
   } catch { res.status(500).json({ error: "Could not load chat history." }); }
 });
 
+app.post("/api/chats/:chatId/archive", async (req, res) => {
+  try {
+    const chat = await db.archiveChat(req.params.chatId, req.body?.archived !== false);
+    if (!chat) return res.status(404).json({ error: "Chat not found." });
+    res.json({ chat });
+  } catch { res.status(500).json({ error: "Could not update chat archive status." }); }
+});
+
 app.post("/api/chats/:chatId/messages", async (req, res) => {
   try {
     const { role, content, context } = req.body || {};
     if (!["user", "assistant", "system"].includes(role) || typeof content !== "string" || !content.trim()) return res.status(400).json({ error: "A valid role and content are required." });
+    const chat = await db.getChat(req.params.chatId);
+    if (!chat) return res.status(404).json({ error: "Chat not found." });
+    if (chat.archivedAt) return res.status(409).json({ error: "Archived chats cannot receive new messages." });
     const message = await db.saveMessage(req.params.chatId, role, content.trim(), context);
-    if (!message) return res.status(404).json({ error: "Chat not found." });
     res.status(201).json({ message });
   } catch { res.status(500).json({ error: "Could not save the message." }); }
 });
@@ -419,7 +484,7 @@ app.get("/api/admin/summary", async (req, res) => {
   if (!adminTokenOk(req, res)) return;
   res.json({ summary: await db.getAdminSummary(), status: { aiAvailable: Boolean(process.env.OPENAI_API_KEY), storageMode: db.mode } });
 });
-app.get("/api/admin/chats", async (req, res) => { if (adminTokenOk(req, res)) res.json({ chats: await db.listChats() }); });
+app.get("/api/admin/chats", async (req, res) => { if (adminTokenOk(req, res)) res.json({ chats: await db.listChats({ includeArchived: true }) }); });
 app.get("/api/admin/chats/:chatId", async (req, res) => {
   if (!adminTokenOk(req, res)) return;
   const chat = await db.getChat(req.params.chatId);
@@ -439,11 +504,18 @@ app.post("/api/chat", async (req, res) => {
   let savedUser = null;
   const knowledge = readKnowledgeFiles();
   try {
-    if (typeof req.body?.message !== "string" || !req.body.message.trim()) return res.status(400).json({ error: "Message is required." });
-    const clean = redact(req.body.message.trim());
+    const attachments = cleanAttachments(req.body?.attachments);
+    const rawMessage = typeof req.body?.message === "string" ? req.body.message.trim() : "";
+    if (!rawMessage && !attachments.length) return res.status(400).json({ error: "Message or file attachment is required." });
+    const fallbackMessage = attachments.length ? `Uploaded ${attachments.length} file${attachments.length === 1 ? "" : "s"}: ${attachments.map((attachment) => attachment.name).join(", ")}` : "";
+    const clean = redact(rawMessage || fallbackMessage);
     if (!chatId) chatId = (await db.createChat(clean.slice(0, 80) || "New chat")).id;
-    else if (!(await db.getChat(chatId))) return res.status(404).json({ error: "Chat not found. Start a new chat and try again." });
-    savedUser = await db.saveMessage(chatId, "user", clean, { source: "api/chat" });
+    else {
+      const existingChat = await db.getChat(chatId);
+      if (!existingChat) return res.status(404).json({ error: "Chat not found. Start a new chat and try again." });
+      if (existingChat.archivedAt) return res.status(409).json({ error: "Archived chats cannot receive new messages. Start a new chat and try again." });
+    }
+    savedUser = await db.saveMessage(chatId, "user", clean, { source: "api/chat", attachments });
     if (!process.env.OPENAI_API_KEY) {
       const assistant = await db.saveMessage(chatId, "assistant", pendingReviewReply, { aiAvailable: false, pendingReview: true });
       return res.json({ chatId, reply: pendingReviewReply, pendingReview: true, messages: [savedUser, assistant], ...knowledge, aiAvailable: false, storageMode: db.mode });
@@ -457,7 +529,7 @@ app.post("/api/chat", async (req, res) => {
         { role: "system", content: systemPrompt },
         { role: "system", content: await aiContext(knowledge) },
         ...historyForAi(chat?.messages?.filter((message) => message.id !== savedUser.id) || req.body.history),
-        { role: "user", content: clean.slice(0, 12000) }
+        { role: "user", content: userMessageForAi(clean, attachments) }
       ]
     });
     const reply = completion.choices?.[0]?.message?.content?.trim();
