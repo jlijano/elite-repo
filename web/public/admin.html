@@ -30,6 +30,25 @@
         text-decoration: none;
       }
 
+      .admin-shell button.nav-item {
+        width: 100%;
+      }
+
+      .admin-nav-stack {
+        min-height: 0;
+        display: grid;
+        grid-template-rows: auto minmax(0, 1fr) auto;
+        gap: var(--space-5);
+      }
+
+      .admin-section-list {
+        min-height: 0;
+        display: grid;
+        align-content: start;
+        gap: 2px;
+        overflow-y: auto;
+      }
+
       .admin-panel {
         min-width: 0;
         display: grid;
@@ -62,6 +81,7 @@
         overflow: auto;
         padding: 20px 24px 28px;
         background: var(--panel);
+        scroll-behavior: smooth;
       }
 
       .admin-layout {
@@ -134,6 +154,15 @@
         border-color: var(--primary);
         background: var(--primary);
         color: #ffffff;
+      }
+
+      .logout-action {
+        color: var(--sidebar-text);
+      }
+
+      .logout-action:hover,
+      .logout-action:focus-visible {
+        background: var(--sidebar-card);
       }
 
       .admin-status {
@@ -212,6 +241,12 @@
       .admin-card {
         min-height: 280px;
         overflow: hidden;
+        scroll-margin-top: 76px;
+      }
+
+      .admin-card.wide {
+        grid-column: 1 / -1;
+        min-height: 0;
       }
 
       .section-head {
@@ -232,12 +267,23 @@
         line-height: 1.2;
       }
 
+      .section-subtitle {
+        margin: 2px 0 0;
+        color: var(--muted);
+        font-size: 0.78rem;
+        line-height: 1.35;
+      }
+
       .list,
       .detail {
         max-height: 460px;
         overflow: auto;
         padding: 12px;
         color: var(--muted);
+      }
+
+      .compact-list {
+        max-height: 280px;
       }
 
       .item {
@@ -305,6 +351,10 @@
         white-space: pre-wrap;
       }
 
+      .empty-note {
+        color: var(--muted);
+      }
+
       @media (max-width: 1060px) {
         .summary {
           grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -328,6 +378,10 @@
           grid-template-columns: 1fr;
         }
 
+        .admin-card.wide {
+          grid-column: auto;
+        }
+
         .admin-header-title p {
           display: none;
         }
@@ -346,15 +400,23 @@
 
         <nav class="primary-nav" aria-label="Admin navigation">
           <a class="nav-item" href="/"><span aria-hidden="true">←</span>Back to chat</a>
-          <a class="nav-item" href="/admin.html"><span aria-hidden="true">▣</span>Admin dashboard</a>
+          <button class="nav-item" data-target="loginSection" type="button"><span aria-hidden="true">⌂</span>Login</button>
+          <button class="nav-item" data-target="chatReviewSection" type="button"><span aria-hidden="true">□</span>Chat review</button>
+          <button class="nav-item" data-target="userManagementSection" type="button"><span aria-hidden="true">◉</span>User management</button>
+          <button class="nav-item" data-target="fileManagementSection" type="button"><span aria-hidden="true">▤</span>File management</button>
+          <button class="nav-item" data-target="logsSection" type="button"><span aria-hidden="true">≡</span>Logs</button>
+          <button class="nav-item" data-target="filesManagementSection" type="button"><span aria-hidden="true">▦</span>Files management</button>
         </nav>
 
-        <section class="agents-panel" aria-label="Admin tools">
-          <h2>Tools</h2>
-          <div class="agent-pill active">
-            <span class="brand-mark small" aria-hidden="true">★</span>
-            <span>Switchboard_Admin</span>
+        <section class="admin-nav-stack" aria-label="Admin tools">
+          <div class="admin-section-list">
+            <h2 class="session-heading">Tools</h2>
+            <div class="agent-pill active">
+              <span class="brand-mark small" aria-hidden="true">★</span>
+              <span>Switchboard_Admin</span>
+            </div>
           </div>
+          <button class="nav-item logout-action" id="logoutButton" type="button"><span aria-hidden="true">↩</span>Logout</button>
         </section>
 
         <div class="directory-card">
@@ -362,7 +424,7 @@
             <span class="status-dot online" aria-hidden="true"></span>
             <span>Protected admin area</span>
           </div>
-          <p id="filesLoaded">Chat and knowledge review tools</p>
+          <p id="filesLoaded">Chat, user, file, and log review sections</p>
           <p id="storageStatus">Requires ADMIN_TOKEN</p>
         </div>
       </aside>
@@ -371,7 +433,7 @@
         <header class="chat-header admin-header">
           <div class="admin-header-title">
             <h1>Switchboard Admin</h1>
-            <p>Inspect chats, review knowledge, and run durable review jobs.</p>
+            <p>Review chats, manage admin access context, inspect file activity, and check logs.</p>
           </div>
           <div class="header-actions">
             <button
@@ -387,29 +449,68 @@
           </div>
         </header>
 
-        <div class="admin-scroll">
+        <div class="admin-scroll" id="adminScroll">
           <div class="admin-layout">
-            <div class="admin-auth">
-              <label for="token">Admin token</label>
-              <input id="token" type="password" autocomplete="off" placeholder="Enter ADMIN_TOKEN" />
-              <button id="load" class="primary-action" type="button">Load</button>
-              <button id="run" type="button">Run Review</button>
-            </div>
+            <section class="admin-card wide" id="loginSection">
+              <div class="section-head">
+                <div>
+                  <h2>Login</h2>
+                  <p class="section-subtitle">Enter the configured admin token to load protected dashboard data.</p>
+                </div>
+              </div>
+              <div class="admin-auth">
+                <label for="token">Admin token</label>
+                <input id="token" type="password" autocomplete="off" placeholder="Enter ADMIN_TOKEN" />
+                <button id="load" class="primary-action" type="button">Login</button>
+                <button id="run" type="button">Run Review</button>
+              </div>
+            </section>
+
             <p class="admin-status" id="status">Admin routes require the backend ADMIN_TOKEN.</p>
             <div class="summary" id="summary"></div>
 
             <div class="admin-grid">
-              <section class="admin-card">
-                <div class="section-head"><h2>Chats</h2></div>
+              <section class="admin-card" id="chatReviewSection">
+                <div class="section-head">
+                  <div>
+                    <h2>Chat Review</h2>
+                    <p class="section-subtitle">Recent chats available for admin inspection.</p>
+                  </div>
+                </div>
                 <div class="list" id="chats">No data loaded.</div>
               </section>
-              <section class="admin-card">
+
+              <section class="admin-card" id="chatDetailSection">
                 <div class="section-head"><h2>Chat Detail</h2></div>
                 <div class="detail" id="chatDetail">Select a chat to inspect messages.</div>
               </section>
-              <section class="admin-card">
+
+              <section class="admin-card" id="userManagementSection">
                 <div class="section-head">
-                  <h2>Knowledge</h2>
+                  <div>
+                    <h2>User Management</h2>
+                    <p class="section-subtitle">Admin access and user-account status.</p>
+                  </div>
+                </div>
+                <div class="list compact-list" id="users">Login to load admin status.</div>
+              </section>
+
+              <section class="admin-card" id="fileManagementSection">
+                <div class="section-head">
+                  <div>
+                    <h2>File Management</h2>
+                    <p class="section-subtitle">Attachment activity found inside selected chat messages.</p>
+                  </div>
+                </div>
+                <div class="list compact-list" id="fileManagement">Select a chat to inspect attached files.</div>
+              </section>
+
+              <section class="admin-card" id="knowledgeSection">
+                <div class="section-head">
+                  <div>
+                    <h2>Knowledge</h2>
+                    <p class="section-subtitle">Approve, return to pending, or archive review-created knowledge.</p>
+                  </div>
                   <select id="knowledgeStatus" aria-label="Knowledge status filter">
                     <option value="all">All</option>
                     <option value="pending_review">Pending</option>
@@ -419,9 +520,30 @@
                 </div>
                 <div class="list" id="knowledge">No data loaded.</div>
               </section>
-              <section class="admin-card">
-                <div class="section-head"><h2>Review Runs</h2></div>
+
+              <section class="admin-card" id="logsSection">
+                <div class="section-head">
+                  <div>
+                    <h2>Logs</h2>
+                    <p class="section-subtitle">Review run history from the backend.</p>
+                  </div>
+                </div>
                 <div class="list" id="runs">No data loaded.</div>
+              </section>
+
+              <section class="admin-card wide" id="filesManagementSection">
+                <div class="section-head">
+                  <div>
+                    <h2>Files Management</h2>
+                    <p class="section-subtitle">Broader file-library controls can be wired when backend file endpoints exist.</p>
+                  </div>
+                </div>
+                <div class="list compact-list" id="filesManagement">
+                  <article class="item">
+                    <div class="row"><span>File library endpoint not configured</span><small>Not wired</small></div>
+                    <p>The current GitHub app stores uploaded text files as sanitized message attachments inside chat context. It does not yet expose a separate files table or admin file-library API.</p>
+                  </article>
+                </div>
               </section>
             </div>
           </div>
@@ -441,12 +563,18 @@
         knowledgeStatus: document.getElementById("knowledgeStatus"),
         knowledge: document.getElementById("knowledge"),
         runs: document.getElementById("runs"),
+        users: document.getElementById("users"),
+        fileManagement: document.getElementById("fileManagement"),
+        filesManagement: document.getElementById("filesManagement"),
+        logoutButton: document.getElementById("logoutButton"),
+        adminScroll: document.getElementById("adminScroll"),
         themeToggle: document.getElementById("themeToggle"),
         themeToggleText: document.getElementById("themeToggleText"),
         themeToggleIcon: document.querySelector(".theme-toggle-icon")
       };
       const themeStorageKey = "switchboard-theme";
-      let token = sessionStorage.getItem("switchboard-admin-token") || "";
+      const adminTokenStorageKey = "switchboard-admin-token";
+      let token = sessionStorage.getItem(adminTokenStorageKey) || "";
       els.token.value = token;
 
       const html = (value) => String(value ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
@@ -474,11 +602,30 @@
       }
       function saveToken() {
         token = els.token.value.trim();
-        sessionStorage.setItem("switchboard-admin-token", token);
+        sessionStorage.setItem(adminTokenStorageKey, token);
+      }
+      function logout() {
+        token = "";
+        sessionStorage.removeItem(adminTokenStorageKey);
+        els.token.value = "";
+        window.location.href = "/";
       }
       function renderSummary(summary = {}, runtime = {}) {
         const metrics = [["Chats", summary.chats], ["Messages", summary.messages], ["Unreviewed", summary.unreviewedMessages], ["Pending KB", summary.pendingKnowledge], ["Approved KB", summary.approvedKnowledge], ["Storage", runtime.storageMode]];
         els.summary.innerHTML = metrics.map(([label, value]) => `<div class="metric"><span>${html(label)}</span><strong>${html(value ?? 0)}</strong></div>`).join("");
+      }
+      function renderUsers(summary = {}, runtime = {}) {
+        els.users.innerHTML = `<article class="item"><div class="row"><span>Admin token session</span><small>${token ? "Active" : "Signed out"}</small></div><p>Dashboard access is protected by ADMIN_TOKEN. The current database schema does not include user account records yet.</p><p>Storage mode: ${html(runtime.storageMode || "unknown")}. Total chats: ${html(summary.chats ?? 0)}.</p></article>`;
+      }
+      function renderFileManagementFromMessages(messages = []) {
+        const attachments = [];
+        for (const message of messages) {
+          const items = Array.isArray(message.context?.attachments) ? message.context.attachments : [];
+          for (const attachment of items) attachments.push({ ...attachment, role: message.role, createdAt: message.createdAt });
+        }
+        els.fileManagement.innerHTML = attachments.length
+          ? attachments.map((attachment) => `<article class="item"><div class="row"><span>${html(attachment.name || "Attachment")}</span><small>${html(attachment.role || "message")}</small></div><p>${html(attachment.type || "text attachment")} ${attachment.size ? `· ${html(attachment.size)} bytes` : ""}</p><p>Stored in sanitized chat message context ${attachment.createdAt ? `on ${html(time(attachment.createdAt))}` : ""}.</p></article>`).join("")
+          : `<article class="item"><div class="row"><span>No attachments in selected chat</span><small>Empty</small></div><p>Text file uploads are stored per message when users attach files in the chat composer.</p></article>`;
       }
       function renderChats(chats = []) {
         els.chats.innerHTML = chats.length ? chats.map((chat) => `<article class="item"><div class="row"><span>${html(chat.title || "New chat")}</span><small>${html(chat.messageCount)} msg</small></div><p>Updated ${html(time(chat.updatedAt))}</p><div class="actions"><button data-chat="${html(chat.id)}">Inspect</button></div></article>`).join("") : "No chats found.";
@@ -503,6 +650,7 @@
             api("/api/admin/review-runs")
           ]);
           renderSummary(summary.summary, summary.status);
+          renderUsers(summary.summary, summary.status);
           renderChats(chats.chats || []);
           renderKnowledge(knowledge.entries || []);
           renderRuns(runs.runs || []);
@@ -514,6 +662,8 @@
       async function loadChat(chatId) {
         const data = await api(`/api/admin/chats/${encodeURIComponent(chatId)}`);
         els.chatDetail.innerHTML = `<article class="item"><div class="row"><span>${html(data.chat.title)}</span><small>${html(data.chat.messages.length)} messages</small></div>${data.chat.messages.map((m) => `<div class="admin-message"><p class="admin-message-meta"><strong>${html(m.role)}</strong> ${html(time(m.createdAt))}</p><p class="admin-message-content">${html(m.content)}</p></div>`).join("")}</article>`;
+        renderFileManagementFromMessages(data.chat.messages || []);
+        document.getElementById("chatDetailSection").scrollIntoView({ behavior: "smooth", block: "start" });
       }
       async function updateKnowledge(entryId, status) {
         await api(`/api/admin/knowledge/${encodeURIComponent(entryId)}`, { method: "PATCH", body: JSON.stringify({ status }) });
@@ -532,6 +682,10 @@
       }
       updateThemeToggle(getCurrentTheme());
       els.themeToggle.addEventListener("click", () => applyTheme(getCurrentTheme() === "dark" ? "light" : "dark"));
+      els.logoutButton.addEventListener("click", logout);
+      document.querySelectorAll("[data-target]").forEach((button) => {
+        button.addEventListener("click", () => document.getElementById(button.dataset.target)?.scrollIntoView({ behavior: "smooth", block: "start" }));
+      });
       els.load.addEventListener("click", loadDashboard);
       els.run.addEventListener("click", runReview);
       els.knowledgeStatus.addEventListener("change", loadDashboard);
