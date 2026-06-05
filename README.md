@@ -23,9 +23,10 @@ The `web/` directory contains a Render-ready Express app that serves a plain HTM
 - Optional PostgreSQL support through `DATABASE_URL`; the app uses storage-only in-memory mode when no database URL is configured.
 - Storage-only chat behavior when `OPENAI_API_KEY` is missing, including a friendly pending-review assistant response.
 - Durable knowledge entries produced by review runs as `pending_review` entries and reused in future AI context only after approval.
-- Backend management dashboard at `/admin.html` for inspecting chats, reviewing knowledge entries, running reviews, and checking review history.
+- Backend management dashboard at `/admin.html` for inspecting chats, reviewing knowledge entries, and checking review history.
 - Admin dashboard styling shares the chat UI shell, theme tokens, and persistent light/dark mode behavior for a consistent management experience.
-- Admin dashboard navigation includes Login, Chat Review, User Management, File Management, Logs, Files Management, and Logout sections.
+- Admin dashboard navigation includes Chat Review, User Management, File Management, Logs, Files Management, and Logout sections.
+- Admin dashboard no longer exposes visible token-entry, Login, or Run Review controls; protected backend admin routes still require `ADMIN_TOKEN`.
 - Admin dashboard chat and knowledge search controls filter cached management data, keep selected chats highlighted, and show clear loading and error states during admin actions.
 - User and broader file management sections currently show honest status placeholders until dedicated backend endpoints are added.
 - Chat failure responses distinguish between saved messages awaiting review and storage failures that could not save the message.
