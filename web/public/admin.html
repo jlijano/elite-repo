@@ -91,21 +91,12 @@
         margin: 0 auto;
       }
 
-      .admin-auth,
       .summary,
       .admin-card,
       .admin-status {
         border: 1px solid var(--line);
         border-radius: var(--radius);
         background: var(--panel);
-      }
-
-      .admin-auth {
-        display: grid;
-        grid-template-columns: auto minmax(220px, 1fr) auto auto;
-        align-items: end;
-        gap: 10px;
-        padding: 12px;
       }
 
       label {
@@ -150,12 +141,6 @@
         background: var(--sidebar-card);
       }
 
-      .admin-panel .primary-action {
-        border-color: var(--primary);
-        background: var(--primary);
-        color: #ffffff;
-      }
-
       .logout-action {
         color: var(--sidebar-text);
       }
@@ -175,6 +160,10 @@
         color: var(--muted);
         font-size: 0.9rem;
         font-weight: 650;
+      }
+
+      .admin-status[hidden] {
+        display: none;
       }
 
       .admin-status::before {
@@ -428,7 +417,6 @@
       }
 
       @media (max-width: 760px) {
-        .admin-auth,
         .summary,
         .admin-grid {
           grid-template-columns: 1fr;
@@ -471,7 +459,6 @@
 
         <nav class="primary-nav" aria-label="Admin navigation">
           <a class="nav-item" href="/"><span aria-hidden="true">←</span>Back to chat</a>
-          <button class="nav-item" data-target="loginSection" type="button"><span aria-hidden="true">⌂</span>Login</button>
           <button class="nav-item" data-target="chatReviewSection" type="button"><span aria-hidden="true">□</span>Chat review</button>
           <button class="nav-item" data-target="userManagementSection" type="button"><span aria-hidden="true">◉</span>User management</button>
           <button class="nav-item" data-target="fileManagementSection" type="button"><span aria-hidden="true">▤</span>File management</button>
@@ -522,22 +509,7 @@
 
         <div class="admin-scroll" id="adminScroll">
           <div class="admin-layout">
-            <section class="admin-card wide" id="loginSection">
-              <div class="section-head">
-                <div>
-                  <h2>Login</h2>
-                  <p class="section-subtitle">Enter the configured admin token to load protected dashboard data.</p>
-                </div>
-              </div>
-              <div class="admin-auth">
-                <label for="token">Admin token</label>
-                <input id="token" type="password" autocomplete="off" placeholder="Enter ADMIN_TOKEN" />
-                <button id="load" class="primary-action" type="button">Login</button>
-                <button id="run" type="button">Run Review</button>
-              </div>
-            </section>
-
-            <p class="admin-status" id="status">Admin routes require the backend ADMIN_TOKEN.</p>
+            <p class="admin-status" id="status" hidden>Admin dashboard status unavailable.</p>
             <div class="summary" id="summary"></div>
 
             <div class="admin-grid">
@@ -564,7 +536,7 @@
                     <p class="section-subtitle">Admin access and user-account status.</p>
                   </div>
                 </div>
-                <div class="list compact-list" id="users">Login to load admin status.</div>
+                <div class="list compact-list" id="users">Admin session data is not loaded.</div>
               </section>
 
               <section class="admin-card" id="fileManagementSection">
@@ -628,9 +600,6 @@
 
     <script>
       const els = {
-        token: document.getElementById("token"),
-        load: document.getElementById("load"),
-        run: document.getElementById("run"),
         status: document.getElementById("status"),
         summary: document.getElementById("summary"),
         chats: document.getElementById("chats"),
@@ -655,7 +624,6 @@
       let chatsCache = [];
       let knowledgeCache = [];
       let selectedChatId = "";
-      els.token.value = token;
 
       const html = (value) => String(value ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
       const time = (value) => value ? new Intl.DateTimeFormat(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }).format(new Date(value)) : "";
@@ -681,19 +649,17 @@
         if (!res.ok) throw new Error(data.error || "Request failed.");
         return data;
       }
-      function saveToken() {
-        token = els.token.value.trim();
-        sessionStorage.setItem(adminTokenStorageKey, token);
+      function refreshTokenFromSession() {
+        token = sessionStorage.getItem(adminTokenStorageKey) || "";
+        return token;
       }
       function logout() {
         token = "";
         sessionStorage.removeItem(adminTokenStorageKey);
-        els.token.value = "";
         window.location.href = "/";
       }
       function setBusy(isBusy) {
-        els.load.disabled = isBusy;
-        els.run.disabled = isBusy;
+        document.body.toggleAttribute("aria-busy", isBusy);
       }
       function renderSummary(summary = {}, runtime = {}) {
         const metrics = [
@@ -735,8 +701,8 @@
         els.runs.innerHTML = runs.length ? runs.map((run) => `<article class="item"><div class="row"><span>${html(run.status)}</span><small>${html(time(run.startedAt))}</small></div><p>${html(run.messagesReviewed)} messages reviewed, ${html(run.knowledgeEntriesCreated)} KB entries created.</p>${run.error ? `<p>${html(run.error)}</p>` : ""}</article>`).join("") : `<div class="empty">No review runs yet.</div>`;
       }
       async function loadDashboard() {
-        saveToken();
-        if (!token) return setStatus("Enter ADMIN_TOKEN to load management data.", true);
+        refreshTokenFromSession();
+        if (!token) return setStatus("Admin session is not available for protected dashboard data.", true);
         setStatus("Loading admin data...");
         setBusy(true);
         try {
@@ -783,32 +749,16 @@
           setStatus(error.message, true);
         }
       }
-      async function runReview() {
-        saveToken();
-        if (!token) return setStatus("Enter ADMIN_TOKEN before running a review.", true);
-        setStatus("Running review...");
-        setBusy(true);
-        try {
-          const data = await api("/api/admin/reviews/run", { method: "POST", body: "{}" });
-          setStatus(`Review ${data.run.status}: ${data.run.messagesReviewed} messages reviewed, ${data.run.knowledgeEntriesCreated} KB entries created.`);
-          await loadDashboard();
-        } catch (error) {
-          setStatus(error.message, true);
-        } finally {
-          setBusy(false);
-        }
-      }
       updateThemeToggle(getCurrentTheme());
       els.themeToggle.addEventListener("click", () => applyTheme(getCurrentTheme() === "dark" ? "light" : "dark"));
       els.logoutButton.addEventListener("click", logout);
       document.querySelectorAll("[data-target]").forEach((button) => {
         button.addEventListener("click", () => document.getElementById(button.dataset.target)?.scrollIntoView({ behavior: "smooth", block: "start" }));
       });
-      els.load.addEventListener("click", loadDashboard);
-      els.run.addEventListener("click", runReview);
       els.chatSearch.addEventListener("input", renderChats);
       els.knowledgeSearch.addEventListener("input", renderKnowledge);
       els.knowledgeStatus.addEventListener("change", loadDashboard);
+      if (token) loadDashboard().catch(() => {});
       setInterval(() => token && loadDashboard().catch(() => {}), 40000);
     </script>
   </body>
