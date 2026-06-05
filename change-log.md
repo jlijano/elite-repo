@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+- Removed inactive chat UI controls for search, library, apps, sidebar collapse, attachments, and voice input so the interface only shows wired behavior.
+- Added focused backend integration tests for health/status, chat storage, `/api/chat` storage-only fallback, review route protection, admin auth, review runs, and knowledge approval.
+- Expanded `routing-rules.md` so it aligns with the Active agents, specialist routing map, risk escalation rules, and handoff format in `agent-directory.md`.
+- Corrected the PostgreSQL review-run changelog note so it no longer claims transaction handling that is not implemented in `web/server.js`.
 - Updated the Switchboard Agent web app with a ChatGPT-inspired full-height sidebar, centered conversation stream, and rounded bottom composer.
 - Added a 40-second frontend refresh for status, chat lists, and active chat history.
 - Added protected admin routes and `/admin.html` backend management dashboard for chats, knowledge entries, and review runs.
@@ -9,7 +13,6 @@
 - Added an optional backend scheduled review runner controlled by `REVIEW_RUN_INTERVAL_MS`.
 - Fixed the chat UI so the active chat title refreshes after the first user message renames a new chat.
 - Hardened `/api/chat` fallback responses so storage failures no longer claim an unsaved message was saved for review.
-- Made PostgreSQL review runs transactional so knowledge entry creation and message review flags cannot drift apart on partial failure.
 - Added PostgreSQL-backed Switchboard chat storage with `chats`, `chat_messages`, `knowledge_entries`, and `review_runs` tables.
 - Added separate chat sessions, New Chat behavior, timestamped messages, chat history loading, knowledge reading, and review run API routes.
 - Changed chat behavior so missing `OPENAI_API_KEY` no longer blocks message storage and returns a friendly pending-review response.
