@@ -18,6 +18,8 @@ The `web/` directory contains a Render-ready Express app that serves a plain HTM
 - Optional PostgreSQL support through `DATABASE_URL`; the app uses storage-only in-memory mode when no database URL is configured.
 - Storage-only chat behavior when `OPENAI_API_KEY` is missing, including a friendly pending-review assistant response.
 - Durable knowledge entries produced by review runs and reused in future AI context when approved.
+- Transactional PostgreSQL review runs so knowledge entries and reviewed message flags stay consistent if a review fails.
+- Chat failure responses distinguish between saved messages awaiting review and storage failures that could not save the message.
 - Agent Directory status indicator backed by the `/api/status` endpoint.
 - Render health check support through `/health`.
 - Responsive mobile layout with small-screen chat header wrapping, full-height mobile viewport support, safe-area spacing, compact composer controls, and mobile New Chat access.
@@ -62,9 +64,9 @@ Do not commit secrets, API keys, deploy hooks, database URLs, passwords, session
 - `GET /api/chats`: lists recent chat sessions.
 - `GET /api/chats/:chatId`: loads a chat and its message history.
 - `POST /api/chats/:chatId/messages`: stores a message for a chat.
-- `POST /api/chat`: stores a user message, attempts an AI response when available, and stores the assistant response.
+- `POST /api/chat`: stores a user message, attempts an AI response when available, stores the assistant response when possible, and returns a storage failure status if the user message could not be saved.
 - `GET /api/knowledge?status=approved`: reads durable knowledge entries.
-- `POST /api/reviews/run`: records a review run, reads unreviewed messages, creates approved knowledge entries, and marks messages reviewed.
+- `POST /api/reviews/run`: records a review run, reads unreviewed messages, creates approved knowledge entries, and marks messages reviewed transactionally when PostgreSQL is configured.
 
 ### Scheduled review workflow
 
