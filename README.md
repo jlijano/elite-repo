@@ -14,11 +14,12 @@ The `web/` directory contains a Render-ready Express app that serves a plain HTM
 
 - Chat interface backed by the `/api/chat` endpoint.
 - Separate chat sessions with New Chat behavior so conversations do not overlap.
+- Automatic 40-second refresh for status, chat list, and active chat history when the user is not composing a message.
 - Persistent message storage with `chat_id`, `role`, `content`, sanitized `context`, review state, and timestamps.
 - Optional PostgreSQL support through `DATABASE_URL`; the app uses storage-only in-memory mode when no database URL is configured.
 - Storage-only chat behavior when `OPENAI_API_KEY` is missing, including a friendly pending-review assistant response.
-- Durable knowledge entries produced by review runs and reused in future AI context when approved.
-- Transactional PostgreSQL review runs so knowledge entries and reviewed message flags stay consistent if a review fails.
+- Durable knowledge entries produced by review runs as `pending_review` entries and reused in future AI context only after approval.
+- Backend management dashboard at `/admin.html` for inspecting chats, reviewing knowledge entries, running reviews, and checking review history.
 - Chat failure responses distinguish between saved messages awaiting review and storage failures that could not save the message.
 - Agent Directory status indicator backed by the `/api/status` endpoint.
 - Render health check support through `/health`.
@@ -53,6 +54,8 @@ Without `DATABASE_URL`, the app starts in in-memory storage mode for local testi
 - `OPENAI_API_KEY`: optional. Enables AI responses when present.
 - `OPENAI_MODEL`: optional. Defaults to `gpt-4.1-mini`.
 - `REVIEW_RUN_TOKEN`: optional. When set, `/api/reviews/run` requires the token through `x-review-token` or `Authorization: Bearer ...`.
+- `ADMIN_TOKEN`: required for the backend management dashboard and `/api/admin/*` routes.
+- `REVIEW_RUN_INTERVAL_MS`: optional. Enables the backend scheduled review runner when set to at least `60000`.
 
 Do not commit secrets, API keys, deploy hooks, database URLs, passwords, session cookies, or Render credentials. Configure secrets only in Render environment variables or another approved secret store.
 
@@ -66,16 +69,25 @@ Do not commit secrets, API keys, deploy hooks, database URLs, passwords, session
 - `POST /api/chats/:chatId/messages`: stores a message for a chat.
 - `POST /api/chat`: stores a user message, attempts an AI response when available, stores the assistant response when possible, and returns a storage failure status if the user message could not be saved.
 - `GET /api/knowledge?status=approved`: reads durable knowledge entries.
-- `POST /api/reviews/run`: records a review run, reads unreviewed messages, creates approved knowledge entries, and marks messages reviewed transactionally when PostgreSQL is configured.
+- `POST /api/reviews/run`: records a review run, reads unreviewed messages, creates pending-review knowledge entries, and marks messages reviewed.
+- `GET /api/admin/summary`: returns backend management counts and runtime status. Requires `ADMIN_TOKEN`.
+- `GET /api/admin/chats`: lists chats for management review. Requires `ADMIN_TOKEN`.
+- `GET /api/admin/chats/:chatId`: loads a chat and messages for management review. Requires `ADMIN_TOKEN`.
+- `GET /api/admin/knowledge?status=all`: lists knowledge entries. Requires `ADMIN_TOKEN`.
+- `PATCH /api/admin/knowledge/:entryId`: updates knowledge entry status, title, or content. Requires `ADMIN_TOKEN`.
+- `GET /api/admin/review-runs`: lists review run history. Requires `ADMIN_TOKEN`.
+- `POST /api/admin/reviews/run`: manually triggers a review run. Requires `ADMIN_TOKEN`.
 
 ### Scheduled review workflow
 
-The review workflow is implemented as an idempotent backend route that can be called by a scheduler:
+The review workflow is implemented as an idempotent backend route and optional backend interval runner:
 
-1. Configure `REVIEW_RUN_TOKEN` in Render if the route should be protected.
+1. Configure `REVIEW_RUN_TOKEN` in Render if the public review route should be protected.
 2. Configure an external scheduler or Render cron-style service to call `POST /api/reviews/run`.
-3. The run reads unreviewed chat messages, writes durable approved `knowledge_entries`, marks messages reviewed, and records the result in `review_runs`.
-4. Future AI responses include approved knowledge entries as additional Switchboard context.
+3. Or configure `REVIEW_RUN_INTERVAL_MS` to run reviews from the backend process at the chosen interval. Values below `60000` are ignored for safety.
+4. The run reads unreviewed chat messages, writes durable `pending_review` `knowledge_entries`, marks messages reviewed, and records the result in `review_runs`.
+5. An admin can approve or archive knowledge entries from `/admin.html`.
+6. Future AI responses include approved knowledge entries as additional Switchboard context.
 
 ## GitHub Actions / auto-deploy
 
