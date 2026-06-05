@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+- Improved the admin dashboard with searchable chat and knowledge lists, clearer loading and empty states, and visible admin-token handling guidance.
+- Added admin dashboard and database deployment checklists for Render/GitHub auto-deploy.
 - Updated the Switchboard Agent web app with a ChatGPT-inspired full-height sidebar, centered conversation stream, and rounded bottom composer.
 - Added a 40-second frontend refresh for status, chat lists, and active chat history.
 - Added protected admin routes and `/admin.html` backend management dashboard for chats, knowledge entries, and review runs.
