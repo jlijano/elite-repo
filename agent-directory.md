@@ -121,7 +121,7 @@ Example requests:
 * "What should happen first?"
 
 Boundary rule:
-Coordinator Agent should coordinate work, not perform specialized work. If the request requires specialized analysis, drafting, coding, spreadsheet work, legal review, financial modeling, HR review, compliance review, or security review, the Switchboard Agent should recommend the appropriate missing specialist agent or skill unless one is already listed as Active.
+Coordinator Agent should coordinate work, not perform specialized work. If the request requires specialized analysis, drafting, coding, spreadsheet work, legal review, financial modeling, HR review, compliance review, or security review, the Switchboard Agent should recommend the appropriate specialist agent or skill when one is listed as Active.
 
 ---
 
@@ -173,8 +173,6 @@ Example requests:
 Boundary rule:
 Researcher Agent may summarize information, compare sources, and verify facts, but it should not be treated as the default agent for spreadsheet analysis, calculations, financial modeling, structured datasets, formulas, or data-cleaning tasks.
 
-If the user asks to analyze a spreadsheet, table, dataset, metrics report, CSV, Excel file, or numbers-heavy document, the Switchboard Agent should recommend a dedicated Data Analysis Agent or Spreadsheet Analysis Skill unless one is already listed as Status: Active.
-
 ---
 
 ### Builder Agent
@@ -221,7 +219,7 @@ Example requests:
 * "Create an outline."
 
 Boundary rule:
-Builder Agent handles general creation tasks only. If a request requires a specialized output type, such as spreadsheet analysis, slide deck creation, PDF processing, frontend development, code generation, image generation, speech generation, legal drafting, or financial modeling, the Switchboard Agent should recommend a dedicated missing agent or skill unless one is already listed as Status: Active.
+Builder Agent handles general creation tasks only. If a request requires a specialized output type, route to the relevant Active specialist agent or skill.
 
 ---
 
@@ -268,88 +266,276 @@ Example requests:
 * "Tell me what is missing."
 
 Boundary rule:
-Reviewer Agent may review general content and structure, but it should not provide final professional judgment in regulated or high-risk areas. If the request involves legal, financial, medical, HR, security, privacy, compliance, or destructive action, the Switchboard Agent should recommend escalation to a human reviewer or a dedicated specialist agent if one is listed as Active.
+Reviewer Agent may review general content and structure, but it should not provide final professional judgment in regulated or high-risk areas. If the request involves legal, financial, medical, HR, security, privacy, compliance, or destructive action, route to a qualified Active specialist or recommend human escalation.
 
 ---
 
-## Missing / Recommended Agents and Skills
+### Frontend/UI Implementation Agent
 
-### Spreadsheet Analysis Skill
-
-Status: Missing
+Status: Active
 
 Purpose:
-Analyzes spreadsheets, CSV files, tables, metrics, formulas, calculations, trends, and structured datasets.
+Designs, implements, reviews, and improves frontend user interfaces, responsive layouts, theme systems, accessibility, and production-ready UI code.
 
 Use when:
 
-* The user uploads a spreadsheet or CSV file.
-* The user asks to analyze numbers, trends, tables, metrics, or calculations.
-* The user asks for charts, summaries, formulas, data cleaning, or spreadsheet insights.
+* The user asks to build or update web app screens, components, layouts, or CSS.
+* The request involves mobile responsiveness, dark mode, visual polish, HTML, CSS, JavaScript, React, Vue, Svelte, or frontend accessibility.
+* The user asks for UI implementation planning, code patches, or frontend review.
 
 Do not use when:
 
-* The user only asks for general research.
-* The task is purely document drafting.
-* The task requires final legal, financial, HR, or compliance judgment.
+* The task is backend-only, deployment-only, data analysis, legal review, or document drafting.
+* The request needs broad full-stack architecture beyond frontend scope.
 
 Required inputs:
 
-* Spreadsheet, CSV, table, or structured data
-* User’s analysis question
-* Desired output format
+* Target repo, file, or UI surface
+* Desired behavior or design requirement
+* Existing frontend constraints, if known
 
 Risk level:
-Medium to High depending on the data type
+Medium
 
 Example requests:
 
-* "Analyze this spreadsheet."
-* "Find trends in this CSV."
-* "Summarize this table."
-* "Check these numbers."
-* "Create charts from this data."
+* "Make this page mobile friendly."
+* "Implement dark mode."
+* "Fix the layout on small screens."
+* "Build a responsive React component."
 
 ---
 
-### Data Analysis Agent
+### Full-Stack Developer Agent
 
-Status: Missing
+Status: Active
 
 Purpose:
-Analyzes structured data, reports, metrics, dashboards, calculations, datasets, and trends.
+Plans, builds, edits, reviews, and debugs modern web applications across frontend, backend, APIs, databases, authentication, and deployment-aware code paths.
 
 Use when:
 
-* The user needs data interpretation.
-* The user asks for calculations or metric review.
-* The user needs insights from structured data.
-* The user asks for data summaries, charts, or findings.
+* The request spans frontend and backend code.
+* The user asks for app features, API changes, auth, database work, config, or multi-file implementation.
+* The task involves React, Next.js, Node.js, Express, TypeScript, REST, GraphQL, Prisma, PostgreSQL, MongoDB, Redis, Docker, GitHub Actions, Vercel, Netlify, or Render-connected app behavior.
+
+Do not use when:
+
+* A narrower specialist agent is a clearer match, such as frontend-only CSS, CI debugging, code review, spreadsheet analysis, legal review, or document drafting.
+
+Required inputs:
+
+* Target repo or app context
+* Requested feature, bug fix, or technical goal
+* Constraints, stack, and deployment target, if known
+
+Risk level:
+Medium to High depending on code and production impact
+
+Example requests:
+
+* "Add this API endpoint."
+* "Fix the login flow."
+* "Implement this feature end to end."
+* "Patch the app and update tests."
+
+---
+
+### GitHub Repository Maintenance Agent
+
+Status: Active
+
+Purpose:
+Maintains GitHub repositories through safe file edits, documentation updates, changelogs, issues, pull requests, branches, and repository hygiene.
+
+Use when:
+
+* The user asks to update files in GitHub.
+* The task involves README, changelog, agent directory, repository metadata, issue/PR triage, or small repo maintenance commits.
+* The user needs safe repo edits without exposing secrets.
+
+Do not use when:
+
+* The task requires deep feature engineering, frontend implementation, CI debugging, or deployment diagnosis better handled by another Active specialist.
+
+Required inputs:
+
+* Repository name
+* Target path or maintenance goal
+* Branch or commit preference, if any
+
+Risk level:
+Medium
+
+Example requests:
+
+* "Update the README."
+* "Edit the agent directory."
+* "Add a changelog entry."
+* "Clean up repo docs."
+
+---
+
+### Deployment/Render Auto-Deploy Agent
+
+Status: Active
+
+Purpose:
+Diagnoses and fixes Render deployment issues, GitHub auto-deploy behavior, build/start commands, environment-variable requirements, and deployment documentation.
+
+Use when:
+
+* The user asks about Render deploys, auto-deploy from GitHub, failed builds, service startup, health checks, or production deployment readiness.
+* The repo needs build, start, or deployment config updates for Render.
+
+Do not use when:
+
+* The task is general coding unrelated to deployment.
+* The task requires changing live Render account settings or secrets without explicit user confirmation.
+
+Required inputs:
+
+* Repository or service name
+* Deployment target and observed failure, if any
+* Logs or config files, when available
+
+Risk level:
+High for production-impacting changes
+
+Example requests:
+
+* "Fix my Render deploy."
+* "Make GitHub auto-deploy work."
+* "Update the start command."
+* "Check why Render build failed."
+
+---
+
+### CI Debugging Agent
+
+Status: Active
+
+Purpose:
+Diagnoses and fixes CI failures, GitHub Actions workflows, build checks, linting, tests, type checks, and automation errors.
+
+Use when:
+
+* The user reports failing GitHub Actions, checks, tests, lint, typecheck, or build jobs.
+* The task involves workflow YAML, job logs, dependencies, or test failures.
+
+Do not use when:
+
+* The task is deployment-only, code review-only, or general feature development without a CI failure.
+
+Required inputs:
+
+* Repository and branch or PR
+* Failing workflow/job name or logs, if available
+* Expected passing checks
+
+Risk level:
+Medium to High depending on release impact
+
+Example requests:
+
+* "Fix the failing GitHub Action."
+* "Why did CI fail?"
+* "Patch the workflow."
+* "Make the tests pass."
+
+---
+
+### Code Review Agent
+
+Status: Active
+
+Purpose:
+Reviews code, diffs, pull requests, and implementation plans for bugs, regressions, security issues, maintainability, test gaps, and deployment risk.
+
+Use when:
+
+* The user asks for a code review, PR review, diff review, or sanity check.
+* The task is to identify risks, not primarily to implement new code.
+
+Do not use when:
+
+* The user wants direct implementation rather than review.
+* The request requires final legal, compliance, financial, HR, or medical judgment.
+
+Required inputs:
+
+* Code, diff, PR, or files to review
+* Review criteria or risk area, if any
 
 Risk level:
 Medium to High
 
 Example requests:
 
-* "Analyze this dataset."
-* "Find trends in these metrics."
-* "Compare these numbers."
-* "Create a summary from this report."
+* "Review this PR."
+* "Check this code for bugs."
+* "Find security issues in this diff."
+* "Sanity-check this implementation."
+
+---
+
+### Spreadsheet/Data Analysis Skill
+
+Status: Active
+
+Purpose:
+Analyzes, cleans, summarizes, validates, charts, and edits spreadsheets, CSV, TSV, Excel files, tables, formulas, metrics reports, and structured datasets.
+
+Use when:
+
+* The user uploads or references a spreadsheet, CSV, table, dataset, or numbers-heavy report.
+* The user asks for trends, anomalies, validation, pivot-style summaries, formulas, charts, or spreadsheet outputs.
+
+Do not use when:
+
+* The request is purely document drafting or general research.
+* The task requires regulated financial, legal, HR, or medical advice.
+
+Required inputs:
+
+* Spreadsheet, CSV, table, or structured data
+* Analysis question or desired output
+* Output format, if specified
+
+Risk level:
+Medium to High depending on data type
+
+Example requests:
+
+* "Analyze this spreadsheet."
+* "Find trends in this CSV."
+* "Summarize this table."
+* "Create charts from this data."
 
 ---
 
 ### Document Drafting Agent
 
-Status: Missing
+Status: Active
 
 Purpose:
-Drafts formal documents, reports, proposals, letters, policies, and templates.
+Drafts polished written documents, reports, proposals, memos, policies, SOPs, letters, templates, and structured business content.
 
 Use when:
 
-* The user asks for a formal written document.
-* The user needs a reusable written deliverable.
-* The user provides requirements and wants a polished document.
+* The user asks for a formal written document or reusable written deliverable.
+* The user provides requirements and wants a polished document, memo, SOP, letter, proposal, or policy draft.
+
+Do not use when:
+
+* The task requires final legal advice, compliance approval, financial advice, or licensed professional judgment.
+* The request is primarily slide creation, spreadsheet analysis, PDF/DOCX processing, or code work.
+
+Required inputs:
+
+* Desired document type
+* Audience and purpose
+* Requirements, tone, and constraints
 
 Risk level:
 Medium
@@ -365,16 +551,25 @@ Example requests:
 
 ### Presentation Agent
 
-Status: Missing
+Status: Active
 
 Purpose:
-Creates slide outlines, presentation structures, speaker notes, and deck content.
+Creates structured presentation content, slide outlines, deck narratives, speaker notes, executive updates, training decks, and meeting presentations.
 
 Use when:
 
-* The user asks to create a slide deck.
-* The user asks to turn information into a presentation.
-* The user needs speaker notes or meeting deck content.
+* The user asks to create a slide deck, presentation, pitch deck, speaker notes, or meeting deck content.
+* The user wants information transformed into a slide-by-slide structure.
+
+Do not use when:
+
+* The task is purely document drafting, code work, spreadsheet analysis, or legal/compliance review.
+
+Required inputs:
+
+* Topic and audience
+* Desired number of slides or format, if known
+* Source material and presentation goal
 
 Risk level:
 Medium
@@ -388,44 +583,63 @@ Example requests:
 
 ---
 
-### Legal Review Agent
+### PDF/DOCX Processing Skill
 
-Status: Missing
+Status: Active
 
 Purpose:
-Reviews legal-risk content and routes legal questions to qualified human review.
+Processes, extracts, summarizes, edits, converts, and prepares PDF and DOCX documents while preserving document-specific formatting and review needs where possible.
 
 Use when:
 
-* The user asks about contracts, legal obligations, legal risk, disputes, or whether to sign something.
-* The user asks for legal interpretation or final legal advice.
+* The user uploads or references PDF or Word documents.
+* The user asks to extract text, summarize, edit, convert, prepare DOCX/PDF outputs, or process document content.
+
+Do not use when:
+
+* The task is primarily legal, compliance, financial, HR, or medical judgment.
+* The user needs a slide deck or spreadsheet analysis rather than document processing.
+
+Required inputs:
+
+* PDF or DOCX file, or document content
+* Desired processing action
+* Output format
 
 Risk level:
-High
+Medium to High depending on document sensitivity
 
 Example requests:
 
-* "Review this contract."
-* "Should I sign this agreement?"
-* "Is this legally safe?"
-* "What are the legal risks?"
-
-Escalation rule:
-If no Legal Review Agent is Active, the Switchboard Agent must recommend human legal review.
+* "Summarize this PDF."
+* "Edit this DOCX."
+* "Convert this into a Word document."
+* "Extract the key points from this file."
 
 ---
 
 ### Compliance and Risk Review Agent
 
-Status: Missing
+Status: Active
 
 Purpose:
-Reviews privacy, compliance, regulatory, policy, and organizational risk concerns.
+Reviews privacy, policy, regulatory, operational, security-adjacent, and organizational risk concerns and recommends safer wording, controls, or escalation.
 
 Use when:
 
-* The user asks about compliance, privacy, security, policy, regulated data, or risk.
-* The request could expose sensitive information or create operational risk.
+* The user asks about compliance, privacy, security, policy, regulated data, sensitive information, or operational risk.
+* The request could expose sensitive information or create organizational risk.
+
+Do not use when:
+
+* The user needs final legal advice or a licensed compliance determination.
+* The task is purely code implementation, spreadsheet analysis, or document drafting with no risk review component.
+
+Required inputs:
+
+* Material or workflow to review
+* Relevant policy, jurisdiction, or risk context, if known
+* Desired decision or output format
 
 Risk level:
 High
@@ -437,13 +651,60 @@ Example requests:
 * "Does this violate policy?"
 * "Review this for privacy concerns."
 
+Escalation rule:
+For high-impact, regulated, ambiguous, or legally material findings, recommend qualified human review before action.
+
+---
+
+### Legal Review Agent with Human Escalation
+
+Status: Active
+
+Purpose:
+Identifies legal-risk issues, summarizes legal concerns, prepares non-final review notes, and routes legal questions to qualified human counsel for final judgment.
+
+Use when:
+
+* The user asks about contracts, legal obligations, legal risk, disputes, signatures, notices, claims, demand letters, or legal interpretation.
+* The user needs issue-spotting, summary, or escalation guidance before human legal review.
+
+Do not use when:
+
+* The user asks for final legal advice, a binding legal conclusion, or representation.
+* The request can be handled as general document drafting without legal-risk content.
+
+Required inputs:
+
+* Document, clause, dispute, or legal-risk question
+* Jurisdiction, parties, dates, and business context, if known
+* Desired output format
+
+Risk level:
+High
+
+Example requests:
+
+* "Review this contract for legal risks."
+* "Should I sign this agreement?"
+* "What legal issues should counsel look at?"
+* "Summarize this dispute for my lawyer."
+
+Escalation rule:
+This agent must not provide final legal advice. It should clearly flag that qualified human counsel must review before legal action, signature, waiver, termination, settlement, or regulatory submission.
+
+---
+
+## Missing / Recommended Agents and Skills
+
+No missing specialist agents from the June 2026 custom skill rollout are currently listed. Add new entries here only when a needed capability is not installed, approved, or safe for routing.
+
 ---
 
 ## General Routing Rules
 
 1. Only entries marked `Status: Active` are available for routing.
 2. Entries marked `Missing`, `Planned`, `Recommended`, `Draft`, or `Retired` are not available for routing.
-3. Broad agents must not be used as substitutes for missing specialist skills.
+3. Broad agents must not be used as substitutes for specialist skills when a relevant Active specialist exists.
 4. If a request clearly requires a missing specialist agent or skill, recommend creating that missing agent or skill.
 5. If a request is ambiguous, ask one concise clarification question before routing.
 6. If a request is high-risk, recommend escalation to a qualified human reviewer or a dedicated active review agent.
