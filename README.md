@@ -1,6 +1,6 @@
 # elite-repo
 
-This repository contains the core project documentation for agent coordination, routing, memory handling, and handoffs.
+This repository contains the core project documentation for agent coordination, routing, memory handling, handoffs, and the Switchboard Agent web app.
 
 ## Purpose
 
@@ -13,8 +13,14 @@ The `web/` directory contains a Render-ready Express app that serves a plain HTM
 ### Features
 
 - Chat interface backed by the `/api/chat` endpoint.
+- Separate chat sessions with New Chat behavior so conversations do not overlap.
+- Persistent message storage with `chat_id`, `role`, `content`, sanitized `context`, review state, and timestamps.
+- Optional PostgreSQL support through `DATABASE_URL`; the app uses storage-only in-memory mode when no database URL is configured.
+- Storage-only chat behavior when `OPENAI_API_KEY` is missing, including a friendly pending-review assistant response.
+- Durable knowledge entries produced by review runs and reused in future AI context when approved.
 - Agent Directory status indicator backed by the `/api/status` endpoint.
-- Responsive mobile layout with small-screen chat header wrapping, full-height mobile viewport support, safe-area spacing, and compact composer controls.
+- Render health check support through `/health`.
+- Responsive mobile layout with small-screen chat header wrapping, full-height mobile viewport support, safe-area spacing, compact composer controls, and mobile New Chat access.
 - Light and dark mode toggle in the chat header.
 - Theme preference stored in browser `localStorage` under `switchboard-theme`; if no preference exists, the app uses the visitor's `prefers-color-scheme` system setting.
 
@@ -27,11 +33,53 @@ From the `web/` directory:
 3. Run validation with `npm run check`.
 4. Open the local server URL shown in the terminal.
 
-The chat endpoint requires `OPENAI_API_KEY` in the environment. `OPENAI_MODEL` is optional and defaults to `gpt-4.1-mini`.
+`OPENAI_API_KEY` is optional. When it is missing, messages are still stored and the app returns a pending-review response. `OPENAI_MODEL` is optional and defaults to `gpt-4.1-mini`.
+
+For persistent PostgreSQL storage, set `DATABASE_URL`. The server creates these tables automatically at startup when PostgreSQL is configured:
+
+- `chats`
+- `chat_messages`
+- `knowledge_entries`
+- `review_runs`
+
+Without `DATABASE_URL`, the app starts in in-memory storage mode for local testing and storage-only operation.
+
+### Environment variables
+
+- `DATABASE_URL`: optional PostgreSQL connection string for persistent storage.
+- `DATABASE_SSL`: optional. Set to `true` only when the PostgreSQL connection requires SSL.
+- `OPENAI_API_KEY`: optional. Enables AI responses when present.
+- `OPENAI_MODEL`: optional. Defaults to `gpt-4.1-mini`.
+- `REVIEW_RUN_TOKEN`: optional. When set, `/api/reviews/run` requires the token through `x-review-token` or `Authorization: Bearer ...`.
+
+Do not commit secrets, API keys, deploy hooks, database URLs, passwords, session cookies, or Render credentials. Configure secrets only in Render environment variables or another approved secret store.
+
+### API routes
+
+- `GET /health`: Render-compatible health check.
+- `GET /api/status`: returns directory, AI, and storage availability.
+- `POST /api/chats`: creates a chat session.
+- `GET /api/chats`: lists recent chat sessions.
+- `GET /api/chats/:chatId`: loads a chat and its message history.
+- `POST /api/chats/:chatId/messages`: stores a message for a chat.
+- `POST /api/chat`: stores a user message, attempts an AI response when available, and stores the assistant response.
+- `GET /api/knowledge?status=approved`: reads durable knowledge entries.
+- `POST /api/reviews/run`: records a review run, reads unreviewed messages, creates approved knowledge entries, and marks messages reviewed.
+
+### Scheduled review workflow
+
+The review workflow is implemented as an idempotent backend route that can be called by a scheduler:
+
+1. Configure `REVIEW_RUN_TOKEN` in Render if the route should be protected.
+2. Configure an external scheduler or Render cron-style service to call `POST /api/reviews/run`.
+3. The run reads unreviewed chat messages, writes durable approved `knowledge_entries`, marks messages reviewed, and records the result in `review_runs`.
+4. Future AI responses include approved knowledge entries as additional Switchboard context.
 
 ## GitHub Actions / auto-deploy
 
 The `Web checks` workflow runs on pull requests targeting `main` and on pushes to `main`. It installs the `web/` dependencies and runs `npm run check` so JavaScript syntax validation happens in GitHub even when a local agent environment cannot clone the repository directly.
+
+Render deployment should happen through GitHub-based auto-deploy from `main`. Do not request, store, or use Render login credentials. If a Render build fails, use the Render build logs to diagnose and fix repository code through GitHub.
 
 ## Documentation Maintenance Rule
 
