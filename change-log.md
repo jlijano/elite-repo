@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+- Expanded the admin dashboard sidebar with Login, Chat Review, User Management, File Management, Logs, Files Management, and Logout navigation.
+- Added honest placeholder admin sections for user and broader file management where backend endpoints are not configured yet.
 - Restyled the admin dashboard so it shares the Switchboard chat UI shell, theme tokens, dark/light mode behavior, and denser operational layout.
 - Added chat archiving so users can hide finished chats without deleting stored message history.
 - Added text file attachments in the chat composer, including selected-file chips, size/count limits, storage in message context, and AI context inclusion.
