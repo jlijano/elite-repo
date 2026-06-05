@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+- Improved the admin dashboard with searchable chat and knowledge lists, clearer loading and empty states, and visible admin-token handling guidance.
+- Added admin dashboard and database deployment checklists for Render/GitHub auto-deploy.
 - Removed inactive chat UI controls for search, library, apps, sidebar collapse, attachments, and voice input so the interface only shows wired behavior.
 - Added focused backend integration tests for health/status, chat storage, `/api/chat` storage-only fallback, review route protection, admin auth, review runs, and knowledge approval.
 - Expanded `routing-rules.md` so it aligns with the Active agents, specialist routing map, risk escalation rules, and handoff format in `agent-directory.md`.
