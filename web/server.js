@@ -193,32 +193,42 @@ function createStore() {
         const runId = makeId();
         await pool.query("INSERT INTO review_runs (id, status) VALUES ($1, 'running')", [runId]);
         try {
-          const result = await pool.query(
-            "SELECT m.id, m.chat_id, m.role, m.content, m.created_at, c.title FROM chat_messages m JOIN chats c ON c.id = m.chat_id WHERE m.reviewed = FALSE ORDER BY m.created_at ASC LIMIT 200"
-          );
-          const groups = groupMessagesByChat(result.rows.map(rowMessageWithTitle));
-          let entriesCreated = 0;
-          for (const group of groups) {
-            const sourceIds = group.messages.map((message) => message.id);
-            const content = buildKnowledgeContent(group);
-            if (!content) {
-              continue;
-            }
-            await pool.query(
-              "INSERT INTO knowledge_entries (id, title, content, status, source_chat_id, source_message_ids, approved_at) VALUES ($1, $2, $3, 'approved', $4, $5, NOW())",
-              [makeId(), `Reviewed chat: ${group.title}`, content, group.chatId, sourceIds]
+          const client = await pool.connect();
+          try {
+            await client.query("BEGIN");
+            const result = await client.query(
+              "SELECT m.id, m.chat_id, m.role, m.content, m.created_at, c.title FROM chat_messages m JOIN chats c ON c.id = m.chat_id WHERE m.reviewed = FALSE ORDER BY m.created_at ASC LIMIT 200"
             );
-            entriesCreated += 1;
+            const groups = groupMessagesByChat(result.rows.map(rowMessageWithTitle));
+            let entriesCreated = 0;
+            for (const group of groups) {
+              const sourceIds = group.messages.map((message) => message.id);
+              const content = buildKnowledgeContent(group);
+              if (!content) {
+                continue;
+              }
+              await client.query(
+                "INSERT INTO knowledge_entries (id, title, content, status, source_chat_id, source_message_ids, approved_at) VALUES ($1, $2, $3, 'approved', $4, $5, NOW())",
+                [makeId(), `Reviewed chat: ${group.title}`, content, group.chatId, sourceIds]
+              );
+              entriesCreated += 1;
+            }
+            const messageIds = result.rows.map((row) => row.id);
+            if (messageIds.length > 0) {
+              await client.query("UPDATE chat_messages SET reviewed = TRUE WHERE id = ANY($1::uuid[])", [messageIds]);
+            }
+            await client.query("COMMIT");
+            const completed = await pool.query(
+              "UPDATE review_runs SET status = 'completed', finished_at = NOW(), messages_reviewed = $2, knowledge_entries_created = $3 WHERE id = $1 RETURNING *",
+              [runId, messageIds.length, entriesCreated]
+            );
+            return rowReviewRun(completed.rows[0]);
+          } catch (error) {
+            await client.query("ROLLBACK").catch(() => {});
+            throw error;
+          } finally {
+            client.release();
           }
-          const messageIds = result.rows.map((row) => row.id);
-          if (messageIds.length > 0) {
-            await pool.query("UPDATE chat_messages SET reviewed = TRUE WHERE id = ANY($1::uuid[])", [messageIds]);
-          }
-          const completed = await pool.query(
-            "UPDATE review_runs SET status = 'completed', finished_at = NOW(), messages_reviewed = $2, knowledge_entries_created = $3 WHERE id = $1 RETURNING *",
-            [runId, messageIds.length, entriesCreated]
-          );
-          return rowReviewRun(completed.rows[0]);
         } catch (error) {
           const failed = await pool.query(
             "UPDATE review_runs SET status = 'failed', finished_at = NOW(), error = $2 WHERE id = $1 RETURNING *",
@@ -573,6 +583,8 @@ app.post("/api/reviews/run", async (req, res) => {
 
 app.post("/api/chat", async (req, res) => {
   let chatId = req.body?.chatId;
+  let userMessageSaved = false;
+  let knowledge = null;
   try {
     const { message, history } = req.body || {};
 
@@ -589,7 +601,8 @@ app.post("/api/chat", async (req, res) => {
     }
 
     const userMessage = await db.saveMessage(chatId, "user", cleanMessage, { source: "api/chat" });
-    const knowledge = readKnowledgeFiles();
+    userMessageSaved = Boolean(userMessage);
+    knowledge = readKnowledgeFiles();
 
     if (!process.env.OPENAI_API_KEY) {
       const assistantMessage = await db.saveMessage(chatId, "assistant", pendingReviewReply, {
@@ -645,19 +658,27 @@ app.post("/api/chat", async (req, res) => {
       storageMode: db.mode
     });
   } catch (error) {
-    const safeMessage = "The Switchboard Agent could not generate an AI response right now. Your message was saved for review.";
+    const safeMessage = userMessageSaved
+      ? "The Switchboard Agent could not generate an AI response right now. Your message was saved for review."
+      : "The Switchboard Agent could not save your message right now. Please try again.";
+    let assistantFallbackSaved = false;
     try {
-      if (chatId) {
+      if (chatId && userMessageSaved) {
         await db.saveMessage(chatId, "assistant", safeMessage, { aiError: true, pendingReview: true });
+        assistantFallbackSaved = true;
       }
     } catch (saveError) {
       console.error("Failed to save AI error fallback:", saveError.message);
     }
     console.error("Chat request failed:", error.message);
-    res.status(200).json({
+    res.status(userMessageSaved ? 200 : 503).json({
       chatId,
       reply: safeMessage,
-      pendingReview: true,
+      pendingReview: userMessageSaved,
+      messageSaved: userMessageSaved,
+      assistantFallbackSaved,
+      directoryAvailable: knowledge?.directoryAvailable,
+      filesLoaded: knowledge?.filesLoaded,
       aiAvailable: Boolean(process.env.OPENAI_API_KEY),
       storageMode: db.mode
     });
