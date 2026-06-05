@@ -2,6 +2,7 @@
 
 ## [Unreleased]
 
+- Fixed the admin dashboard cleanup so chat and knowledge search controls render, filtering works from cached dashboard data, selected chats stay highlighted, and loading/error states are shown during admin actions.
 - Expanded the admin dashboard sidebar with Login, Chat Review, User Management, File Management, Logs, Files Management, and Logout navigation.
 - Added honest placeholder admin sections for user and broader file management where backend endpoints are not configured yet.
 - Restyled the admin dashboard so it shares the Switchboard chat UI shell, theme tokens, dark/light mode behavior, and denser operational layout.
