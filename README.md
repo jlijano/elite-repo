@@ -24,6 +24,7 @@ The `web/` directory contains a Render-ready Express app that serves a plain HTM
 - Storage-only chat behavior when `OPENAI_API_KEY` is missing, including a friendly pending-review assistant response.
 - Durable knowledge entries produced by review runs as `pending_review` entries and reused in future AI context only after approval.
 - Backend management dashboard at `/admin.html` for inspecting chats, reviewing knowledge entries, running reviews, and checking review history.
+- Admin dashboard styling shares the chat UI shell, theme tokens, and persistent light/dark mode behavior for a consistent management experience.
 - Chat failure responses distinguish between saved messages awaiting review and storage failures that could not save the message.
 - Agent Directory status indicator backed by the `/api/status` endpoint.
 - Render health check support through `/health`.
