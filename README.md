@@ -14,6 +14,7 @@ The `web/` directory contains a Render-ready Express app that serves a plain HTM
 
 - Chat interface backed by the `/api/chat` endpoint.
 - ChatGPT-inspired full-height chat UI with a dark sidebar, centered conversation stream, rounded bottom composer, and responsive mobile layout.
+- Focused navigation that only exposes wired behavior: New Chat, saved chat sessions, agent status, theme switching, and message sending.
 - Separate chat sessions with New Chat behavior so conversations do not overlap.
 - Automatic 40-second refresh for status, chat list, and active chat history when the user is not composing a message.
 - Persistent message storage with `chat_id`, `role`, `content`, sanitized `context`, review state, and timestamps.
@@ -33,8 +34,9 @@ From the `web/` directory:
 
 1. Install dependencies with `npm install`.
 2. Start the app with `npm start`.
-3. Run validation with `npm run check`.
-4. Open the local server URL shown in the terminal.
+3. Run backend integration tests with `npm test`.
+4. Run full validation with `npm run check`.
+5. Open the local server URL shown in the terminal.
 
 `OPENAI_API_KEY` is optional. When it is missing, messages are still stored and the app returns a pending-review response. `OPENAI_MODEL` is optional and defaults to `gpt-4.1-mini`.
 
@@ -89,9 +91,21 @@ The review workflow is implemented as an idempotent backend route and optional b
 5. An admin can approve or archive knowledge entries from `/admin.html`.
 6. Future AI responses include approved knowledge entries as additional Switchboard context.
 
+### Test coverage
+
+`npm test` runs focused backend integration tests against the Express app in in-memory storage mode. The tests cover:
+
+- `/health` and `/api/status`.
+- Chat creation, message storage, sanitized context, and chat history loading.
+- `/api/chat` storage-only fallback when `OPENAI_API_KEY` is missing.
+- Protected review routes and review token enforcement.
+- Protected admin routes and admin token enforcement.
+- Review-run creation of pending knowledge entries.
+- Admin approval of knowledge entries and approved knowledge retrieval.
+
 ## GitHub Actions / auto-deploy
 
-The `Web checks` workflow runs on pull requests targeting `main` and on pushes to `main`. It installs the `web/` dependencies and runs `npm run check` so JavaScript syntax validation happens in GitHub even when a local agent environment cannot clone the repository directly.
+The `Web checks` workflow runs on pull requests targeting `main` and on pushes to `main`. It installs the `web/` dependencies and runs `npm run check`, which performs JavaScript syntax validation and backend integration tests in GitHub even when a local agent environment cannot clone the repository directly.
 
 Render deployment should happen through GitHub-based auto-deploy from `main`. Do not request, store, or use Render login credentials. If a Render build fails, use the Render build logs to diagnose and fix repository code through GitHub.
 
