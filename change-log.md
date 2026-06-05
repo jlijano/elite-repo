@@ -2,6 +2,7 @@
 
 ## [Unreleased]
 
+- Restyled the admin dashboard so it shares the Switchboard chat UI shell, theme tokens, dark/light mode behavior, and denser operational layout.
 - Added chat archiving so users can hide finished chats without deleting stored message history.
 - Added text file attachments in the chat composer, including selected-file chips, size/count limits, storage in message context, and AI context inclusion.
 - Added an additive `archived_at` chat schema field and archive API route.
