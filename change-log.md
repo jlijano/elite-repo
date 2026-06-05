@@ -2,6 +2,9 @@
 
 ## [Unreleased]
 
+- Added chat archiving so users can hide finished chats without deleting stored message history.
+- Added text file attachments in the chat composer, including selected-file chips, size/count limits, storage in message context, and AI context inclusion.
+- Added an additive `archived_at` chat schema field and archive API route.
 - Removed inactive chat UI controls for search, library, apps, sidebar collapse, attachments, and voice input so the interface only shows wired behavior.
 - Added focused backend integration tests for health/status, chat storage, `/api/chat` storage-only fallback, review route protection, admin auth, review runs, and knowledge approval.
 - Expanded `routing-rules.md` so it aligns with the Active agents, specialist routing map, risk escalation rules, and handoff format in `agent-directory.md`.
