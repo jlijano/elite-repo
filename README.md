@@ -104,6 +104,8 @@ The review workflow is implemented as an idempotent backend route and optional b
 - `/health` and `/api/status`.
 - Chat creation, message storage, sanitized context, and chat history loading.
 - `/api/chat` storage-only fallback when `OPENAI_API_KEY` is missing.
+- Chat archiving, hidden archived chats, and archived-chat write protection.
+- Text attachment storage and attachment secret redaction.
 - Protected review routes and review token enforcement.
 - Protected admin routes and admin token enforcement.
 - Review-run creation of pending knowledge entries.
