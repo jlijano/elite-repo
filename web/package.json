@@ -1,6 +1,6 @@
 {
   "name": "switchboard-agent-web",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Render-ready messaging app for the Switchboard Agent.",
   "main": "server.js",
   "scripts": {
@@ -11,7 +11,8 @@
     "cors": "^2.8.5",
     "dotenv": "^16.4.7",
     "express": "^4.21.2",
-    "openai": "^4.77.0"
+    "openai": "^4.77.0",
+    "pg": "^8.13.1"
   },
   "engines": {
     "node": ">=18"
