@@ -13,6 +13,7 @@ The `web/` directory contains a Render-ready Express app that serves a plain HTM
 ### Features
 
 - Chat interface backed by the `/api/chat` endpoint.
+- ChatGPT-inspired full-height chat UI with a dark sidebar, centered conversation stream, rounded bottom composer, and responsive mobile layout.
 - Separate chat sessions with New Chat behavior so conversations do not overlap.
 - Automatic 40-second refresh for status, chat list, and active chat history when the user is not composing a message.
 - Persistent message storage with `chat_id`, `role`, `content`, sanitized `context`, review state, and timestamps.
@@ -23,7 +24,6 @@ The `web/` directory contains a Render-ready Express app that serves a plain HTM
 - Chat failure responses distinguish between saved messages awaiting review and storage failures that could not save the message.
 - Agent Directory status indicator backed by the `/api/status` endpoint.
 - Render health check support through `/health`.
-- Responsive mobile layout with small-screen chat header wrapping, full-height mobile viewport support, safe-area spacing, compact composer controls, and mobile New Chat access.
 - Light and dark mode toggle in the chat header.
 - Theme preference stored in browser `localStorage` under `switchboard-theme`; if no preference exists, the app uses the visitor's `prefers-color-scheme` system setting.
 
