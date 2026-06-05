@@ -14,12 +14,18 @@ const newChatButton = document.getElementById("newChatButton");
 const mobileNewChatButton = document.getElementById("mobileNewChatButton");
 const chatList = document.getElementById("chatList");
 const currentChatTitle = document.getElementById("currentChatTitle");
+const filePickerButton = document.getElementById("filePickerButton");
+const fileInput = document.getElementById("fileInput");
+const attachmentTray = document.getElementById("attachmentTray");
 
 const themeStorageKey = "switchboard-theme";
 const chatStorageKey = "switchboard-current-chat";
 const refreshIntervalMs = 40000;
+const maxAttachmentFiles = 4;
+const maxAttachmentBytes = 180 * 1024;
 let currentChatId = null;
 let chatHistory = [];
+let selectedAttachments = [];
 let isSending = false;
 let typingEl = null;
 
@@ -40,6 +46,14 @@ function getStored(key) {
     return localStorage.getItem(key);
   } catch (error) {
     return null;
+  }
+}
+
+function removeStored(key) {
+  try {
+    localStorage.removeItem(key);
+  } catch (error) {
+    return;
   }
 }
 
@@ -87,6 +101,17 @@ function formatTime(value) {
   return new Intl.DateTimeFormat(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }).format(new Date(value));
 }
 
+function formatBytes(value) {
+  if (!Number.isFinite(value)) return "";
+  if (value < 1024) return `${value} B`;
+  if (value < 1024 * 1024) return `${Math.round(value / 1024)} KB`;
+  return `${(value / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function attachmentNames(attachments = []) {
+  return attachments.map((attachment) => attachment.name).join(", ");
+}
+
 function setStatus({ directoryAvailable, filesLoaded: loadedFiles, error, aiAvailable, storageAvailable, storageMode } = {}) {
   const compactDot = document.querySelector(".compact-status .status-dot");
   statusDot.classList.remove("online", "error");
@@ -124,6 +149,19 @@ function scrollToBottom() {
   messagesEl.scrollTop = messagesEl.scrollHeight;
 }
 
+function appendAttachmentList(parent, attachments = []) {
+  if (!attachments.length) return;
+  const list = document.createElement("div");
+  list.className = "message-attachments";
+  for (const attachment of attachments) {
+    const item = document.createElement("span");
+    item.className = "message-attachment";
+    item.textContent = `${attachment.name}${attachment.size ? ` · ${formatBytes(Number(attachment.size))}` : ""}`;
+    list.appendChild(item);
+  }
+  parent.appendChild(list);
+}
+
 function createMessageElement(role, content, options = {}) {
   const article = document.createElement("article");
   article.className = `message ${role}`;
@@ -138,6 +176,7 @@ function createMessageElement(role, content, options = {}) {
   const bubble = document.createElement("div");
   bubble.className = "bubble";
   bubble.textContent = content;
+  appendAttachmentList(bubble, options.attachments || []);
   if (options.createdAt) {
     const time = document.createElement("time");
     time.dateTime = options.createdAt;
@@ -158,7 +197,8 @@ function renderMessages(messages = []) {
   renderWelcome();
   chatHistory = [];
   for (const message of messages) {
-    messagesEl.appendChild(createMessageElement(message.role, message.content, { createdAt: message.createdAt }));
+    const attachments = Array.isArray(message.context?.attachments) ? message.context.attachments : [];
+    messagesEl.appendChild(createMessageElement(message.role, message.content, { createdAt: message.createdAt, attachments }));
     if (message.role === "user" || message.role === "assistant") chatHistory.push({ role: message.role, content: message.content });
   }
   scrollToBottom();
@@ -187,12 +227,63 @@ function setSending(nextValue) {
   isSending = nextValue;
   inputEl.disabled = nextValue;
   sendButton.disabled = nextValue;
+  filePickerButton.disabled = nextValue;
+  fileInput.disabled = nextValue;
   sendButton.textContent = nextValue ? "..." : "↑";
 }
 
 function resizeInput() {
   inputEl.style.height = "auto";
   inputEl.style.height = `${Math.min(inputEl.scrollHeight, 160)}px`;
+}
+
+function renderSelectedAttachments() {
+  attachmentTray.innerHTML = "";
+  attachmentTray.hidden = selectedAttachments.length === 0;
+  for (const attachment of selectedAttachments) {
+    const chip = document.createElement("span");
+    chip.className = "attachment-chip";
+    chip.innerHTML = `<span>${escapeHtml(attachment.name)}</span><small>${formatBytes(attachment.size)}</small>`;
+    const removeButton = document.createElement("button");
+    removeButton.type = "button";
+    removeButton.className = "remove-attachment";
+    removeButton.setAttribute("aria-label", `Remove ${attachment.name}`);
+    removeButton.textContent = "×";
+    removeButton.addEventListener("click", () => {
+      selectedAttachments = selectedAttachments.filter((item) => item !== attachment);
+      renderSelectedAttachments();
+    });
+    chip.appendChild(removeButton);
+    attachmentTray.appendChild(chip);
+  }
+}
+
+async function addFiles(files) {
+  const availableSlots = maxAttachmentFiles - selectedAttachments.length;
+  const nextFiles = [...files].slice(0, Math.max(availableSlots, 0));
+  if (!nextFiles.length) {
+    addMessage("assistant", `You can attach up to ${maxAttachmentFiles} files per message.`, { error: true, skipHistory: true });
+    return;
+  }
+
+  for (const file of nextFiles) {
+    if (file.size > maxAttachmentBytes) {
+      addMessage("assistant", `${file.name} is too large. Attach text files up to ${formatBytes(maxAttachmentBytes)}.`, { error: true, skipHistory: true });
+      continue;
+    }
+    try {
+      const content = await file.text();
+      if (!content.trim()) {
+        addMessage("assistant", `${file.name} does not contain readable text.`, { error: true, skipHistory: true });
+        continue;
+      }
+      selectedAttachments.push({ name: file.name, type: file.type, size: file.size, content });
+    } catch (error) {
+      addMessage("assistant", `${file.name} could not be read as text.`, { error: true, skipHistory: true });
+    }
+  }
+  fileInput.value = "";
+  renderSelectedAttachments();
 }
 
 function renderChatList(chats = []) {
@@ -202,12 +293,28 @@ function renderChatList(chats = []) {
     return;
   }
   for (const chat of chats) {
+    const row = document.createElement("div");
+    row.className = `chat-list-row${chat.id === currentChatId ? " active" : ""}`;
+
     const button = document.createElement("button");
     button.type = "button";
-    button.className = `chat-list-item${chat.id === currentChatId ? " active" : ""}`;
+    button.className = "chat-list-item";
     button.innerHTML = `<span>${escapeHtml(chat.title || "New chat")}</span><small>${chat.messageCount || 0} message${chat.messageCount === 1 ? "" : "s"}</small>`;
     button.addEventListener("click", () => loadChat(chat.id));
-    chatList.appendChild(button);
+
+    const archiveButton = document.createElement("button");
+    archiveButton.type = "button";
+    archiveButton.className = "archive-chat-button";
+    archiveButton.setAttribute("aria-label", `Archive ${chat.title || "chat"}`);
+    archiveButton.textContent = "Archive";
+    archiveButton.addEventListener("click", (event) => {
+      event.stopPropagation();
+      archiveChat(chat.id).catch((error) => addMessage("assistant", error.message, { error: true, skipHistory: true }));
+    });
+
+    row.appendChild(button);
+    row.appendChild(archiveButton);
+    chatList.appendChild(row);
   }
 }
 
@@ -242,6 +349,21 @@ async function createChat() {
   await loadChats();
 }
 
+async function archiveChat(chatId) {
+  await requestJson(`/api/chats/${encodeURIComponent(chatId)}/archive`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ archived: true })
+  });
+  const chats = await loadChats();
+  if (chatId === currentChatId) {
+    removeStored(chatStorageKey);
+    currentChatId = null;
+    if (chats[0]) await loadChat(chats[0].id);
+    else await createChat();
+  }
+}
+
 async function loadChat(chatId) {
   const data = await requestJson(`/api/chats/${encodeURIComponent(chatId)}`);
   saveCurrentChat(data.chat.id);
@@ -263,7 +385,7 @@ async function refreshCurrentSession() {
   const chats = await loadChats();
   const active = chats.find((chat) => chat.id === currentChatId);
   if (active) currentChatTitle.textContent = active.title || "New chat";
-  if (currentChatId && !isSending && !inputEl.value.trim() && document.visibilityState === "visible") {
+  if (currentChatId && !isSending && !inputEl.value.trim() && !selectedAttachments.length && document.visibilityState === "visible") {
     const data = await requestJson(`/api/chats/${encodeURIComponent(currentChatId)}`);
     renderMessages(data.chat.messages || []);
   }
@@ -271,11 +393,15 @@ async function refreshCurrentSession() {
 
 async function sendMessage() {
   const message = inputEl.value.trim();
-  if (!message || isSending) return;
+  const attachments = selectedAttachments.slice();
+  if ((!message && !attachments.length) || isSending) return;
   if (!currentChatId) await createChat();
 
-  addMessage("user", message, { createdAt: new Date().toISOString() });
+  const displayMessage = message || `Uploaded ${attachments.length} file${attachments.length === 1 ? "" : "s"}: ${attachmentNames(attachments)}`;
+  addMessage("user", displayMessage, { createdAt: new Date().toISOString(), attachments });
   inputEl.value = "";
+  selectedAttachments = [];
+  renderSelectedAttachments();
   resizeInput();
   setSending(true);
   showTyping();
@@ -284,7 +410,7 @@ async function sendMessage() {
     const data = await requestJson("/api/chat", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ chatId: currentChatId, message, history: chatHistory.slice(0, -1) })
+      body: JSON.stringify({ chatId: currentChatId, message, attachments, history: chatHistory.slice(0, -1) })
     });
     hideTyping();
     if (data.chatId && data.chatId !== currentChatId) saveCurrentChat(data.chatId);
@@ -314,10 +440,13 @@ inputEl.addEventListener("keydown", (event) => {
   }
 });
 inputEl.addEventListener("input", resizeInput);
+filePickerButton.addEventListener("click", () => fileInput.click());
+fileInput.addEventListener("change", () => addFiles(fileInput.files).catch((error) => addMessage("assistant", error.message, { error: true, skipHistory: true })));
 newChatButton.addEventListener("click", () => createChat().catch((error) => addMessage("assistant", error.message, { error: true, skipHistory: true })));
 mobileNewChatButton.addEventListener("click", () => createChat().catch((error) => addMessage("assistant", error.message, { error: true, skipHistory: true })));
 
 initializeThemeToggle();
+renderSelectedAttachments();
 loadStatus();
 ensureChatSession().catch((error) => {
   renderWelcome();
