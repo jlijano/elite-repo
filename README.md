@@ -14,9 +14,11 @@ The `web/` directory contains a Render-ready Express app that serves a plain HTM
 
 - Chat interface backed by the `/api/chat` endpoint.
 - ChatGPT-inspired full-height chat UI with a dark sidebar, centered conversation stream, rounded bottom composer, and responsive mobile layout.
-- Focused navigation that only exposes wired behavior: New Chat, saved chat sessions, agent status, theme switching, and message sending.
+- Focused navigation for New Chat, saved chat sessions, chat archiving, agent status, theme switching, text file uploads, and message sending.
 - Separate chat sessions with New Chat behavior so conversations do not overlap.
-- Automatic 40-second refresh for status, chat list, and active chat history when the user is not composing a message.
+- Non-destructive chat archiving with active chat lists hiding archived chats while admin chat review can still load all chats.
+- Text file attachments in the composer, stored in sanitized message context and included in AI context for the current message.
+- Automatic 40-second refresh for status, chat list, and active chat history when the user is not composing a message or attaching files.
 - Persistent message storage with `chat_id`, `role`, `content`, sanitized `context`, review state, and timestamps.
 - Optional PostgreSQL support through `DATABASE_URL`; the app uses storage-only in-memory mode when no database URL is configured.
 - Storage-only chat behavior when `OPENAI_API_KEY` is missing, including a friendly pending-review assistant response.
@@ -47,6 +49,8 @@ For persistent PostgreSQL storage, set `DATABASE_URL`. The server creates these 
 - `knowledge_entries`
 - `review_runs`
 
+Existing PostgreSQL databases are updated additively with `chats.archived_at` so archived chats can be hidden without deleting chat history.
+
 Without `DATABASE_URL`, the app starts in in-memory storage mode for local testing and storage-only operation.
 
 ### Environment variables
@@ -66,10 +70,12 @@ Do not commit secrets, API keys, deploy hooks, database URLs, passwords, session
 - `GET /health`: Render-compatible health check.
 - `GET /api/status`: returns directory, AI, and storage availability.
 - `POST /api/chats`: creates a chat session.
-- `GET /api/chats`: lists recent chat sessions.
+- `GET /api/chats`: lists recent unarchived chat sessions.
+- `GET /api/chats?includeArchived=true`: lists recent chat sessions including archived chats.
 - `GET /api/chats/:chatId`: loads a chat and its message history.
+- `POST /api/chats/:chatId/archive`: archives or unarchives a chat with `{ "archived": true }` or `{ "archived": false }`.
 - `POST /api/chats/:chatId/messages`: stores a message for a chat.
-- `POST /api/chat`: stores a user message, attempts an AI response when available, stores the assistant response when possible, and returns a storage failure status if the user message could not be saved.
+- `POST /api/chat`: stores a user message and optional text attachments, attempts an AI response when available, stores the assistant response when possible, and returns a storage failure status if the user message could not be saved.
 - `GET /api/knowledge?status=approved`: reads durable knowledge entries.
 - `POST /api/reviews/run`: records a review run, reads unreviewed messages, creates pending-review knowledge entries, and marks messages reviewed.
 - `GET /api/admin/summary`: returns backend management counts and runtime status. Requires `ADMIN_TOKEN`.
