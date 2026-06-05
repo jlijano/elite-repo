@@ -14,6 +14,7 @@ The `web/` directory contains a Render-ready Express app that serves a plain HTM
 
 - Chat interface backed by the `/api/chat` endpoint.
 - Agent Directory status indicator backed by the `/api/status` endpoint.
+- Responsive mobile layout with small-screen chat header wrapping, full-height mobile viewport support, safe-area spacing, and compact composer controls.
 - Light and dark mode toggle in the chat header.
 - Theme preference stored in browser `localStorage` under `switchboard-theme`; if no preference exists, the app uses the visitor's `prefers-color-scheme` system setting.
 
