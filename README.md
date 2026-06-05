@@ -23,9 +23,14 @@ From the `web/` directory:
 
 1. Install dependencies with `npm install`.
 2. Start the app with `npm start`.
-3. Open the local server URL shown in the terminal.
+3. Run validation with `npm run check`.
+4. Open the local server URL shown in the terminal.
 
 The chat endpoint requires `OPENAI_API_KEY` in the environment. `OPENAI_MODEL` is optional and defaults to `gpt-4.1-mini`.
+
+## GitHub Actions / auto-deploy
+
+The `Web checks` workflow runs on pull requests targeting `main` and on pushes to `main`. It installs the `web/` dependencies and runs `npm run check` so JavaScript syntax validation happens in GitHub even when a local agent environment cannot clone the repository directly.
 
 ## Documentation Maintenance Rule
 

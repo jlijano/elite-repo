@@ -4,7 +4,8 @@
   "description": "Render-ready messaging app for the Switchboard Agent.",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "check": "node --check server.js && node --check public/app.js"
   },
   "dependencies": {
     "cors": "^2.8.5",
