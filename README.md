@@ -6,6 +6,32 @@ This repository contains the core project documentation for agent coordination, 
 
 Use this repository as the central reference for structured collaboration and task management.
 
+## Web app
+
+The `web/` directory contains a Render-ready Express app that serves a plain HTML, CSS, and JavaScript messaging interface for the Switchboard Agent.
+
+### Features
+
+- Chat interface backed by the `/api/chat` endpoint.
+- Agent Directory status indicator backed by the `/api/status` endpoint.
+- Light and dark mode toggle in the chat header.
+- Theme preference stored in browser `localStorage` under `switchboard-theme`; if no preference exists, the app uses the visitor's `prefers-color-scheme` system setting.
+
+### Local development
+
+From the `web/` directory:
+
+1. Install dependencies with `npm install`.
+2. Start the app with `npm start`.
+3. Run validation with `npm run check`.
+4. Open the local server URL shown in the terminal.
+
+The chat endpoint requires `OPENAI_API_KEY` in the environment. `OPENAI_MODEL` is optional and defaults to `gpt-4.1-mini`.
+
+## GitHub Actions / auto-deploy
+
+The `Web checks` workflow runs on pull requests targeting `main` and on pushes to `main`. It installs the `web/` dependencies and runs `npm run check` so JavaScript syntax validation happens in GitHub even when a local agent environment cannot clone the repository directly.
+
 ## Documentation Maintenance Rule
 
 Whenever making any repository change, check whether README.md needs to be updated. If a change affects app behavior, setup steps, deployment, environment variables, UI, backend routes, agent behavior, routing rules, GitHub Actions, Render deployment, or repository structure, update README.md in the same commit so the documentation stays current.
