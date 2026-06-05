@@ -17,7 +17,6 @@
         }
 
         const theme = storedTheme || (systemPrefersDark ? "dark" : "light");
-
         document.documentElement.dataset.theme = theme;
       })();
     </script>
@@ -25,12 +24,20 @@
   </head>
   <body>
     <main class="app-shell" aria-label="Switchboard Agent messaging app">
-      <aside class="sidebar" aria-label="Application details">
+      <aside class="sidebar" aria-label="Chat sessions and application details">
         <div>
           <p class="eyebrow">Agent Workspace</p>
           <h1>Switchboard Agent</h1>
           <p class="subtitle">AI routing and agent coordination</p>
         </div>
+
+        <section class="session-panel" aria-label="Chat sessions">
+          <div class="session-heading">
+            <h2>Chats</h2>
+            <button class="secondary-button" id="newChatButton" type="button">New Chat</button>
+          </div>
+          <div class="chat-list" id="chatList" aria-live="polite"></div>
+        </section>
 
         <div class="directory-card">
           <div class="status-row">
@@ -38,18 +45,20 @@
             <span id="statusText">Checking directory...</span>
           </div>
           <p id="filesLoaded">Loading routing context</p>
+          <p id="storageStatus">Checking storage</p>
         </div>
 
-        <p class="footer-note">Render deploy hook test: deployment triggered by agent.</p>
+        <p class="footer-note">Render deploys from GitHub main after checks pass.</p>
       </aside>
 
       <section class="chat-panel" aria-label="Chat with Switchboard Agent">
         <header class="chat-header">
           <div>
             <p class="eyebrow">Live chat</p>
-            <h2>Switchboard Agent</h2>
+            <h2 id="currentChatTitle">Switchboard Agent</h2>
           </div>
           <div class="header-actions">
+            <button class="mobile-new-chat" id="mobileNewChatButton" type="button">New Chat</button>
             <button
               class="theme-toggle"
               id="themeToggle"
@@ -67,17 +76,7 @@
           </div>
         </header>
 
-        <div class="messages" id="messages" aria-live="polite">
-          <article class="message assistant">
-            <div class="avatar" aria-hidden="true">S</div>
-            <div class="bubble">
-              <p>
-                Hi. Send me a request and I will classify it, check the Agent Directory,
-                route it to an active match, or recommend what is missing.
-              </p>
-            </div>
-          </article>
-        </div>
+        <div class="messages" id="messages" aria-live="polite"></div>
 
         <form class="composer" id="chatForm">
           <label class="visually-hidden" for="messageInput">Message</label>
