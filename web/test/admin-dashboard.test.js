@@ -77,10 +77,10 @@ test("settings page owns review runs and system health", () => {
   assert.match(settingsHtml, /<h2>System health<\/h2>/);
 });
 
-test("top nav includes current time and profile settings send icon", () => {
+test("top nav includes current time and profile settings person icon", () => {
   for (const pageHtml of allAdminPages) {
     assert.match(pageHtml, /id="menuClock"/);
-    assert.match(pageHtml, /class="profile-settings" href="\/user\.html#profile" aria-label="User profile settings">↗<\/a>/);
+    assert.match(pageHtml, /class="profile-settings" href="\/user\.html#profile" aria-label="User profile settings">👤<\/a>/);
   }
 
   assert.match(adminJs, /function updateClock\(\)/);
