@@ -4,12 +4,19 @@ const taskListStatusLabels = { backlog: "Backlog", todo: "To Do", in_progress: "
 const taskListPriorityLabels = { low: "Low", medium: "Medium", high: "High" };
 const taskListCommonFieldTypes = [
   ["person", "Person", "@", "Assign a same-company user, owner, reviewer, approver, or requester."],
-  ["date", "Date", "📅", "Use for due dates, start dates, actual dates, review dates, or follow-up dates."],
-  ["dropdown", "Dropdown", "▾", "Create your own choices, such as Status, Phase, Client, Risk, or Department."],
+  ["date", "Date", "Date", "Use for due dates, start dates, actual dates, review dates, or follow-up dates."],
+  ["status", "Status", "Status", "Create task-specific states such as Pending, Approved, Blocked, or Waiting."],
+  ["dropdown", "Dropdown", "List", "Create your own choices, such as Phase, Client, Risk, or Department."],
   ["text", "Text", "T", "Add a short custom value, note, code, label, or reference."],
-  ["file", "File Attachment", "📎", "Attach a screenshot, brief, contract, invoice, or support document."]
+  ["file", "File Attachment", "File", "Attach a screenshot, brief, contract, invoice, or support document."],
+  ["number", "Number", "123", "Track effort, score, budget, quantity, rating, or any numeric value."],
+  ["long_text", "Long Text", "Aa", "Add longer notes, requirements, summaries, or instructions."],
+  ["checkbox", "Checkbox", "Y/N", "Store a yes/no value such as Approved, Required, Reviewed, or Complete."],
+  ["link", "Link", "URL", "Store a related URL, ticket, document, meeting, or reference link."],
+  ["tags", "Tags", "#", "Add multiple labels such as team, sprint, customer, source, or topic."]
 ];
 const taskListDropdownDefaults = ["Option 1", "Option 2", "Option 3"];
+const taskListStatusDefaults = ["Pending", "In Review", "Approved", "Blocked"];
 const taskListFileLimitBytes = 1024 * 1024;
 
 const taskListState = {
@@ -107,9 +114,13 @@ function taskListFieldDownload(field = {}) {
 
 function taskListFieldDisplayValue(field = {}) {
   const type = field.type || "text";
-  if (type === "person") return taskListHtml(taskListUserName(field.value) || field.value || "-");
+  const value = field.value;
+  if (type === "person") return taskListHtml(taskListUserName(value) || value || "-");
   if (type === "file") return taskListFieldDownload(field);
-  return taskListHtml(field.value || "-");
+  if (type === "checkbox") return taskListHtml(value ? "Yes" : "No");
+  if (type === "tags") return taskListHtml(Array.isArray(value) ? value.join(", ") : value || "-");
+  if (type === "link" && value) return `<a href="${taskListHtml(value)}" target="_blank" rel="noreferrer">${taskListHtml(value)}</a>`;
+  return taskListHtml(value || value === 0 ? value : "-");
 }
 
 function taskListCustomFields(task) {
@@ -182,14 +193,15 @@ function dropdownOptionsFromText(text = "") {
     .filter(Boolean);
 }
 
-function dropdownOptionsText(options = []) {
-  const list = Array.isArray(options) && options.length ? options : taskListDropdownDefaults;
+function dropdownOptionsText(options = [], type = "dropdown") {
+  const fallback = type === "status" ? taskListStatusDefaults : taskListDropdownDefaults;
+  const list = Array.isArray(options) && options.length ? options : fallback;
   return list.join("\n");
 }
 
-function renderDropdownValueOptions(select, options = [], selectedValue = "") {
+function renderDropdownValueOptions(select, options = [], selectedValue = "", type = "dropdown") {
   if (!select) return;
-  const choices = options.length ? options : taskListDropdownDefaults;
+  const choices = options.length ? options : (type === "status" ? taskListStatusDefaults : taskListDropdownDefaults);
   select.innerHTML = [`<option value="">Select option</option>`, ...choices.map((label) => `<option value="${taskListHtml(label)}"${label === selectedValue ? " selected" : ""}>${taskListHtml(label)}</option>`)].join("");
 }
 
@@ -201,14 +213,30 @@ function taskListFieldValueControl(type = "text", value = "", meta = {}) {
   if (type === "date") {
     return `<div class="custom-field-value-cell"><label><span>Value</span><input data-custom-field-value type="date" value="${taskListHtml(value)}" /></label></div>`;
   }
-  if (type === "dropdown") {
-    const optionsText = dropdownOptionsText(meta.options);
+  if (type === "status" || type === "dropdown") {
+    const optionsText = dropdownOptionsText(meta.options, type);
     const options = dropdownOptionsFromText(optionsText);
     return `<div class="custom-field-value-cell custom-field-dropdown-cell"><label><span>Options</span><textarea data-custom-field-options rows="3" placeholder="One option per line">${taskListHtml(optionsText)}</textarea></label><label><span>Value</span><select data-custom-field-value>${[`<option value="">Select option</option>`, ...options.map((label) => `<option value="${taskListHtml(label)}"${label === value ? " selected" : ""}>${taskListHtml(label)}</option>`)].join("")}</select></label></div>`;
   }
   if (type === "file") {
     const fileName = meta.fileName || value || "No file selected";
     return `<div class="custom-field-value-cell"><label><span>Value</span><input data-custom-field-file type="file" /><input data-custom-field-value type="hidden" value="${taskListHtml(value)}" /><small class="file-field-preview" data-file-preview>${taskListHtml(fileName)}</small></label></div>`;
+  }
+  if (type === "number") {
+    return `<div class="custom-field-value-cell"><label><span>Value</span><input data-custom-field-value type="number" step="any" value="${taskListHtml(value)}" placeholder="0" /></label></div>`;
+  }
+  if (type === "long_text") {
+    return `<div class="custom-field-value-cell"><label><span>Value</span><textarea data-custom-field-value rows="4" maxlength="2000" placeholder="Add details">${taskListHtml(value)}</textarea></label></div>`;
+  }
+  if (type === "checkbox") {
+    return `<div class="custom-field-value-cell"><label><span>Value</span><select data-custom-field-value><option value="false"${value === true || value === "true" ? "" : " selected"}>No</option><option value="true"${value === true || value === "true" ? " selected" : ""}>Yes</option></select></label></div>`;
+  }
+  if (type === "link") {
+    return `<div class="custom-field-value-cell"><label><span>Value</span><input data-custom-field-value type="url" maxlength="500" value="${taskListHtml(value)}" placeholder="https://example.com" /></label></div>`;
+  }
+  if (type === "tags") {
+    const tagValue = Array.isArray(value) ? value.join(", ") : value;
+    return `<div class="custom-field-value-cell"><label><span>Value</span><input data-custom-field-value maxlength="500" value="${taskListHtml(tagValue)}" placeholder="Tag 1, Tag 2" /></label></div>`;
   }
   return `<div class="custom-field-value-cell"><label><span>Value</span><input data-custom-field-value maxlength="240" value="${taskListHtml(value)}" placeholder="Type text" /></label></div>`;
 }
@@ -228,7 +256,7 @@ function injectTaskListModal() {
           <div class="common-field-card-grid" aria-label="Custom field data types">
             ${commonFieldCards()}
           </div>
-          <p class="custom-field-help">Choose a data type, then name it for this task. For example, add a Dropdown and name it Status, Phase, Risk, or anything this task needs.</p>
+          <p class="custom-field-help">Choose a data type, then name it for this task. Each custom field is saved only on this task, with the database value shaped for that field type.</p>
           <div class="custom-field-builder" id="taskListCustomFields" aria-label="Custom fields"></div>
         </details>
         <div class="playground-modal-actions"><button type="button" id="taskListTaskCancel">Cancel</button><button class="primary-action" id="taskListTaskSave" type="button">Create Task</button></div>
@@ -277,8 +305,9 @@ function attachDropdownOptionsHandler(row, selectedValue = "") {
   const optionsInput = row.querySelector("[data-custom-field-options]");
   const valueSelect = row.querySelector("select[data-custom-field-value]");
   if (!optionsInput || !valueSelect) return;
-  optionsInput.addEventListener("input", () => renderDropdownValueOptions(valueSelect, dropdownOptionsFromText(optionsInput.value), valueSelect.value));
-  renderDropdownValueOptions(valueSelect, dropdownOptionsFromText(optionsInput.value), selectedValue);
+  const fieldType = row.dataset.customFieldType || "dropdown";
+  optionsInput.addEventListener("input", () => renderDropdownValueOptions(valueSelect, dropdownOptionsFromText(optionsInput.value), valueSelect.value, fieldType));
+  renderDropdownValueOptions(valueSelect, dropdownOptionsFromText(optionsInput.value), selectedValue, fieldType);
 }
 
 function addTaskListCustomField(name = "", value = "", type = "text", meta = {}) {
@@ -290,6 +319,7 @@ function addTaskListCustomField(name = "", value = "", type = "text", meta = {})
   row.className = "custom-field-row";
   row.dataset.customFieldType = safeType;
   row.setAttribute("data-custom-field-type", safeType);
+  if (meta.id) row.dataset.customFieldId = meta.id;
   if (meta.fileName) row.dataset.fileName = meta.fileName;
   if (meta.fileType) row.dataset.fileType = meta.fileType;
   if (meta.fileSize) row.dataset.fileSize = String(meta.fileSize);
@@ -340,15 +370,25 @@ function closeTaskListModal() {
   setTaskListModalBusy(false);
 }
 
+function typedCustomFieldValue(row, type) {
+  const valueInput = row.querySelector("[data-custom-field-value]");
+  const rawValue = valueInput?.value || "";
+  if (type === "number") return rawValue === "" ? "" : Number(rawValue);
+  if (type === "checkbox") return rawValue === "true";
+  if (type === "tags") return dropdownOptionsFromText(rawValue);
+  return rawValue;
+}
+
 function taskListFormPayload() {
   const customFields = [...document.querySelectorAll("#taskListCustomFields .custom-field-row")]
-    .map((row) => {
+    .map((row, index) => {
       const field = {
+        id: row.dataset.customFieldId || `field-${index + 1}`,
         type: row.dataset.customFieldType || "text",
         name: row.querySelector("[data-custom-field-name]")?.value || "",
-        value: row.querySelector("[data-custom-field-value]")?.value || ""
+        value: typedCustomFieldValue(row, row.dataset.customFieldType || "text")
       };
-      if (field.type === "dropdown") {
+      if (field.type === "dropdown" || field.type === "status") {
         field.options = dropdownOptionsFromText(row.querySelector("[data-custom-field-options]")?.value || "");
       }
       if (field.type === "file") {
@@ -359,7 +399,7 @@ function taskListFormPayload() {
       }
       return field;
     })
-    .filter((field) => field.name.trim() || field.value.trim() || field.fileName || (Array.isArray(field.options) && field.options.length));
+    .filter((field) => field.name.trim() || field.value === true || field.value === 0 || String(field.value || "").trim() || field.fileName || (Array.isArray(field.value) && field.value.length) || (Array.isArray(field.options) && field.options.length));
   return {
     title: document.getElementById("taskListTaskTitle")?.value || "",
     status: "todo",
