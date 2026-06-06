@@ -22,7 +22,10 @@ const form = document.getElementById("loginForm");
 const email = document.getElementById("loginEmail");
 const password = document.getElementById("loginPassword");
 const status = document.getElementById("loginStatus");
-const githubLogin = document.getElementById("githubLogin");
+const providerLinks = [
+  { id: "googleLogin", statusPath: "/api/auth/google/status" },
+  { id: "githubLogin", statusPath: "/api/auth/github/status" }
+].map((provider) => ({ ...provider, element: document.getElementById(provider.id) }));
 
 function setLoginStatus(message, error = false) {
   if (!status) return;
@@ -73,32 +76,40 @@ function explainReason() {
   if (reason === "expired") setLoginStatus("Your session expired. Please sign in again.", true);
   if (reason === "required") setLoginStatus("Please sign in to continue.", true);
   if (reason === "not-admin") setLoginStatus("That area requires an admin account. Sign in with an admin user to continue.", true);
-  if (reason === "github-unavailable") {
-    clearReason("github-unavailable");
+  if (reason === "github-unavailable" || reason === "google-unavailable") {
+    clearReason(reason);
     clearLoginStatus();
   }
   if (reason === "github-user-missing") setLoginStatus("No active Switchboard user matches that GitHub email.", true);
   if (reason === "github-email-missing") setLoginStatus("GitHub did not provide a verified email address.", true);
   if (reason === "github-failed") setLoginStatus("GitHub login could not be completed.", true);
+  if (reason === "google-user-missing") setLoginStatus("No active Switchboard user matches that Google email.", true);
+  if (reason === "google-email-missing") setLoginStatus("Google did not provide a verified email address.", true);
+  if (reason === "google-failed") setLoginStatus("Google login could not be completed.", true);
 }
 
-function prepareGithubLoginLink() {
+function prepareProviderLoginLinks() {
   const redirect = new URLSearchParams(window.location.search).get("redirect");
-  if (!githubLogin || !redirect) return;
-  const url = new URL(githubLogin.getAttribute("href"), window.location.origin);
-  url.searchParams.set("redirect", redirect);
-  githubLogin.href = `${url.pathname}${url.search}`;
+  if (!redirect) return;
+  for (const provider of providerLinks) {
+    if (!provider.element) continue;
+    const url = new URL(provider.element.getAttribute("href"), window.location.origin);
+    url.searchParams.set("redirect", redirect);
+    provider.element.href = `${url.pathname}${url.search}`;
+  }
 }
 
-async function syncGithubLoginAvailability() {
-  if (!githubLogin) return;
-  try {
-    const response = await fetch("/api/auth/github/status", { cache: "no-store" });
-    const data = await response.json().catch(() => ({}));
-    githubLogin.hidden = !data.enabled;
-  } catch {
-    githubLogin.hidden = true;
-  }
+async function syncProviderAvailability() {
+  await Promise.all(providerLinks.map(async (provider) => {
+    if (!provider.element) return;
+    try {
+      const response = await fetch(provider.statusPath, { cache: "no-store" });
+      const data = await response.json().catch(() => ({}));
+      provider.element.hidden = !data.enabled;
+    } catch {
+      provider.element.hidden = true;
+    }
+  }));
 }
 
 form?.addEventListener("submit", async (event) => {
@@ -126,6 +137,6 @@ form?.addEventListener("submit", async (event) => {
   }
 });
 
-prepareGithubLoginLink();
+prepareProviderLoginLinks();
 explainReason();
-syncGithubLoginAvailability();
+syncProviderAvailability();
