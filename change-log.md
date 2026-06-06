@@ -2,6 +2,7 @@
 
 ## [Unreleased]
 
+- Removed the redundant Logout action from the admin left sidebar so logout is only exposed through the top-header profile dropdown.
 - Added protected user-management backend CRUD APIs for listing, creating, loading, updating, disabling, and reactivating users, plus user audit-event reads and focused backend tests.
 - Added Phase 1 user-management database foundation tables for `users` and `user_audit_events`, including role/status constraints, case-insensitive email uniqueness, password hash storage, and audit lookup indexes.
 - Added an admin profile dropdown with Update Profile and Logout actions, plus dedicated `/update-profile.html` and `/login.html` pages.
