@@ -524,6 +524,10 @@ async function loadSettingsPage() {
   setStatus("Settings page loaded.");
 }
 
+async function loadPlaygroundPage() {
+  setStatus("Playground page loaded.");
+}
+
 async function loadPage() {
   refreshTokenFromSession();
   try {
@@ -531,6 +535,7 @@ async function loadPage() {
     if (page === "knowledge") await loadKnowledgePage();
     if (page === "user") await loadUserPage();
     if (page === "settings") await loadSettingsPage();
+    if (page === "playground") await loadPlaygroundPage();
     if (page === "update-profile") {
       loadProfileForm();
       setStatus("Update profile page loaded.");
