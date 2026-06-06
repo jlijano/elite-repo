@@ -102,6 +102,54 @@ CREATE INDEX IF NOT EXISTS user_audit_events_target_created_at_idx
 CREATE INDEX IF NOT EXISTS user_audit_events_actor_created_at_idx
   ON user_audit_events(actor_user_id, created_at DESC);
 
+CREATE TABLE IF NOT EXISTS entra_companies (
+  id UUID PRIMARY KEY,
+  name TEXT NOT NULL,
+  description TEXT,
+  status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'archived')),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS entra_companies_name_lower_idx
+  ON entra_companies(LOWER(name));
+
+CREATE INDEX IF NOT EXISTS entra_companies_status_idx
+  ON entra_companies(status, created_at DESC);
+
+CREATE TABLE IF NOT EXISTS entra_departments (
+  id UUID PRIMARY KEY,
+  company_id UUID NOT NULL REFERENCES entra_companies(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  description TEXT,
+  status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'archived')),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS entra_departments_company_name_lower_idx
+  ON entra_departments(company_id, LOWER(name));
+
+CREATE INDEX IF NOT EXISTS entra_departments_company_status_idx
+  ON entra_departments(company_id, status, created_at DESC);
+
+CREATE TABLE IF NOT EXISTS entra_groups (
+  id UUID PRIMARY KEY,
+  company_id UUID NOT NULL REFERENCES entra_companies(id) ON DELETE CASCADE,
+  department_id UUID REFERENCES entra_departments(id) ON DELETE SET NULL,
+  name TEXT NOT NULL,
+  description TEXT,
+  status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'archived')),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS entra_groups_scope_name_lower_idx
+  ON entra_groups(company_id, COALESCE(department_id, '00000000-0000-0000-0000-000000000000'::uuid), LOWER(name));
+
+CREATE INDEX IF NOT EXISTS entra_groups_company_department_status_idx
+  ON entra_groups(company_id, department_id, status, created_at DESC);
+
 CREATE TABLE IF NOT EXISTS knowledge_entries (
   id UUID PRIMARY KEY,
   title TEXT NOT NULL,
