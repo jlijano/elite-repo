@@ -26,7 +26,7 @@ test("playground store seeds tasks, projects, notes, and metrics", async () => {
   assert.ok(Array.isArray(data.tasks[0].customFields));
 });
 
-test("playground store persists created tasks, typed custom fields, and projects in memory mode", async () => {
+test("playground store persists task-specific custom fields with typed database values", async () => {
   const store = createStore();
   const task = await store.createTask({
     title: "Stored task",
@@ -41,10 +41,15 @@ test("playground store persists created tasks, typed custom fields, and projects
     customFields: [
       { type: "person", name: "Owner", value: "00000000-0000-4000-8000-000000000002" },
       { type: "date", name: "Start", value: "2026-06-06" },
-      { type: "status", name: "Approval", value: "review" },
-      { type: "dropdown", name: "Client", value: "Acme" },
+      { type: "status", name: "Approval", value: "review", options: ["review", "approved"] },
+      { type: "dropdown", name: "Client", value: "Acme", options: ["Acme", "Beta"] },
       { type: "text", name: "Notes", value: "Needs review" },
-      { type: "file", name: "Brief", value: "brief.pdf", fileName: "brief.pdf", fileType: "application/pdf", fileSize: 42, fileData: "data:application/pdf;base64,JVBERi0=" }
+      { type: "file", name: "Brief", value: "brief.pdf", fileName: "brief.pdf", fileType: "application/pdf", fileSize: 42, fileData: "data:application/pdf;base64,JVBERi0=" },
+      { type: "number", name: "Effort", value: "3.5" },
+      { type: "long_text", name: "Scope", value: "Longer scoped instructions" },
+      { type: "checkbox", name: "Approved", value: "true" },
+      { type: "link", name: "Spec", value: "https://example.com/spec" },
+      { type: "tags", name: "Labels", value: "alpha, beta, alpha" }
     ]
   }, "Tester");
   const project = await store.createProject({
@@ -54,17 +59,22 @@ test("playground store persists created tasks, typed custom fields, and projects
     progress: 0,
     taskCount: 0
   });
-  const data = await store.listAll({ search: "acme" });
+  const data = await store.listAll({ search: "beta" });
   const saved = data.tasks.find((item) => item.id === task.id);
 
   assert.ok(data.tasks.some((item) => item.id === task.id && item.title === "Stored task" && item.projectTitle === "Website Redesign"));
   assert.deepEqual(saved.customFields, [
-    { type: "person", name: "Owner", value: "00000000-0000-4000-8000-000000000002" },
-    { type: "date", name: "Start", value: "2026-06-06" },
-    { type: "status", name: "Approval", value: "review" },
-    { type: "dropdown", name: "Client", value: "Acme" },
-    { type: "text", name: "Notes", value: "Needs review" },
-    { type: "file", name: "Brief", value: "brief.pdf", fileName: "brief.pdf", fileType: "application/pdf", fileSize: 42, fileData: "data:application/pdf;base64,JVBERi0=" }
+    { id: "field-1", type: "person", name: "Owner", value: "00000000-0000-4000-8000-000000000002" },
+    { id: "field-2", type: "date", name: "Start", value: "2026-06-06" },
+    { id: "field-3", type: "status", name: "Approval", value: "review", options: ["review", "approved"] },
+    { id: "field-4", type: "dropdown", name: "Client", value: "Acme", options: ["Acme", "Beta"] },
+    { id: "field-5", type: "text", name: "Notes", value: "Needs review" },
+    { id: "field-6", type: "file", name: "Brief", value: "brief.pdf", fileName: "brief.pdf", fileType: "application/pdf", fileSize: 42, fileData: "data:application/pdf;base64,JVBERi0=" },
+    { id: "field-7", type: "number", name: "Effort", value: 3.5 },
+    { id: "field-8", type: "long_text", name: "Scope", value: "Longer scoped instructions" },
+    { id: "field-9", type: "checkbox", name: "Approved", value: true },
+    { id: "field-10", type: "link", name: "Spec", value: "https://example.com/spec" },
+    { id: "field-11", type: "tags", name: "Labels", value: ["alpha", "beta"] }
   ]);
   assert.ok((await store.listAll()).projects.some((item) => item.id === project.id && item.title === "Stored project"));
   assert.equal((await store.listAll()).metrics.totalTasks, 7);
@@ -97,7 +107,7 @@ test("playground store updates task detail, comments, custom fields, and activit
 
   assert.equal(updated.statusKey, "in_progress");
   assert.equal(updated.projectTitle, "Website Redesign");
-  assert.deepEqual(updated.customFields, [{ type: "text", name: "Stage", value: "Build" }]);
+  assert.deepEqual(updated.customFields, [{ id: "field-1", type: "text", name: "Stage", value: "Build" }]);
   assert.equal(comment.body, "Progress note");
   assert.equal(detail.task.description, "After");
   assert.ok(detail.updates.some((item) => item.body === "Progress note"));
@@ -162,15 +172,23 @@ test("playground tasks script creates saved tasks with real typed optional custo
   assert.ok(script.includes("taskListTaskModal"));
   assert.ok(script.includes("taskListTaskTitle"));
   assert.ok(script.includes("taskListCommonFieldTypes"));
-  assert.ok(script.includes('["person", "Person"]'));
-  assert.ok(script.includes('["date", "Date"]'));
-  assert.ok(script.includes('["status", "Status"]'));
-  assert.ok(script.includes('["dropdown", "Dropdown"]'));
-  assert.ok(script.includes('["text", "Text"]'));
-  assert.ok(script.includes('["file", "File Attachment"]'));
+  assert.ok(script.includes('["person", "Person",'));
+  assert.ok(script.includes('["date", "Date",'));
+  assert.ok(script.includes('["status", "Status",'));
+  assert.ok(script.includes('["dropdown", "Dropdown",'));
+  assert.ok(script.includes('["text", "Text",'));
+  assert.ok(script.includes('["file", "File Attachment",'));
+  assert.ok(script.includes('["number", "Number",'));
+  assert.ok(script.includes('["long_text", "Long Text",'));
+  assert.ok(script.includes('["checkbox", "Checkbox",'));
+  assert.ok(script.includes('["link", "Link",'));
+  assert.ok(script.includes('["tags", "Tags",'));
   assert.ok(script.includes("taskListFieldValueControl"));
+  assert.ok(script.includes("typedCustomFieldValue"));
   assert.ok(script.includes("data-custom-field-type"));
   assert.ok(script.includes('type="file"'));
+  assert.ok(script.includes('type="number"'));
+  assert.ok(script.includes('type="url"'));
   assert.ok(script.includes("FileReader"));
   assert.ok(script.includes("fileData"));
   assert.ok(script.includes("customFields"));
