@@ -77,7 +77,7 @@ test("dashboard renders configurable professional widgets", () => {
 
   assert.match(adminHtml, /const widgetStorageKey = "switchboard-admin-widgets"/);
   assert.match(adminHtml, /function renderWidgetToggles\(\)/);
-  assert.match(adminHtml, /function applyWidgetVisibility\(\)/);
+  assert.match(adminHtml, /function applyWidgetPrefs\(\)/);
   assert.match(adminHtml, /loading/i);
   assert.match(adminHtml, /empty/i);
 });
