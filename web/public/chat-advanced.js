@@ -16,17 +16,36 @@
     try { localStorage.setItem(key, value); } catch { return; }
   }
 
-  function participantId() {
-    let value = stored(participantKey);
+  function sharedChatId() {
+    return new URLSearchParams(document.location.search).get("chat") || "";
+  }
+
+  function sharedLinkNumber() {
+    return Math.max(1, Number(new URLSearchParams(document.location.search).get("share") || 1));
+  }
+
+  function participantScope(chatId = currentChatId || sharedChatId() || "") {
+    const id = String(chatId || "");
+    if (!id) return "pending";
+    return sharedChatId() === id ? `${id}:share-${sharedLinkNumber()}` : `${id}:original`;
+  }
+
+  function scopedKey(baseKey, chatId) {
+    return `${baseKey}:${participantScope(chatId)}`;
+  }
+
+  function participantId(chatId = currentChatId || sharedChatId() || "") {
+    const key = scopedKey(participantKey, chatId);
+    let value = stored(key);
     if (!value) {
       value = crypto?.randomUUID ? crypto.randomUUID() : `participant-${Date.now()}-${Math.random().toString(16).slice(2)}`;
-      setStoredValue(participantKey, value);
+      setStoredValue(key, value);
     }
     return value;
   }
 
-  function nickname() {
-    return String(stored(nicknameKey) || "").trim().slice(0, 40);
+  function nickname(chatId = currentChatId || sharedChatId() || "") {
+    return String(stored(scopedKey(nicknameKey, chatId)) || "").trim().slice(0, 40);
   }
 
   function deviceType() {
@@ -36,12 +55,12 @@
     return "desktop";
   }
 
-  function participantContext() {
-    const id = participantId();
-    const name = nickname();
+  function participantContext(chatId = currentChatId || sharedChatId() || "") {
+    const id = participantId(chatId);
+    const name = nickname(chatId);
     return {
       participantId: id,
-      participantType: document.location.search.includes("chat=") ? "shared" : "original",
+      participantType: sharedChatId() === chatId ? "shared" : "original",
       participantLabel: name || "Participant",
       deviceType: deviceType()
     };
@@ -60,7 +79,7 @@
   }
 
   function messageStatus(message) {
-    const ownId = participantId();
+    const ownId = participantId(message.chatId || currentChatId);
     const receipts = Array.isArray(message.readReceipts) ? message.readReceipts.filter((receipt) => receipt.participantId !== ownId) : [];
     if (receipts.length === 1) return { text: `Seen by ${displayReceiptLabel(receipts[0])}`, state: "seen" };
     if (receipts.length > 1) return { text: `Seen by ${receipts.length}`, state: "seen" };
@@ -142,7 +161,7 @@
     toggle.type = "button";
     toggle.className = "message-action-button";
     toggle.setAttribute("aria-label", "Message actions");
-    toggle.textContent = "⋯";
+    toggle.textContent = "...";
     const menu = document.createElement("div");
     menu.className = "message-action-menu";
     menu.hidden = true;
@@ -201,7 +220,7 @@
 
   function markRead(messages = lastMessages) {
     if (!currentChatId || !Array.isArray(messages) || !messages.length) return;
-    const ownId = participantId();
+    const ownId = participantId(currentChatId);
     const messageIds = messages
       .filter((message) => message.role === "user" && message.context?.participantId !== ownId)
       .map((message) => message.id)
@@ -210,7 +229,7 @@
     fetch(`/api/chats/${encodeURIComponent(currentChatId)}/read`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ context: participantContext(), messageIds })
+      body: JSON.stringify({ context: participantContext(currentChatId), messageIds })
     }).catch(() => {});
   }
 
@@ -224,7 +243,7 @@
   function openStream(chatId) {
     if (!chatId || !window.EventSource) return;
     if (stream) stream.close();
-    stream = new EventSource(`/api/chats/${encodeURIComponent(chatId)}/events?participantId=${encodeURIComponent(participantId())}`);
+    stream = new EventSource(`/api/chats/${encodeURIComponent(chatId)}/events?participantId=${encodeURIComponent(participantId(chatId))}`);
     const onUpdate = (event) => {
       try {
         const data = JSON.parse(event.data || "{}");
