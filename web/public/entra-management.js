@@ -31,6 +31,7 @@
   const html = (value) => String(value ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
   const textMatch = (value, query = "") => String(value || "").toLowerCase().includes(query.trim().toLowerCase());
   const time = (value) => value ? new Intl.DateTimeFormat(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }).format(new Date(value)) : "";
+  const key = (value) => String(value || "").trim().toLowerCase();
 
   function injectStyles() {
     if (document.getElementById("entraManagementStyles")) return;
@@ -42,6 +43,7 @@
       .entra-toolbar input { flex: 1 1 260px; }
       .entra-management-grid { display: block; min-height: 0; }
       .entra-list { max-height: none; overflow: auto; }
+      .entra-import-input { display: none; }
       .entra-table-wrap { width: 100%; overflow-x: auto; }
       .entra-table { width: 100%; min-width: 760px; border-collapse: collapse; color: var(--text); }
       .entra-table th, .entra-table td { padding: 12px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: middle; }
@@ -261,6 +263,219 @@
     return body;
   }
 
+  function csvEscape(value) {
+    const text = String(value ?? "");
+    return /[",\n\r]/.test(text) ? `"${text.replace(/"/g, "\"\"")}"` : text;
+  }
+
+  function exportRows() {
+    if (page === "company") {
+      return [["company", "description", "status"], ...state.companies.map((record) => [record.name, record.description || "", record.status || "active"])];
+    }
+    if (page === "department") {
+      return [["company", "department", "description", "status"], ...state.departments.map((record) => [record.companyName || companyName(record.companyId), record.name, record.description || "", record.status || "active"])];
+    }
+    return [["company", "department", "group", "description", "status"], ...state.groups.map((record) => [record.companyName || companyName(record.companyId), record.departmentName || departmentName(record.departmentId), record.name, record.description || "", record.status || "active"])] ;
+  }
+
+  function exportCsv() {
+    const rows = exportRows();
+    const csv = rows.map((row) => row.map(csvEscape).join(",")).join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = `switchboard-${plural[page]}-${new Date().toISOString().slice(0, 10)}.csv`;
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    URL.revokeObjectURL(url);
+    setStatus(`${labels[page]} list exported.`);
+  }
+
+  function parseCsv(text) {
+    const rows = [];
+    let row = [];
+    let value = "";
+    let quoted = false;
+    for (let index = 0; index < text.length; index += 1) {
+      const char = text[index];
+      const next = text[index + 1];
+      if (quoted) {
+        if (char === '"' && next === '"') {
+          value += '"';
+          index += 1;
+        } else if (char === '"') {
+          quoted = false;
+        } else {
+          value += char;
+        }
+      } else if (char === '"') {
+        quoted = true;
+      } else if (char === ",") {
+        row.push(value);
+        value = "";
+      } else if (char === "\n") {
+        row.push(value);
+        rows.push(row);
+        row = [];
+        value = "";
+      } else if (char !== "\r") {
+        value += char;
+      }
+    }
+    row.push(value);
+    rows.push(row);
+    return rows.filter((item) => item.some((cell) => String(cell || "").trim()));
+  }
+
+  function rowsFromCsv(text) {
+    const rows = parseCsv(text);
+    if (!rows.length) return [];
+    const headers = rows.shift().map((header) => key(header).replace(/[^a-z0-9]/g, ""));
+    return rows.map((row) => headers.reduce((record, header, index) => {
+      record[header] = String(row[index] || "").trim();
+      return record;
+    }, {})).filter((record) => Object.values(record).some(Boolean));
+  }
+
+  function findCompanyByName(name) {
+    const target = key(name);
+    return state.companies.find((item) => key(item.name) === target) || null;
+  }
+
+  function findDepartmentByName(companyId, name) {
+    const target = key(name);
+    return state.departments.find((item) => item.companyId === companyId && key(item.name) === target) || null;
+  }
+
+  function findGroupByName(companyId, departmentId, name) {
+    const target = key(name);
+    return state.groups.find((item) => item.companyId === companyId && (item.departmentId || "") === (departmentId || "") && key(item.name) === target) || null;
+  }
+
+  function statusFromRow(row) {
+    const value = key(row.status) === "archived" ? "archived" : "active";
+    return value;
+  }
+
+  async function ensureImportedCompany(name, row = {}, counts) {
+    const cleaned = String(name || "").trim();
+    if (!cleaned) return null;
+    const existing = findCompanyByName(cleaned);
+    if (existing) return existing;
+    const data = await apiJson("/api/admin/entra/companies", {
+      method: "POST",
+      body: JSON.stringify({ name: cleaned, description: row.description || "", status: statusFromRow(row) })
+    });
+    const company = data.company;
+    if (company) {
+      state.companies.unshift(company);
+      counts.created += 1;
+    }
+    return company || findCompanyByName(cleaned);
+  }
+
+  async function importCompany(row, counts) {
+    const name = row.company || row.name;
+    if (!name) return counts.skipped += 1;
+    if (findCompanyByName(name)) return counts.skipped += 1;
+    await ensureImportedCompany(name, row, counts);
+  }
+
+  async function importDepartment(row, counts) {
+    const company = await ensureImportedCompany(row.company || row.companyname, row, counts);
+    const name = row.department || row.name;
+    if (!company || !name) return counts.skipped += 1;
+    if (findDepartmentByName(company.id, name)) return counts.skipped += 1;
+    const data = await apiJson("/api/admin/entra/departments", {
+      method: "POST",
+      body: JSON.stringify({ companyId: company.id, name, description: row.description || "", status: statusFromRow(row) })
+    });
+    if (data.department) {
+      state.departments.unshift(data.department);
+      counts.created += 1;
+    }
+  }
+
+  async function importGroup(row, counts) {
+    const company = await ensureImportedCompany(row.company || row.companyname, row, counts);
+    const groupName = row.group || row.name;
+    if (!company || !groupName) return counts.skipped += 1;
+    let department = null;
+    const departmentLabel = row.department || row.departmentname || "";
+    if (departmentLabel) {
+      department = findDepartmentByName(company.id, departmentLabel);
+      if (!department) {
+        const data = await apiJson("/api/admin/entra/departments", {
+          method: "POST",
+          body: JSON.stringify({ companyId: company.id, name: departmentLabel, description: "", status: "active" })
+        });
+        department = data.department || null;
+        if (department) {
+          state.departments.unshift(department);
+          counts.created += 1;
+        }
+      }
+    }
+    const departmentId = department?.id || "";
+    if (findGroupByName(company.id, departmentId, groupName)) return counts.skipped += 1;
+    const data = await apiJson("/api/admin/entra/groups", {
+      method: "POST",
+      body: JSON.stringify({ companyId: company.id, departmentId, name: groupName, description: row.description || "", status: statusFromRow(row) })
+    });
+    if (data.group) {
+      state.groups.unshift(data.group);
+      counts.created += 1;
+    }
+  }
+
+  async function importCsvFile(file) {
+    if (!file) return;
+    try {
+      setStatus(`Importing ${labels[page].toLowerCase()} list...`);
+      await loadData("Checking existing records...");
+      const records = rowsFromCsv(await file.text());
+      const counts = { created: 0, skipped: 0 };
+      for (const row of records) {
+        if (page === "company") await importCompany(row, counts);
+        if (page === "department") await importDepartment(row, counts);
+        if (page === "group") await importGroup(row, counts);
+      }
+      await loadData(`Imported ${counts.created} records. Skipped ${counts.skipped}.`);
+    } catch (error) {
+      setStatus(error.message, true);
+    }
+  }
+
+  function injectImportExportControls() {
+    const toolbar = document.querySelector(".entra-toolbar");
+    if (!toolbar || document.getElementById("exportEntraButton")) return;
+    const importInput = document.createElement("input");
+    importInput.id = "importEntraInput";
+    importInput.className = "entra-import-input";
+    importInput.type = "file";
+    importInput.accept = ".csv,text/csv";
+
+    const exportButton = document.createElement("button");
+    exportButton.id = "exportEntraButton";
+    exportButton.type = "button";
+    exportButton.textContent = "Export list";
+
+    const importButton = document.createElement("button");
+    importButton.id = "importEntraButton";
+    importButton.type = "button";
+    importButton.textContent = "Import list";
+
+    toolbar.append(exportButton, importButton, importInput);
+    exportButton.addEventListener("click", exportCsv);
+    importButton.addEventListener("click", () => importInput.click());
+    importInput.addEventListener("change", () => {
+      const [file] = importInput.files || [];
+      importCsvFile(file).finally(() => { importInput.value = ""; });
+    });
+  }
+
   async function saveRecord(event) {
     event.preventDefault();
     const endpoint = endpoints[page];
@@ -315,6 +530,7 @@
   }
 
   injectStyles();
+  injectImportExportControls();
   bind();
   resetForm();
   loadData().catch((error) => setStatus(error.message, true));
