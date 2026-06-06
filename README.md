@@ -57,6 +57,7 @@ The `web/` directory contains a Render-ready Express app that serves a plain HTM
 - Logout clears browser-held auth tokens, calls backend session logout when a user session is present, and redirects to `/login.html`.
 - Admin pages no longer expose visible token-entry, Login, or Run Review controls; protected backend admin routes accept either `ADMIN_TOKEN` or an active owner/admin user session.
 - Protected user-management APIs and the `/user.html` admin UI support table-based user listing and searching, Add user modal creation, drag-and-drop or click-to-select profile photo upload with preview, hosted profile photo URLs, user editing, disabling, and reactivating when `ADMIN_TOKEN` or an active owner/admin user session is available.
+- The `/user.html` page keeps page-specific layout and behavior in `web/public/user-page.css` and `web/public/user-page.js`; shared admin behavior remains in `web/public/admin.js` and shared styles remain in `web/public/admin.css`.
 - Company, Department, and Group admin pages now match the User management UI pattern with table-based records, search plus Add actions in the card header, status/action columns, responsive mobile rows, and modal create/edit forms.
 - The `/user-audit.html` report page reads protected audit events, shows the acting user, a plain-language update summary, and timestamp, and exports the same audit data as CSV.
 - Knowledge base includes source-controlled project knowledge cards plus review-created backend knowledge when an admin session is available.
@@ -89,6 +90,10 @@ For persistent PostgreSQL storage, set `DATABASE_URL`. The server creates these 
 - `users`
 - `user_sessions`
 - `user_audit_events`
+- `user_verification_tokens`
+- `entra_companies`
+- `entra_departments`
+- `entra_groups`
 - `knowledge_entries`
 - `review_runs`
 
@@ -97,6 +102,12 @@ The `users`, `user_sessions`, and `user_audit_events` tables back login, profile
 Existing PostgreSQL databases are updated additively with `chats.archived_at` and user-management/auth foundation tables so archived chats can be hidden without deleting chat history and account records can be stored without replacing existing chat data.
 
 Without `DATABASE_URL`, the app starts in in-memory storage mode for local testing and storage-only operation.
+
+### Bootstrap account policy
+
+The PostgreSQL schema does not seed bootstrap users by default. Optional bootstrap/demo accounts live in `web/db/seed-bootstrap-users.sql` and should be run only as an intentional bootstrap or demo step. Rotate or disable seeded accounts before production use, and keep real credentials in deployment environment variables or another approved secret store.
+
+See [Bootstrap Account Policy](docs/bootstrap-account-policy.md) for production rules and the hardening status.
 
 ### Environment variables
 
@@ -168,7 +179,8 @@ The review workflow is implemented as an idempotent backend route and optional b
 - Admin approval of knowledge entries and approved knowledge retrieval.
 - Protected user-management routes, user creation/listing/loading/updating, duplicate email handling, disable/reactivate actions, uploaded profile photo Data URL validation, and audit-event creation.
 - Real auth/profile behavior: failed and successful login, login rate limiting, session profile reads, backend-backed profile updates, current-password verification for password changes, stricter password rejection, password-change session rotation and old-token revocation, session-backed owner/admin access to all `/api/admin/*` routes, logout revocation, non-admin rejection from admin APIs, audit entries for login/profile activity, and new-password login.
-- User page controls for searchable table listing, Add user modal creation, drag-and-drop profile photo upload, photo preview, create/edit fields, role/status selection, password entry, and backend API wiring.
+- User page controls for searchable table listing, Add user modal creation, drag-and-drop profile photo upload, photo preview, create/edit fields, role/status selection, password entry, extracted `user-page.css` and `user-page.js` assets, and backend API wiring.
+- Regression checks that public static files do not contain common mojibake markers and that bootstrap/demo users remain in an explicit seed file instead of the automatic schema.
 - Entra Company, Department, and Group pages for table-based management layout, search, Add buttons, modal create/edit forms, status actions, and responsive rows.
 - User Audit report controls for User, Update, Timestamp rows, protected audit data, actor/target identity display, and CSV export.
 - Admin navigation routes, page ownership for Chat, Knowledge base, User, Playground, Settings, Reports, Logs, Review runs, System health, and User audit, plus nested Attachments, Settings section structure, standardized Settings status badges, Settings Access and security session/protected-route summaries, safe action links, secret-display guardrails, Settings Review runs summary cards, System health hints, live Diagnostics rendering, Settings Light / Dark / System theme preference markup, theme persistence keys, reload restore behavior, System-mode handling, Settings refresh cadence markup, refresh persistence key, manual refresh timer cancellation, Refresh now wiring, Playground required workspace sections, the profile dropdown, Update Profile form, Logout redirect, profile-menu-only admin logout, and the Mac-style clock wiring.
