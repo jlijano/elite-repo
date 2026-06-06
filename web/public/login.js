@@ -22,6 +22,7 @@ const form = document.getElementById("loginForm");
 const email = document.getElementById("loginEmail");
 const password = document.getElementById("loginPassword");
 const status = document.getElementById("loginStatus");
+const githubLogin = document.getElementById("githubLogin");
 
 function setLoginStatus(message, error = false) {
   if (!status) return;
@@ -58,6 +59,18 @@ function explainReason() {
   if (reason === "expired") setLoginStatus("Your session expired. Please sign in again.", true);
   if (reason === "required") setLoginStatus("Please sign in to continue.", true);
   if (reason === "not-admin") setLoginStatus("That area requires an admin account. Sign in with an admin user to continue.", true);
+  if (reason === "github-unavailable") setLoginStatus("GitHub login is not configured yet.", true);
+  if (reason === "github-user-missing") setLoginStatus("No active Switchboard user matches that GitHub email.", true);
+  if (reason === "github-email-missing") setLoginStatus("GitHub did not provide a verified email address.", true);
+  if (reason === "github-failed") setLoginStatus("GitHub login could not be completed.", true);
+}
+
+function prepareGithubLoginLink() {
+  const redirect = new URLSearchParams(window.location.search).get("redirect");
+  if (!githubLogin || !redirect) return;
+  const url = new URL(githubLogin.getAttribute("href"), window.location.origin);
+  url.searchParams.set("redirect", redirect);
+  githubLogin.href = `${url.pathname}${url.search}`;
 }
 
 form?.addEventListener("submit", async (event) => {
@@ -85,4 +98,5 @@ form?.addEventListener("submit", async (event) => {
   }
 });
 
+prepareGithubLoginLink();
 explainReason();
