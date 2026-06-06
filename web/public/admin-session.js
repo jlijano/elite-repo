@@ -160,12 +160,18 @@
     if (!isAdminRole(data.user?.role)) redirectNonAdmin();
   }
 
-  function loadUserOrgFields() {
-    if (document.body?.dataset.adminPage !== "user" || document.getElementById("userOrgFieldsScript")) return;
+  function loadScriptOnce(id, src) {
+    if (document.getElementById(id)) return;
     const script = document.createElement("script");
-    script.id = "userOrgFieldsScript";
-    script.src = "/user-org-fields.js";
+    script.id = id;
+    script.src = src;
     document.body.appendChild(script);
+  }
+
+  function loadUserOrgFields() {
+    if (document.body?.dataset.adminPage !== "user") return;
+    loadScriptOnce("userOrgFieldsScript", "/user-org-fields.js");
+    loadScriptOnce("userEntraSuggestionsScript", "/user-entra-suggestions.js");
   }
 
   const nativeFetch = window.fetch.bind(window);
