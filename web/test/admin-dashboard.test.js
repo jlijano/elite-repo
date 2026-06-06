@@ -84,7 +84,7 @@ test("top-level admin navigation uses dedicated page links", () => {
 test("reports navigation is grouped and contains all report types", () => {
   for (const pageHtml of allAdminPages) {
     assert.match(pageHtml, /class="admin-section-list reports-nav"[\s\S]*aria-label="Reports navigation"/);
-    assert.match(pageHtml, /<h2 class="session-heading">Reports<\/h2>/);
+    assert.match(pageHtml, /(<h2 class="session-heading">Reports<\/h2>|class="reports-summary-label">Reports<\/span>)/);
     for (const [href, label] of reportLinks) {
       assert.match(pageHtml, new RegExp(`href="${href}"[\\s\\S]*>${label}<`));
     }
@@ -137,6 +137,8 @@ test("settings page owns preferences access review health diagnostics and refres
   assert.match(settingsHtml, /id="diagnosticsPage"/);
   assert.match(settingsHtml, />Preferences<\/p>/);
   assert.match(settingsHtml, />Access and security<\/p>/);
+  assert.match(settingsHtml, /class="list compact-list review-runs-panel" id="runs"/);
+  assert.match(settingsHtml, /id="diagnosticsList"/);
   assert.match(settingsHtml, /class="refresh-cadence-control"[\s\S]*aria-label="Refresh cadence"/);
   assert.match(settingsHtml, /data-refresh-choice="manual"[\s\S]*>Manual<\/button>/);
   assert.match(settingsHtml, /data-refresh-choice="fast"[\s\S]*>15s<\/button>/);
@@ -323,6 +325,26 @@ test("settings access security summarizes session and protected route state with
   assert.match(adminCss, /\.access-summary/);
   assert.match(adminCss, /\.access-security-grid/);
   assert.match(adminCss, /\.access-actions/);
+});
+
+test("settings review runs health and diagnostics render richer operational context", () => {
+  assert.match(adminJs, /function renderMetricCard\(label, value, detail, state = "Ready"\)/);
+  assert.match(adminJs, /function renderDiagnostics\(status = lastStatus \|\| \{\}\)/);
+  assert.match(adminJs, /review-run-summary/);
+  assert.match(adminJs, /Last run/);
+  assert.match(adminJs, /Messages reviewed/);
+  assert.match(adminJs, /Knowledge entries/);
+  assert.match(adminJs, /Failures/);
+  assert.match(adminJs, /health-hint/);
+  assert.match(adminJs, /Refresh cadence/);
+  assert.match(adminJs, /Theme mode/);
+  assert.match(adminJs, /Secret display guard/);
+  assert.match(adminJs, /renderDiagnostics\(status\)/);
+  assert.match(adminCss, /\.review-runs-panel/);
+  assert.match(adminCss, /\.review-run-summary/);
+  assert.match(adminCss, /\.metric-card/);
+  assert.match(adminCss, /\.health-hint/);
+  assert.match(adminCss, /\.diagnostics-item/);
 });
 
 test("admin javascript switches behavior by page", () => {
