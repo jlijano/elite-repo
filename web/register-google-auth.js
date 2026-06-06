@@ -1,5 +1,6 @@
 const crypto = require("crypto");
 const express = require("express");
+const { getOrCreateOAuthUser } = require("./oauth-user");
 
 const originalListen = express.application.listen;
 const attachedApps = new WeakSet();
@@ -125,11 +126,16 @@ async function exchangeCodeForToken(req, code) {
   return data.access_token;
 }
 
-async function googleVerifiedEmail(accessToken) {
+async function googleVerifiedProfile(accessToken) {
   const profile = await googleFetchJson("https://openidconnect.googleapis.com/v1/userinfo", {
     headers: { Authorization: `Bearer ${accessToken}` }
   });
-  return profile.email_verified === true ? cleanString(profile.email, 160).toLowerCase() : "";
+  return profile.email_verified === true ? {
+    email: cleanString(profile.email, 160).toLowerCase(),
+    name: cleanString(profile.name, 120),
+    photoUrl: cleanString(profile.picture, 2000),
+    source: "google"
+  } : { email: "" };
 }
 
 function loginRedirect(reason = "google-failed") {
@@ -194,12 +200,12 @@ function attachGoogleAuthRoutes(app) {
       const code = cleanString(req.query.code, 500);
       if (!code) return res.redirect(loginRedirect("google-failed"));
       const accessToken = await exchangeCodeForToken(req, code);
-      const email = await googleVerifiedEmail(accessToken);
-      if (!email) return res.redirect(loginRedirect("google-email-missing"));
+      const profile = await googleVerifiedProfile(accessToken);
+      if (!profile.email) return res.redirect(loginRedirect("google-email-missing"));
       const store = app.locals.userManagementStore;
       if (!store) return res.redirect(loginRedirect("google-failed"));
-      const user = await store.getPrivateUserByEmail(email);
-      if (!user || user.status !== "active") return res.redirect(loginRedirect("google-user-missing"));
+      const user = await getOrCreateOAuthUser(store, profile);
+      if (!user) return res.redirect(loginRedirect("google-access-denied"));
       const session = await store.createSession(user.id);
       const updatedUser = await store.updateLastLogin(user.id);
       const publicUser = updatedUser || user;
