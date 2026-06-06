@@ -42,6 +42,13 @@ test("chat identity is scoped by conversation and share link", () => {
   assert.match(chatAdvancedScript, /participantId\(chatId\)/);
 });
 
+test("picked identity is preserved when a new chat id is saved", () => {
+  const saveWrapper = bubbleColorScript.match(/saveCurrentChat = function identitySaveCurrentChat[\s\S]+?\n    };\n/);
+  assert.ok(saveWrapper, "identity saveCurrentChat wrapper should be installed");
+  assert.match(saveWrapper[0], /if \(selectedNickname && selectedColor\) persistIdentity\(chatId\);/);
+  assert.match(saveWrapper[0], /else loadStoredIdentity\(chatId\);/);
+});
+
 test("message labels are rendered once", () => {
   assert.match(bubbleColorScript, /bubble\.querySelectorAll\("\.participant-label"\)\.forEach\(\(label\) => label\.remove\(\)\)/);
 });
