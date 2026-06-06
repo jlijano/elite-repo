@@ -16,6 +16,7 @@ The `web/` directory contains a Render-ready Express app that serves a plain HTM
 - ChatGPT-inspired full-height chat UI with a dark sidebar, centered conversation stream, rounded bottom composer, and responsive mobile layout.
 - Focused navigation for New Chat, saved chat sessions, chat archiving, agent status, theme switching, the composer plus menu, and message sending.
 - The composer plus menu includes Share link, Attach image, Take a photo, Attach a file, and Send voice message actions. Share links use the current chat ID so anyone with the link can open the same conversation and continue chatting in it.
+- Shared chat pages refresh the active conversation every 2 seconds while visible and label user messages as `Original` or `Shared link` so participants can tell where each message came from.
 - Separate chat sessions with New Chat behavior so conversations do not overlap.
 - The simplified chat header includes an X close control that archives the current chat and immediately starts a fresh `New chat` state.
 - Logged-in chat users see a sidebar Users section populated by active users who share the current user's company, department, or group.
