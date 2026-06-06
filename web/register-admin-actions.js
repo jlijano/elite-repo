@@ -266,14 +266,17 @@ function attachAdminActionRoutes(app) {
   });
 }
 
-function sendEnhancedJavaScript(res, root, requestedFile, prefixFile, suffixFile) {
+function sendEnhancedJavaScript(res, root, requestedFile, prefixFile, suffixFiles = []) {
   const sourcePath = path.join(root, requestedFile);
-  const prefixPath = prefixFile ? path.join(publicDir, prefixFile) : "";
-  const suffixPath = suffixFile ? path.join(publicDir, suffixFile) : "";
   const parts = [];
-  if (prefixPath && fs.existsSync(prefixPath)) parts.push(fs.readFileSync(prefixPath, "utf8"));
+  const appendPublicFile = (fileName) => {
+    const filePath = fileName ? path.join(publicDir, fileName) : "";
+    if (filePath && fs.existsSync(filePath)) parts.push(fs.readFileSync(filePath, "utf8"));
+  };
+
+  appendPublicFile(prefixFile);
   parts.push(fs.readFileSync(sourcePath, "utf8"));
-  if (suffixPath && fs.existsSync(suffixPath)) parts.push(fs.readFileSync(suffixPath, "utf8"));
+  for (const fileName of [suffixFiles].flat().filter(Boolean)) appendPublicFile(fileName);
   res.type("application/javascript").send(parts.join("\n\n"));
 }
 
@@ -287,7 +290,7 @@ express.static = function patchedStatic(root, options = {}) {
         return sendEnhancedJavaScript(res, root, "entra-management.js", "entra-admin-enhancements.js");
       }
       if (pathname === "/admin.js" && fs.existsSync(path.join(root, "admin.js"))) {
-        return sendEnhancedJavaScript(res, root, "admin.js", null, "user-purge-enhancements.js");
+        return sendEnhancedJavaScript(res, root, "admin.js", null, ["user-purge-enhancements.js", "user-management-polish.js"]);
       }
     } catch (error) {
       return next(error);
