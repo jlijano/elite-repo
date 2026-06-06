@@ -60,9 +60,12 @@
     return article?.querySelector(".row span")?.textContent?.trim() || "this chat";
   }
 
-  function clearSelectedChat(chatId) {
-    const active = chats.querySelector(`.item.active [data-chat="${CSS.escape(chatId)}"]`);
-    if (!active) return;
+  function hasPurgeButton(actions, chatId) {
+    return [...actions.querySelectorAll("[data-chat-purge]")].some((button) => button.dataset.chatPurge === chatId);
+  }
+
+  function clearSelectedChat(article) {
+    if (!article?.classList.contains("active")) return;
     if (detail) detail.textContent = "Select a chat to inspect messages.";
     if (files) files.textContent = "Select a chat to inspect attached files.";
   }
@@ -86,7 +89,7 @@
       });
       const data = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(data.error || "Could not purge chat.");
-      clearSelectedChat(chatId);
+      clearSelectedChat(article);
       article?.remove();
       setStatus(`Purged ${title}.`);
     } catch (error) {
@@ -103,7 +106,7 @@
       const chatId = inspectButton.dataset.chat;
       const actions = inspectButton.closest(".actions");
       const article = inspectButton.closest(".item");
-      if (!chatId || !actions || actions.querySelector(`[data-chat-purge="${CSS.escape(chatId)}"]`)) return;
+      if (!chatId || !actions || hasPurgeButton(actions, chatId)) return;
       const purgeButton = document.createElement("button");
       purgeButton.type = "button";
       purgeButton.className = "chat-purge-action";
