@@ -4,9 +4,9 @@
   "description": "Render-ready messaging app for the Switchboard Agent.",
   "main": "server.js",
   "scripts": {
-    "start": "node -r ./register-entra-management.js server.js",
+    "start": "node -r ./register-glass-buttons.js -r ./register-entra-management.js server.js",
     "test": "node --test test/*.test.js",
-    "check": "node --check server.js && node --check user-management.js && node --check entra-management.js && node --check playground-management.js && node --check account-verification.js && node --check register-user-management.js && node --check register-entra-management.js && node --check public/app.js && node --check public/admin.js && node --check public/playground.js && node --check public/login.js && node --check public/profile.js && node --check public/admin-session.js && node --check public/entra-management.js && node --check public/user-entra-suggestions.js && node --check public/verify-account.js && npm test"
+    "check": "node --check server.js && node --check user-management.js && node --check entra-management.js && node --check playground-management.js && node --check account-verification.js && node --check register-user-management.js && node --check register-entra-management.js && node --check register-glass-buttons.js && node --check public/app.js && node --check public/admin.js && node --check public/playground.js && node --check public/login.js && node --check public/profile.js && node --check public/admin-session.js && node --check public/entra-management.js && node --check public/user-entra-suggestions.js && node --check public/verify-account.js && npm test"
   },
   "dependencies": {
     "cors": "^2.8.5",
