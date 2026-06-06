@@ -22,7 +22,10 @@
     company: $("entraCompany"),
     department: $("entraDepartment"),
     saveButton: $("saveEntraButton"),
-    cancelButton: $("cancelEntraEditButton")
+    cancelButton: $("cancelEntraEditButton"),
+    addButton: $("addEntraButton"),
+    dialog: $("entraDialog"),
+    closeButton: $("closeEntraModalButton")
   };
 
   const html = (value) => String(value ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
@@ -34,16 +37,65 @@
     const style = document.createElement("style");
     style.id = "entraManagementStyles";
     style.textContent = `
-      .entra-management-grid { display: grid; grid-template-columns: minmax(320px, 0.9fr) minmax(360px, 1.1fr); min-height: 520px; }
-      .entra-form-panel { min-width: 0; display: grid; align-content: start; gap: 12px; padding: 12px; border-left: 1px solid var(--line); }
-      .entra-list { max-height: 640px; }
-      .entra-toolbar { min-width: min(440px, 100%); }
-      .entra-toolbar input { flex: 1 1 220px; }
-      .entra-meta { color: var(--muted); }
-      .entra-parent { color: var(--text); font-weight: 800; }
+      .entra-card-head { align-items: center; }
+      .entra-toolbar { min-width: min(520px, 100%); }
+      .entra-toolbar input { flex: 1 1 260px; }
+      .entra-management-grid { display: block; min-height: 0; }
+      .entra-list { max-height: none; overflow: auto; }
+      .entra-table-wrap { width: 100%; overflow-x: auto; }
+      .entra-table { width: 100%; min-width: 760px; border-collapse: collapse; color: var(--text); }
+      .entra-table th, .entra-table td { padding: 12px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: middle; }
+      .entra-table th { color: var(--muted); background: var(--panel-soft); font-size: 0.76rem; font-weight: 900; text-transform: uppercase; }
+      .entra-table td { color: var(--text); font-size: 0.88rem; }
+      .entra-table tr.active td { box-shadow: inset 3px 0 0 var(--primary); }
+      .entra-table .muted-cell { color: var(--muted); }
+      .entra-table .actions { justify-content: flex-end; flex-wrap: nowrap; }
+      .entra-record-name { display: block; font-weight: 900; }
+      .entra-record-note { display: block; margin-top: 3px; color: var(--muted); font-size: 0.78rem; }
+      .entra-modal { position: fixed; inset: 0; width: min(680px, calc(100vw - 28px)); max-height: min(720px, calc(100dvh - 28px)); margin: auto; padding: 0; border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel); color: var(--text); box-shadow: 0 24px 80px rgba(0, 0, 0, 0.42); }
+      .entra-modal::backdrop { background: rgba(0, 0, 0, 0.58); }
+      .entra-modal-content { display: grid; max-height: min(720px, calc(100dvh - 28px)); overflow: hidden; }
+      .entra-modal-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 14px; border-bottom: 1px solid var(--line); background: var(--panel-soft); }
+      .entra-modal-head h2 { margin: 0; font-size: 1rem; }
+      .entra-modal-close { width: 38px; height: 38px; padding: 0; font-size: 1.1rem; }
+      .entra-dialog-body { max-height: calc(100dvh - 104px); overflow: auto; padding: 12px; }
+      .entra-dialog-body .management-form { border: 0; padding: 0; }
       .entra-scope-row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
-      @media (max-width: 1060px) { .entra-management-grid { grid-template-columns: 1fr; } .entra-form-panel { border-left: 0; border-top: 1px solid var(--line); } }
-      @media (max-width: 760px) { .entra-toolbar { width: 100%; min-width: 0; flex-direction: column; align-items: stretch; } .entra-scope-row { grid-template-columns: 1fr; } }
+      @media (max-width: 760px) {
+        .entra-card-head { align-items: stretch; flex-direction: column; }
+        .entra-toolbar { width: 100%; min-width: 0; flex-direction: column; align-items: stretch; }
+        .entra-toolbar input, .entra-toolbar button { flex: 0 0 auto; }
+        .entra-table { min-width: 680px; }
+        .entra-scope-row { grid-template-columns: 1fr; }
+      }
+      @media (max-width: 520px) {
+        .entra-table-wrap { overflow-x: visible; }
+        .entra-table { min-width: 0; display: block; }
+        .entra-table thead { display: none; }
+        .entra-table tbody, .entra-table tr, .entra-table td { display: block; width: 100%; }
+        .entra-table tr { padding: 10px; border-bottom: 1px solid var(--line); }
+        .entra-table tr.active { box-shadow: inset 3px 0 0 var(--primary); }
+        .entra-table tr.active td { box-shadow: none; }
+        .entra-table td { display: grid; grid-template-columns: 82px minmax(0, 1fr); gap: 8px; padding: 6px 0; border: 0; font-size: 0.84rem; }
+        .entra-table td::before { color: var(--muted); font-size: 0.68rem; font-weight: 900; text-transform: uppercase; }
+        .entra-table td:nth-child(1)::before { content: "Name"; }
+        .entra-table td:nth-child(2)::before { content: "Company"; }
+        .entra-table td:nth-child(3)::before { content: "Department"; }
+        .entra-table td:nth-child(4)::before { content: "Status"; }
+        .entra-table td:nth-child(5)::before { content: "Updated"; }
+        .entra-table td:nth-child(6) { display: block; padding-top: 8px; }
+        .entra-table td:nth-child(6)::before { content: none; }
+        .entra-table .actions { justify-content: stretch; flex-wrap: wrap; }
+        .entra-table .actions button { flex: 1 1 120px; }
+      }
+      @media (max-width: 340px), (max-height: 420px) and (max-width: 740px) {
+        .entra-table tr { padding: 8px; }
+        .entra-table td { grid-template-columns: 74px minmax(0, 1fr); gap: 6px; font-size: 0.78rem; }
+        .entra-table td::before { font-size: 0.64rem; }
+        .entra-modal { width: calc(100vw - 12px); max-height: calc(100dvh - 12px); }
+        .entra-modal-head { padding: 8px; }
+        .entra-dialog-body { max-height: calc(100dvh - 66px); padding: 8px; }
+      }
     `;
     document.head.appendChild(style);
   }
@@ -76,16 +128,20 @@
   }
 
   function companyName(companyId) {
-    return state.companies.find((item) => item.id === companyId)?.name || "No company";
+    return state.companies.find((item) => item.id === companyId)?.name || "Not set";
   }
 
   function departmentName(departmentId) {
-    return state.departments.find((item) => item.id === departmentId)?.name || "No department";
+    return state.departments.find((item) => item.id === departmentId)?.name || "Not set";
   }
 
   function statusBadge(status = "active") {
     const cls = status === "archived" ? "status-storage" : "status-ready";
     return `<small class="status-badge ${cls}">${html(status)}</small>`;
+  }
+
+  function tableCell(content, className = "") {
+    return `<td${className ? ` class="${className}"` : ""}>${content}</td>`;
   }
 
   function fillSelect(select, items, placeholder, selected = "") {
@@ -104,6 +160,16 @@
   function renderScopeControls(record = {}) {
     fillSelect(els.company, state.companies.filter((item) => item.status !== "archived"), "Select company", record.companyId || "");
     updateDepartmentOptions(record.departmentId || "");
+  }
+
+  function openDialog() {
+    if (!els.dialog || els.dialog.open) return;
+    els.dialog.showModal();
+    window.setTimeout(() => els.name?.focus(), 0);
+  }
+
+  function closeDialog() {
+    if (els.dialog?.open) els.dialog.close();
   }
 
   function resetForm() {
@@ -125,13 +191,23 @@
     if (els.formTitle) els.formTitle.textContent = `Edit ${record.name || labels[page]}`;
     if (els.saveButton) els.saveButton.textContent = "Save changes";
     if (els.cancelButton) els.cancelButton.hidden = false;
-    els.name?.focus();
+    openDialog();
   }
 
-  function recordMeta(record) {
-    if (page === "company") return `${state.departments.filter((item) => item.companyId === record.id).length} departments · ${state.groups.filter((item) => item.companyId === record.id).length} groups`;
-    if (page === "department") return `<span class="entra-parent">${html(record.companyName || companyName(record.companyId))}</span> · ${state.groups.filter((item) => item.departmentId === record.id).length} groups`;
-    return `<span class="entra-parent">${html(record.companyName || companyName(record.companyId))}</span>${record.departmentId ? ` · ${html(record.departmentName || departmentName(record.departmentId))}` : " · No department"}`;
+  function nameCell(record) {
+    const note = record.description || "No description";
+    return `<span class="entra-record-name">${html(record.name)}</span><span class="entra-record-note">${html(note)}</span>`;
+  }
+
+  function companyCell(record) {
+    if (page === "company") return `${state.departments.filter((item) => item.companyId === record.id).length} departments`;
+    return html(record.companyName || companyName(record.companyId));
+  }
+
+  function departmentCell(record) {
+    if (page === "company") return `${state.groups.filter((item) => item.companyId === record.id).length} groups`;
+    if (page === "department") return `${state.groups.filter((item) => item.departmentId === record.id).length} groups`;
+    return html(record.departmentName || departmentName(record.departmentId));
   }
 
   function renderList() {
@@ -142,19 +218,25 @@
       els.list.innerHTML = `<div class="empty action-empty"><strong>No ${plural[page]} found.</strong><p>Create a ${labels[page].toLowerCase()} record or clear the search.</p></div>`;
       return;
     }
-    els.list.innerHTML = records.map((record) => {
+
+    const rows = records.map((record) => {
       const archived = record.status === "archived";
       const action = archived
         ? `<button type="button" data-reactivate="${html(record.id)}">Reactivate</button>`
         : `<button type="button" data-archive="${html(record.id)}">Archive</button>`;
-      return `<article class="item ${record.id === state.editingId ? "active" : ""}">
-        <div class="row"><span>${html(record.name)}</span>${statusBadge(record.status)}</div>
-        <p class="entra-meta">${recordMeta(record)}</p>
-        <p>${html(record.description || "No description yet.")}</p>
-        <p class="entra-meta">Updated ${html(time(record.updatedAt))}</p>
-        <div class="actions"><button type="button" data-edit="${html(record.id)}">Edit</button>${action}</div>
-      </article>`;
+      return `<tr${record.id === state.editingId ? " class=\"active\"" : ""}>
+        ${tableCell(nameCell(record))}
+        ${tableCell(companyCell(record), "muted-cell")}
+        ${tableCell(departmentCell(record), "muted-cell")}
+        ${tableCell(statusBadge(record.status))}
+        ${tableCell(html(time(record.updatedAt)), "muted-cell")}
+        ${tableCell(`<div class="actions"><button type="button" data-edit="${html(record.id)}">Edit</button>${action}</div>`)}
+      </tr>`;
     }).join("");
+
+    const secondColumn = page === "company" ? "Departments" : "Company";
+    const thirdColumn = page === "company" ? "Groups" : page === "department" ? "Groups" : "Department";
+    els.list.innerHTML = `<div class="entra-table-wrap"><table class="entra-table"><thead><tr><th>Name</th><th>${secondColumn}</th><th>${thirdColumn}</th><th>Status</th><th>Updated</th><th>Actions</th></tr></thead><tbody>${rows}</tbody></table></div>`;
   }
 
   async function loadData(message = `Loading ${plural[page]}...`) {
@@ -188,6 +270,7 @@
     try {
       await apiJson(url, { method, body: JSON.stringify(payload()) });
       resetForm();
+      closeDialog();
       await loadData(method === "POST" ? `${labels[page]} created.` : `${labels[page]} updated.`);
     } catch (error) {
       setStatus(error.message, true);
@@ -208,7 +291,10 @@
 
   function bind() {
     els.form?.addEventListener("submit", saveRecord);
-    els.cancelButton?.addEventListener("click", () => { resetForm(); renderList(); });
+    els.addButton?.addEventListener("click", () => { resetForm(); openDialog(); });
+    els.closeButton?.addEventListener("click", closeDialog);
+    els.cancelButton?.addEventListener("click", () => { resetForm(); closeDialog(); renderList(); });
+    els.dialog?.addEventListener("click", (event) => { if (event.target === els.dialog) closeDialog(); });
     els.search?.addEventListener("input", renderList);
     els.company?.addEventListener("change", () => updateDepartmentOptions());
     els.list?.addEventListener("click", (event) => {
@@ -222,6 +308,9 @@
       }
       if (archive) setRecordStatus(archive.dataset.archive, "archive");
       if (reactivate) setRecordStatus(reactivate.dataset.reactivate, "reactivate");
+    });
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "Escape") closeDialog();
     });
   }
 
