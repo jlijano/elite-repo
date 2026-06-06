@@ -306,7 +306,7 @@
     const originalCreateMessageElement = createMessageElement;
     createMessageElement = function bubbleColorCreateMessageElement(role, content, options = {}) {
       const article = originalCreateMessageElement(role, content, options);
-      const color = normalizeColor(options.bubbleColor || options.context?.bubbleColor || (role === "user" ? selectedColor : ""));
+      const color = normalizeColor(options.bubbleColor || options.context?.bubbleColor || "");
       if (role === "user" && color) {
         const bubble = article.querySelector(".bubble");
         bubble?.classList.add("participant-bubble");
