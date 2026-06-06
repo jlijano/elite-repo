@@ -11,6 +11,7 @@ const originalRouteMethods = {
   delete: express.application.delete
 };
 const attachedApps = new WeakSet();
+const sessionBridgeAdminToken = `session-admin-${Date.now().toString(36)}`;
 let wrapAdminRoutes = true;
 let userManagementStore;
 
@@ -40,7 +41,8 @@ async function sessionAdminOk(req) {
 }
 
 function markLegacyHandlerAuthorized(req) {
-  if (process.env.ADMIN_TOKEN) req.headers["x-admin-token"] = process.env.ADMIN_TOKEN;
+  if (!process.env.ADMIN_TOKEN) process.env.ADMIN_TOKEN = sessionBridgeAdminToken;
+  req.headers["x-admin-token"] = process.env.ADMIN_TOKEN;
 }
 
 function wrapAdminHandler(handler) {
