@@ -2,6 +2,7 @@
 
 ## [Unreleased]
 
+- Added a Reports section to the admin sidebar with working Reports overview, Logs, Review runs, System health, and User audit pages.
 - Added Phase 5 admin auth hardening so legacy `/api/admin/*` routes accept active owner/admin user sessions as well as `ADMIN_TOKEN`, with tests for summary, chats, knowledge, review runs, logout revocation, and non-admin session rejection.
 - Added Phase 4 auth/profile hardening with real login sessions, backend-backed profile reads and updates, current-password verification for password changes, session logout, user-session storage, browser login/profile scripts, and auth/profile integration tests.
 - Added a Light / Dark / System theme preference control to admin Settings, including reload-safe persistence, System-mode handling, styling, README notes, and frontend contract coverage.
@@ -53,7 +54,7 @@
 - Added a review workflow endpoint that creates durable approved knowledge entries from unreviewed chats and marks messages reviewed.
 - Added secret redaction safeguards for stored message content and context.
 - Improved frontend and backend error handling and status reporting for AI and storage availability.
-- Improved the Switchboard Agent web app CSS for mobile screens with safer viewport sizing, responsive header actions, safe-area spacing, and compact composer controls.
+- Improved the Switchboard Agent web app CSS for mobile screens with safer viewport sizing, responsive header actions, and safe-area spacing.
 - Added a web validation script and GitHub Actions workflow for pull request checks.
 - Added a persistent light/dark mode toggle to the Switchboard Agent web app.
 - Added a README maintenance rule requiring README.md and meaningful change-log.md updates for future repository changes that affect setup, behavior, deployment, agent rules, UI, API, workflows, or project structure.
