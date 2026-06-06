@@ -1,9 +1,10 @@
 const page = document.body.dataset.adminPage || "chat";
 const themeStorageKey = "switchboard-theme";
 const themePreferenceStorageKey = "switchboard-theme-mode";
+const refreshCadenceStorageKey = "switchboard-refresh-cadence";
 const adminTokenStorageKey = "switchboard-admin-token";
 const userProfileStorageKey = "switchboard-user-profile";
-const refreshIntervalMs = 40000;
+const defaultRefreshCadence = "standard";
 const defaultProfile = { photo: "", name: "Switchboard User", email: "user@example.com", passwordUpdatedAt: "" };
 const projectKnowledgeEntries = [
   { id: "project-admin-token-ui", title: "Admin login panel cleanup", status: "project", createdAt: "2026-06-06T00:00:00.000Z", content: "The admin dashboard should not show visible token-entry, Login, or Run Review controls. Protected backend admin routes still require ADMIN_TOKEN, but that requirement stays backend-only rather than being presented as an on-screen token form." },
@@ -56,6 +57,9 @@ const els = {
   settingsThemeButton: $("settingsThemeButton"),
   settingsThemeOptions: document.querySelectorAll("[data-theme-choice]"),
   settingsThemeSummary: $("settingsThemeSummary"),
+  settingsRefreshOptions: document.querySelectorAll("[data-refresh-choice]"),
+  settingsRefreshSummary: $("settingsRefreshSummary"),
+  settingsRefreshNow: $("settingsRefreshNow"),
   settingsAdminState: $("settingsAdminState"),
   menuClock: $("menuClock")
 };
@@ -68,6 +72,7 @@ let userAuditCache = [];
 let selectedChatId = "";
 let editingUserId = "";
 let lastStatus = null;
+let refreshTimerId = null;
 
 const html = (value) => String(value ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 const time = (value) => value ? new Intl.DateTimeFormat(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }).format(new Date(value)) : "";
@@ -78,6 +83,14 @@ const getCurrentTheme = () => document.documentElement.dataset.theme === "dark" 
 const validThemeChoices = ["light", "dark", "system"];
 const systemThemeQuery = window.matchMedia?.("(prefers-color-scheme: dark)");
 const resolveThemeChoice = (choice) => choice === "system" ? (systemThemeQuery?.matches ? "dark" : "light") : choice;
+const refreshCadenceOptions = {
+  manual: { label: "Manual", ms: 0, summary: "Manual refresh. Background refresh is off." },
+  fast: { label: "15 seconds", ms: 15000, summary: "Auto refresh every 15 seconds" },
+  standard: { label: "40 seconds", ms: 40000, summary: "Auto refresh every 40 seconds" },
+  minute: { label: "1 minute", ms: 60000, summary: "Auto refresh every 1 minute" },
+  relaxed: { label: "5 minutes", ms: 300000, summary: "Auto refresh every 5 minutes" }
+};
+const validRefreshCadences = Object.keys(refreshCadenceOptions);
 const statusClass = (state = "") => {
   const normalized = String(state).toLowerCase();
   if (normalized.includes("error") || normalized.includes("unavailable") || normalized.includes("failed") || normalized.includes("disabled")) return "status-error";
@@ -174,6 +187,40 @@ function toggleTheme() {
 
 function handleSystemThemeChange() {
   if (getStoredThemePreference() === "system") applyThemePreference("system");
+}
+
+function getStoredRefreshCadence() {
+  try {
+    const storedCadence = localStorage.getItem(refreshCadenceStorageKey);
+    if (validRefreshCadences.includes(storedCadence)) return storedCadence;
+  } catch (error) {}
+  return defaultRefreshCadence;
+}
+
+function updateSettingsRefreshControl(cadence = getStoredRefreshCadence()) {
+  const choice = validRefreshCadences.includes(cadence) ? cadence : defaultRefreshCadence;
+  const config = refreshCadenceOptions[choice];
+  els.settingsRefreshOptions?.forEach((button) => {
+    const active = button.dataset.refreshChoice === choice;
+    button.classList.toggle("active", active);
+    button.setAttribute("aria-pressed", String(active));
+  });
+  if (els.settingsRefreshSummary) els.settingsRefreshSummary.textContent = config.summary;
+}
+
+function schedulePageRefresh(cadence = getStoredRefreshCadence()) {
+  if (refreshTimerId) clearInterval(refreshTimerId);
+  refreshTimerId = null;
+  const choice = validRefreshCadences.includes(cadence) ? cadence : defaultRefreshCadence;
+  const intervalMs = refreshCadenceOptions[choice].ms;
+  if (intervalMs > 0) refreshTimerId = setInterval(() => loadPage().catch(() => {}), intervalMs);
+}
+
+function applyRefreshCadence(cadence) {
+  const choice = validRefreshCadences.includes(cadence) ? cadence : defaultRefreshCadence;
+  try { localStorage.setItem(refreshCadenceStorageKey, choice); } catch (error) {}
+  updateSettingsRefreshControl(choice);
+  schedulePageRefresh(choice);
 }
 
 function refreshTokenFromSession() {
@@ -557,6 +604,8 @@ els.themeToggle?.addEventListener("click", toggleTheme);
 els.settingsThemeOptions?.forEach((button) => button.addEventListener("click", () => applyThemePreference(button.dataset.themeChoice)));
 els.settingsThemeButton?.addEventListener("click", toggleTheme);
 systemThemeQuery?.addEventListener?.("change", handleSystemThemeChange);
+els.settingsRefreshOptions?.forEach((button) => button.addEventListener("click", () => applyRefreshCadence(button.dataset.refreshChoice)));
+els.settingsRefreshNow?.addEventListener("click", () => loadPage().catch((error) => setStatus(error.message, true)));
 els.logoutButton?.addEventListener("click", logout);
 els.profileMenuButton?.addEventListener("click", toggleProfileDropdown);
 els.profileLogoutButtons.forEach((button) => button.addEventListener("click", logout));
@@ -584,4 +633,4 @@ els.knowledgeSearch?.addEventListener("input", renderKnowledge);
 els.userSearch?.addEventListener("input", () => renderUsers());
 els.knowledgeStatus?.addEventListener("change", () => loadKnowledgePage().catch((error) => setStatus(error.message, true)));
 loadPage().catch(() => {});
-setInterval(() => loadPage().catch(() => {}), refreshIntervalMs);
+applyRefreshCadence(getStoredRefreshCadence());
