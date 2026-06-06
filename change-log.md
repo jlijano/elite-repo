@@ -2,6 +2,7 @@
 
 ## [Unreleased]
 
+- Moved the admin light/dark mode control out of the top header and into the Settings page.
 - Split the admin dashboard into dedicated static pages for Chat, Knowledge base, User, and Settings, with `/admin.html` redirecting to `/chat.html`.
 - Moved Attachments into the Chat page and moved Review runs plus System health into Settings.
 - Renamed Knowledge Queue to Knowledge base, Admin access to User, and added a Manage users action for user management.
