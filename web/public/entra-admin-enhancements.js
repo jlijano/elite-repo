@@ -164,6 +164,13 @@
         color: var(--muted);
         font-weight: 800;
         font-size: 0.72rem;
+        transition: border-color 160ms ease, background 160ms ease, color 160ms ease;
+      }
+
+      .company-logo-field.drag-over .company-logo-preview {
+        border-color: var(--primary);
+        background: rgba(20, 184, 166, 0.16);
+        color: var(--primary);
       }
 
       .company-logo-preview img,
@@ -321,19 +328,11 @@
 
     const logoUrl = document.getElementById("companyLogoUrl");
     const logoFile = document.getElementById("companyLogoFile");
-    document.getElementById("companyLogoChoose")?.addEventListener("click", () => logoFile?.click());
-    document.getElementById("companyLogoClear")?.addEventListener("click", () => {
-      logoUrl.value = "";
-      if (logoFile) logoFile.value = "";
-      logoPreview("");
-    });
-    logoUrl?.addEventListener("input", () => logoPreview(logoUrl.value.trim()));
-    logoFile?.addEventListener("change", () => {
-      const file = logoFile.files?.[0];
+    const useLogoFile = (file) => {
       if (!file) return;
       if (!/^image\/(png|jpe?g|gif|webp)$/i.test(file.type) || file.size > 550000) {
         window.alert("Use a PNG, JPG, GIF, or WebP logo under 550 KB.");
-        logoFile.value = "";
+        if (logoFile) logoFile.value = "";
         return;
       }
       const reader = new FileReader();
@@ -342,6 +341,28 @@
         logoPreview(logoUrl.value);
       };
       reader.readAsDataURL(file);
+    };
+    document.getElementById("companyLogoChoose")?.addEventListener("click", () => logoFile?.click());
+    document.getElementById("companyLogoClear")?.addEventListener("click", () => {
+      logoUrl.value = "";
+      if (logoFile) logoFile.value = "";
+      logoPreview("");
+    });
+    logoUrl?.addEventListener("input", () => logoPreview(logoUrl.value.trim()));
+    logoFile?.addEventListener("change", () => {
+      useLogoFile(logoFile.files?.[0]);
+    });
+    wrapper.addEventListener("dragover", (event) => {
+      event.preventDefault();
+      wrapper.classList.add("drag-over");
+    });
+    wrapper.addEventListener("dragleave", (event) => {
+      if (!wrapper.contains(event.relatedTarget)) wrapper.classList.remove("drag-over");
+    });
+    wrapper.addEventListener("drop", (event) => {
+      event.preventDefault();
+      wrapper.classList.remove("drag-over");
+      useLogoFile(event.dataTransfer?.files?.[0]);
     });
   }
 
@@ -473,7 +494,7 @@
     const list = document.getElementById("entraList");
     if (!list) return;
     enhanceRows();
-    new MutationObserver(enhanceRows).observe(list, { childList: true, subtree: true });
+    new MutationObserver(enhRows).observe(list, { childList: true, subtree: true });
   }
 
   addStyles();
