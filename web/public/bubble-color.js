@@ -90,6 +90,15 @@
       || fallbackLabel();
   }
 
+  function resetIdentityForNewChat() {
+    selectedNickname = "";
+    selectedColor = "";
+    pendingColor = "";
+    participants = [];
+    removeStored(nicknameKey);
+    removeStored(colorKey);
+  }
+
   function setMenuStatus(message) {
     const status = document.getElementById("plusMenuStatus");
     if (status) status.textContent = message || "";
@@ -154,7 +163,7 @@
       <section class="bubble-color-card" role="dialog" aria-modal="true" aria-labelledby="bubbleColorTitle">
         <h2 id="bubbleColorTitle">Set up your chat identity</h2>
         <p>Choose a nickname and message bubble color. Colors already used in this chat are locked.</p>
-        <label class="bubble-nickname-label" for="bubbleNicknameInput">Nickname<input class="bubble-nickname-input" id="bubbleNicknameInput" type="text" maxlength="40" autocomplete="nickname" placeholder="Example: Alex"></label>
+        <label class="bubble-nickname-label" for="bubbleNicknameInput">Nickname<input class="bubble-nickname-input" id="bubbleNicknameInput" type="text" maxlength="40" autocomplete="off" placeholder="Example: Alex"></label>
         <div class="bubble-color-grid" id="bubbleColorGrid" role="group" aria-label="Bubble color choices"></div>
         <div class="plus-menu-status" id="bubbleColorStatus" aria-live="polite"></div>
         <div class="bubble-color-actions"><button class="bubble-color-confirm" id="bubbleColorConfirm" type="button">Start chat</button></div>
@@ -399,7 +408,7 @@
     sendMessage = async function identitySendMessage(...args) {
       const message = inputEl.value.trim();
       if ((!message && !selectedAttachments.length) || isSending) return;
-      await ensureIdentity();
+      if (currentChatId) await ensureIdentity();
       return originalSendMessage.apply(this, args);
     };
   }
@@ -407,6 +416,7 @@
   if (typeof createChat === "function") {
     const originalCreateChat = createChat;
     createChat = async function identityCreateChat(...args) {
+      resetIdentityForNewChat();
       await ensureIdentity();
       await originalCreateChat.apply(this, args);
       if (currentChatId) {
