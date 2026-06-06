@@ -85,11 +85,15 @@ test("playground store updates task detail, comments, and activity", async () =>
   assert.ok(detail.activity.some((item) => item.action === "task.updated"));
 });
 
-test("playground page loads the storage-backed script", () => {
+test("playground page loads the storage-backed script after admin session bootstrap", () => {
   const html = fs.readFileSync(path.join(__dirname, "..", "public", "playground.html"), "utf8");
+  const adminSessionIndex = html.indexOf('<script src="admin-session.js"></script>');
+  const adminIndex = html.indexOf('<script src="admin.js"></script>');
+  const playgroundIndex = html.indexOf('<script src="playground.js"></script>');
 
-  assert.ok(html.includes('<script src="admin.js"></script>'));
-  assert.ok(html.includes('<script src="playground.js"></script>'));
+  assert.ok(adminSessionIndex > -1);
+  assert.ok(adminIndex > adminSessionIndex);
+  assert.ok(playgroundIndex > adminIndex);
 });
 
 test("playground script includes task modal, filters, drawer, and stable status keys", () => {
