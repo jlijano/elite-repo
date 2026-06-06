@@ -97,13 +97,13 @@
   function context(extra = {}) {
     const chatId = currentChatId || sharedChatId || "";
     return {
+      ...extra,
       participantId: currentParticipantId(chatId),
       participantType: participantType(),
       participantLabel: ownLabel(),
       deviceType: deviceType(),
       shareCount: currentShareCount(),
-      bubbleColor: selectedColor,
-      ...extra
+      bubbleColor: selectedColor
     };
   }
 
