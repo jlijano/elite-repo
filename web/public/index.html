@@ -21,10 +21,68 @@
       })();
     </script>
     <link rel="stylesheet" href="style.css" />
+    <style>
+      .app-shell {
+        grid-template-columns: minmax(0, 1fr);
+      }
+
+      .sidebar,
+      .mobile-new-chat,
+      .compact-status,
+      .header-spacer {
+        display: none !important;
+      }
+
+      .chat-panel {
+        grid-template-rows: 64px minmax(0, 1fr) auto;
+      }
+
+      .chat-header {
+        justify-content: flex-end;
+        padding: 0 clamp(12px, 3vw, 24px);
+      }
+
+      .header-actions {
+        width: 100%;
+        justify-content: flex-end;
+      }
+
+      .messages {
+        padding-inline: clamp(12px, 4vw, 24px);
+      }
+
+      .composer {
+        left: max(12px, calc((100vw - 960px) / 2 + 12px));
+        right: max(12px, calc((100vw - 960px) / 2 + 12px));
+      }
+
+      @media (max-width: 900px) {
+        .chat-header {
+          min-height: 58px;
+        }
+
+        .composer {
+          left: 12px;
+          right: 12px;
+          bottom: max(12px, env(safe-area-inset-bottom));
+        }
+      }
+
+      @media (max-width: 420px) {
+        #themeToggleText {
+          display: inline;
+        }
+
+        .theme-toggle {
+          min-width: 44px;
+          max-width: 100%;
+        }
+      }
+    </style>
   </head>
   <body>
     <main class="app-shell" aria-label="Switchboard Agent messaging app">
-      <aside class="sidebar" aria-label="Navigation, chats, and agent status">
+      <aside class="sidebar" aria-label="Navigation, chats, and agent status" hidden>
         <div class="sidebar-topbar">
           <a class="brand-lockup" href="/" aria-label="Switchboard Agent home">
             <span class="brand-mark" aria-hidden="true">★</span>
@@ -81,7 +139,7 @@
               <span class="theme-toggle-icon" aria-hidden="true">☾</span>
               <span id="themeToggleText">Dark Mode</span>
             </button>
-            <div class="compact-status">
+            <div class="compact-status" hidden>
               <span class="status-dot" aria-hidden="true"></span>
               <span id="mobileStatusText">Online</span>
             </div>
