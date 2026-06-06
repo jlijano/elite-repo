@@ -23,27 +23,22 @@ The `web/` directory contains a Render-ready Express app that serves a plain HTM
 - Optional PostgreSQL support through `DATABASE_URL`; the app uses storage-only in-memory mode when no database URL is configured.
 - Storage-only chat behavior when `OPENAI_API_KEY` is missing, including a friendly pending-review assistant response.
 - Durable knowledge entries produced by review runs as `pending_review` entries and reused in future AI context only after approval.
-- Backend management dashboard at `/admin.html` for inspecting chats, reviewing knowledge entries, checking review history, managing attachments surfaced from chat messages, reviewing access status, and checking system health.
-- Admin dashboard styling shares the chat UI shell, theme tokens, and persistent light/dark mode behavior for a consistent management experience.
-- Admin dashboard navigation uses clarified labels for Chat Review, Knowledge Queue, Review Runs, Attachments, Admin Access, System Health, Settings, and Logout.
-- Admin dashboard highlights the active navigation section, scrolls each nav item to the matching widget, and presents Switchboard Admin as the current workspace rather than as a generic tool.
-- Admin dashboard removes the generic Dashboard/Overview landing block so the admin side starts directly with actionable management sections.
-- Admin dashboard uses configurable compact widgets instead of a static card grid, with consistent headers, actions, loading states, empty states, and useful setup messages for unavailable data.
-- Admin dashboard default view starts with Knowledge Queue while Chat Review remains hidden until selected from navigation or enabled in Settings.
-- Admin dashboard widgets currently include Chat Review, Knowledge Queue, Review Runs, Attachments, Admin Access, System Health, and Settings.
-- Admin dashboard frontend contract tests verify navigation targets, active-state behavior, hidden Chat Review behavior, Settings theme toggle wiring, clean labels, removed Overview markup, and configurable widget markup.
-- Admin dashboard includes a Settings widget for application-wide preferences, including theme control, visible widgets, refresh cadence, parked dashboard ordering status, and protected admin-data state.
-- Admin dashboard visible-widget settings include Chat Review as a default-off option so the cleaned dashboard view remains calm until the admin opens it.
-- Admin dashboard keeps the left sidebar fixed on desktop while the right dashboard panel scrolls independently so lower sections remain reachable.
-- Admin dashboard keeps the Chat Review and selected chat detail hidden until the Chat review navigation item is selected.
-- Admin dashboard no longer exposes visible token-entry, Login, or Run Review controls; Chat Review loads recent chats into the highlighted review section, while protected backend admin routes still require `ADMIN_TOKEN` for management-only data.
-- Admin dashboard Knowledge Queue includes source-controlled project knowledge cards from the current build conversation, plus review-created backend knowledge when an admin session is available.
-- Admin dashboard chat and knowledge search controls filter cached management data, keep selected chats highlighted, and show clear loading and error states during admin actions.
-- Admin Access, Attachments, and System Health widgets show honest status or setup messages when dedicated backend data is unavailable.
+- Backend management area split into dedicated admin pages instead of one scrolling static dashboard:
+  - `/chat.html` for chat review and selected-chat attachments.
+  - `/knowledge.html` for the Knowledge base.
+  - `/user.html` for User management, profile settings, and the Manage users action.
+  - `/settings.html` for Settings, Review runs, and System health.
+  - `/admin.html` redirects to `/chat.html` for backward compatibility.
+- Admin navigation uses Back to chat, Chat, Knowledge base, User, Settings, and Logout. Attachments live inside Chat; Review runs and System health live inside Settings.
+- Admin pages share the chat UI shell, theme tokens, persistent light/dark mode behavior, fixed desktop sidebar, and independently scrolling right panel.
+- Admin top headers include a Mac-style current day/time display and a user profile settings send icon.
+- Admin pages no longer expose visible token-entry, Login, or Run Review controls; protected backend admin routes still require `ADMIN_TOKEN` for management-only data.
+- Knowledge base includes source-controlled project knowledge cards plus review-created backend knowledge when an admin session is available.
+- Chat and knowledge search controls filter cached management data, keep selected chats highlighted, and show clear loading and error states during admin actions.
 - Chat failure responses distinguish between saved messages awaiting review and storage failures that could not save the message.
 - Agent Directory status indicator backed by the `/api/status` endpoint.
 - Render health check support through `/health`.
-- Light and dark mode toggle in the chat header.
+- Light and dark mode toggle in the chat and admin headers.
 - Theme preference stored in browser `localStorage` under `switchboard-theme`; if no preference exists, the app uses the visitor's `prefers-color-scheme` system setting.
 
 ### Local development
@@ -110,12 +105,12 @@ The review workflow is implemented as an idempotent backend route and optional b
 2. Configure an external scheduler or Render cron-style service to call `POST /api/reviews/run`.
 3. Or configure `REVIEW_RUN_INTERVAL_MS` to run reviews from the backend process at the chosen interval. Values below `60000` are ignored for safety.
 4. The run reads unreviewed chat messages, writes durable `pending_review` `knowledge_entries`, marks messages reviewed, and records the result in `review_runs`.
-5. An admin can approve or archive knowledge entries from `/admin.html`.
+5. An admin can approve or archive knowledge entries from `/knowledge.html`.
 6. Future AI responses include approved knowledge entries as additional Switchboard context.
 
 ### Test coverage
 
-`npm test` runs focused backend integration tests against the Express app in in-memory storage mode and frontend contract tests against the admin dashboard markup. The tests cover:
+`npm test` runs focused backend integration tests against the Express app in in-memory storage mode and frontend contract tests against the admin page markup. The tests cover:
 
 - `/health` and `/api/status`.
 - Chat creation, message storage, sanitized context, and chat history loading.
@@ -126,7 +121,7 @@ The review workflow is implemented as an idempotent backend route and optional b
 - Protected admin routes and admin token enforcement.
 - Review-run creation of pending knowledge entries.
 - Admin approval of knowledge entries and approved knowledge retrieval.
-- Admin dashboard navigation labels, matching section targets, active-state logic, hidden Chat Review behavior, Settings theme toggle wiring, removed Overview markup, Chat Review visible-widget defaults, and configurable widget markup.
+- Admin navigation routes, page ownership for Chat, Knowledge base, User, Settings, nested Attachments, nested Review runs, nested System health, the top-header profile settings action, and the Mac-style clock wiring.
 
 ## GitHub Actions / auto-deploy
 
