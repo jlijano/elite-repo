@@ -35,7 +35,7 @@
       </aside>
       <section class="admin-panel" aria-label="User management controls">
         <header class="chat-header admin-header">
-          <div class="admin-header-title"><h1>User</h1><p>Manage profile settings and user-management access.</p></div>
+          <div class="admin-header-title"><h1>User</h1><p>Manage profile settings, account records, and user access.</p></div>
           <div class="header-actions">
             <span class="admin-clock" id="menuClock" aria-live="polite"></span>
             <div class="profile-menu">
@@ -51,11 +51,69 @@
           <div class="admin-layout">
             <p class="admin-status" id="status">Loading user management...</p>
             <section class="admin-card wide" id="userManagementPage">
-              <div class="card-head">
-                <div><h2>User management</h2><p class="card-subtitle">Profile settings, admin access state, and account management readiness.</p></div>
-                <div class="card-actions"><button id="manageUsersButton" type="button">Manage users</button></div>
+              <div class="card-head user-card-head">
+                <div><h2>User management</h2><p class="card-subtitle">Create users, update account details, manage status, and review audit events.</p></div>
+                <div class="card-actions user-toolbar">
+                  <label class="sr-only" for="userSearch">Search users</label>
+                  <input id="userSearch" type="search" placeholder="Search name, email, role" autocomplete="off" />
+                  <button id="manageUsersButton" type="button">New user</button>
+                </div>
               </div>
-              <div class="list" id="users">Loading user management...</div>
+              <div class="user-management-grid">
+                <section class="user-list-panel" aria-label="User records">
+                  <div class="list user-list" id="users">Loading user records...</div>
+                </section>
+                <section class="user-form-panel" aria-label="Create or edit user">
+                  <form class="management-form" id="userForm" autocomplete="off">
+                    <div class="form-heading">
+                      <h3 id="userFormTitle">Create user</h3>
+                      <button id="cancelUserEditButton" type="button" hidden>Cancel edit</button>
+                    </div>
+                    <label>
+                      <span>Name</span>
+                      <input id="userName" name="name" type="text" autocomplete="name" required />
+                    </label>
+                    <label>
+                      <span>Email address</span>
+                      <input id="userEmail" name="email" type="email" autocomplete="email" required />
+                    </label>
+                    <label>
+                      <span>Profile photo URL</span>
+                      <input id="userPhotoUrl" name="photoUrl" type="url" placeholder="https://example.com/photo.jpg" autocomplete="off" />
+                    </label>
+                    <div class="form-row">
+                      <label>
+                        <span>Role</span>
+                        <select id="userRole" name="role">
+                          <option value="viewer">Viewer</option>
+                          <option value="member">Member</option>
+                          <option value="admin">Admin</option>
+                          <option value="owner">Owner</option>
+                        </select>
+                      </label>
+                      <label>
+                        <span>Status</span>
+                        <select id="userStatus" name="status">
+                          <option value="active">Active</option>
+                          <option value="invited">Invited</option>
+                          <option value="disabled">Disabled</option>
+                        </select>
+                      </label>
+                    </div>
+                    <label>
+                      <span>Password</span>
+                      <input id="userPassword" name="password" type="password" autocomplete="new-password" minlength="8" placeholder="Leave blank unless setting a password" />
+                    </label>
+                    <div class="form-actions">
+                      <button id="saveUserButton" type="submit">Create user</button>
+                    </div>
+                  </form>
+                  <div class="audit-panel" aria-label="Recent user audit events">
+                    <div class="form-heading"><h3>Recent audit events</h3></div>
+                    <div class="compact-list" id="userAuditEvents">Loading audit events...</div>
+                  </div>
+                </section>
+              </div>
             </section>
           </div>
         </div>
