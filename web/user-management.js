@@ -39,6 +39,9 @@ function publicUser(row) {
     name: row.name,
     email: row.email,
     photoUrl: row.photo_url || row.photoUrl || "",
+    company: row.company || "",
+    department: row.department || "",
+    group: row.group_name || row.group || "",
     role: row.role,
     status: row.status,
     passwordUpdatedAt: row.password_updated_at || row.passwordUpdatedAt ? new Date(row.password_updated_at || row.passwordUpdatedAt).toISOString() : null,
@@ -50,10 +53,7 @@ function publicUser(row) {
 
 function privateUser(row) {
   if (!row) return null;
-  return {
-    ...publicUser(row),
-    passwordHash: row.password_hash || row.passwordHash || null
-  };
+  return { ...publicUser(row), passwordHash: row.password_hash || row.passwordHash || null };
 }
 
 function auditRow(row) {
@@ -193,14 +193,16 @@ function createUserPayload(body = {}) {
   const email = normalizeEmail(body.email);
   if (!name) throw appError(400, "Name is required.");
   if (!email || !isEmail(email)) throw appError(400, "A valid email is required.");
-  const passwordHash = hashPassword(body.password);
   return {
     name,
     email,
     photoUrl: cleanPhotoUrl(body.photoUrl || body.photo_url),
+    company: cleanString(body.company, 120),
+    department: cleanString(body.department, 120),
+    group: cleanString(body.group || body.groupName || body.group_name, 120),
     role: cleanRole(body.role),
     status: cleanStatus(body.status),
-    passwordHash
+    passwordHash: hashPassword(body.password)
   };
 }
 
@@ -218,6 +220,11 @@ function updateUserPayload(body = {}) {
   }
   if (Object.prototype.hasOwnProperty.call(body, "photoUrl") || Object.prototype.hasOwnProperty.call(body, "photo_url")) {
     updates.photoUrl = cleanPhotoUrl(body.photoUrl || body.photo_url);
+  }
+  if (Object.prototype.hasOwnProperty.call(body, "company")) updates.company = cleanString(body.company, 120);
+  if (Object.prototype.hasOwnProperty.call(body, "department")) updates.department = cleanString(body.department, 120);
+  if (Object.prototype.hasOwnProperty.call(body, "group") || Object.prototype.hasOwnProperty.call(body, "groupName") || Object.prototype.hasOwnProperty.call(body, "group_name")) {
+    updates.group = cleanString(body.group || body.groupName || body.group_name, 120);
   }
   if (Object.prototype.hasOwnProperty.call(body, "role")) updates.role = cleanRole(body.role);
   if (Object.prototype.hasOwnProperty.call(body, "status")) updates.status = cleanStatus(body.status);
@@ -285,6 +292,9 @@ function createPostgresUserStore(options) {
     if (Object.prototype.hasOwnProperty.call(updates, "name")) addField("name", updates.name);
     if (Object.prototype.hasOwnProperty.call(updates, "email")) addField("email", updates.email);
     if (Object.prototype.hasOwnProperty.call(updates, "photoUrl")) addField("photo_url", updates.photoUrl || null);
+    if (Object.prototype.hasOwnProperty.call(updates, "company")) addField("company", updates.company || null);
+    if (Object.prototype.hasOwnProperty.call(updates, "department")) addField("department", updates.department || null);
+    if (Object.prototype.hasOwnProperty.call(updates, "group")) addField("group_name", updates.group || null);
     if (Object.prototype.hasOwnProperty.call(updates, "role")) addField("role", updates.role);
     if (Object.prototype.hasOwnProperty.call(updates, "status")) addField("status", updates.status);
     if (Object.prototype.hasOwnProperty.call(updates, "passwordHash")) {
@@ -330,8 +340,8 @@ function createPostgresUserStore(options) {
       await ready();
       try {
         const result = await pool.query(
-          "INSERT INTO users (id, name, email, photo_url, role, status, password_hash, password_updated_at) VALUES ($1, $2, $3, $4, $5, $6, $7, CASE WHEN $7::text IS NULL THEN NULL ELSE NOW() END) RETURNING *",
-          [options.makeId(), payload.name, payload.email, payload.photoUrl || null, payload.role, payload.status, payload.passwordHash]
+          "INSERT INTO users (id, name, email, photo_url, company, department, group_name, role, status, password_hash, password_updated_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, CASE WHEN $10::text IS NULL THEN NULL ELSE NOW() END) RETURNING *",
+          [options.makeId(), payload.name, payload.email, payload.photoUrl || null, payload.company || null, payload.department || null, payload.group || null, payload.role, payload.status, payload.passwordHash]
         );
         const user = publicUser(result.rows[0]);
         await writeAudit("user.created", user.id, { email: user.email, role: user.role, status: user.status, source: actorUserId ? "session" : "admin-token" }, actorUserId);
@@ -463,6 +473,9 @@ function createMemoryUserStore(options) {
         name: payload.name,
         email: payload.email,
         photoUrl: payload.photoUrl || "",
+        company: payload.company || "",
+        department: payload.department || "",
+        group: payload.group || "",
         role: payload.role,
         status: payload.status,
         passwordHash: payload.passwordHash,
