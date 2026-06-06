@@ -26,15 +26,17 @@
           <a class="nav-item" href="/knowledge.html"><span aria-hidden="true">◇</span>Knowledge base</a>
           <a class="nav-item active" href="/user.html" aria-current="page"><span aria-hidden="true">◉</span>User</a>
           <a class="nav-item" href="/playground.html"><span aria-hidden="true">▦</span>Playground</a>
-          <div class="admin-section-list reports-nav" aria-label="Reports navigation">
-            <h2 class="session-heading">Reports</h2>
-            <a class="nav-item" href="/reports.html"><span aria-hidden="true">▣</span>Overview</a>
-            <a class="nav-item" href="/logs.html"><span aria-hidden="true">≡</span>Logs</a>
-            <a class="nav-item" href="/review-runs.html"><span aria-hidden="true">↻</span>Review runs</a>
-            <a class="nav-item" href="/system-health.html"><span aria-hidden="true">✚</span>System health</a>
-            <a class="nav-item" href="/user-audit.html"><span aria-hidden="true">◎</span>User audit</a>
-          </div>
-          <a class="nav-item" href="/settings.html"><span aria-hidden="true">⚙</span>Settings</a>
+          <details class="admin-section-list reports-nav" open>
+            <summary class="reports-summary"><span class="reports-summary-label">Reports</span><span class="reports-summary-chevron" aria-hidden="true">⌄</span></summary>
+            <div class="reports-nav-items" aria-label="Reports navigation">
+              <a class="nav-item" href="/reports.html"><span aria-hidden="true">▣</span>Overview</a>
+              <a class="nav-item" href="/logs.html"><span aria-hidden="true">≡</span>Logs</a>
+              <a class="nav-item" href="/review-runs.html"><span aria-hidden="true">↻</span>Review runs</a>
+              <a class="nav-item" href="/system-health.html"><span aria-hidden="true">✚</span>System health</a>
+              <a class="nav-item" href="/user-audit.html"><span aria-hidden="true">◎</span>User audit</a>
+              <a class="nav-item" href="/settings.html"><span aria-hidden="true">⚙</span>Settings</a>
+            </div>
+          </details>
         </nav>
         <section class="admin-section-list" aria-label="Admin workspace">
           <h2 class="session-heading">Workspace</h2>
