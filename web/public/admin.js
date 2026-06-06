@@ -22,6 +22,18 @@ const els = {
   knowledgeStatus: $("knowledgeStatus"),
   knowledge: $("knowledge"),
   users: $("users"),
+  userSearch: $("userSearch"),
+  userForm: $("userForm"),
+  userFormTitle: $("userFormTitle"),
+  userName: $("userName"),
+  userEmail: $("userEmail"),
+  userPhotoUrl: $("userPhotoUrl"),
+  userRole: $("userRole"),
+  userStatus: $("userStatus"),
+  userPassword: $("userPassword"),
+  userAuditEvents: $("userAuditEvents"),
+  cancelUserEditButton: $("cancelUserEditButton"),
+  saveUserButton: $("saveUserButton"),
   manageUsersButton: $("manageUsersButton"),
   runs: $("runs"),
   systemHealth: $("systemHealth"),
@@ -48,7 +60,10 @@ const els = {
 let token = sessionStorage.getItem(adminTokenStorageKey) || "";
 let chatsCache = [];
 let knowledgeCache = [...projectKnowledgeEntries];
+let usersCache = [];
+let userAuditCache = [];
 let selectedChatId = "";
+let editingUserId = "";
 let lastStatus = null;
 
 const html = (value) => String(value ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
@@ -59,9 +74,9 @@ const adminHeaders = () => token ? { "Content-Type": "application/json", "x-admi
 const getCurrentTheme = () => document.documentElement.dataset.theme === "dark" ? "dark" : "light";
 const statusClass = (state = "") => {
   const normalized = String(state).toLowerCase();
-  if (normalized.includes("error") || normalized.includes("unavailable") || normalized.includes("failed")) return "status-error";
+  if (normalized.includes("error") || normalized.includes("unavailable") || normalized.includes("failed") || normalized.includes("disabled")) return "status-error";
   if (normalized.includes("public")) return "status-public";
-  if (normalized.includes("storage-only")) return "status-storage";
+  if (normalized.includes("storage-only") || normalized.includes("invited")) return "status-storage";
   if (normalized.includes("loaded") || normalized.includes("running")) return "status-loaded";
   return "status-ready";
 };
@@ -249,9 +264,75 @@ function renderRuns(runs = []) {
   }).join("") : `<div class="empty action-empty"><strong>No review runs yet.</strong><p>Review history will appear here after the backend records a completed run.</p></div>`;
 }
 
-function renderUsers(summary = {}, runtime = {}) {
+function setUserFormEnabled(enabled) {
+  [els.userName, els.userEmail, els.userPhotoUrl, els.userRole, els.userStatus, els.userPassword, els.saveUserButton, els.cancelUserEditButton].forEach((field) => {
+    if (field) field.disabled = !enabled;
+  });
+  if (els.manageUsersButton) els.manageUsersButton.disabled = !enabled;
+  if (els.userSearch) els.userSearch.disabled = !enabled;
+}
+
+function resetUserForm() {
+  editingUserId = "";
+  if (els.userForm) els.userForm.reset();
+  if (els.userRole) els.userRole.value = "viewer";
+  if (els.userStatus) els.userStatus.value = "active";
+  if (els.userFormTitle) els.userFormTitle.textContent = "Create user";
+  if (els.saveUserButton) els.saveUserButton.textContent = "Create user";
+  if (els.cancelUserEditButton) els.cancelUserEditButton.hidden = true;
+}
+
+function fillUserForm(user) {
+  editingUserId = user.id;
+  if (els.userName) els.userName.value = user.name || "";
+  if (els.userEmail) els.userEmail.value = user.email || "";
+  if (els.userPhotoUrl) els.userPhotoUrl.value = user.photoUrl || "";
+  if (els.userRole) els.userRole.value = user.role || "viewer";
+  if (els.userStatus) els.userStatus.value = user.status || "active";
+  if (els.userPassword) els.userPassword.value = "";
+  if (els.userFormTitle) els.userFormTitle.textContent = `Edit ${user.name || "user"}`;
+  if (els.saveUserButton) els.saveUserButton.textContent = "Save changes";
+  if (els.cancelUserEditButton) els.cancelUserEditButton.hidden = false;
+  els.userName?.focus();
+}
+
+function renderUserAuditEvents() {
+  if (!els.userAuditEvents) return;
+  if (!token) {
+    els.userAuditEvents.innerHTML = `<div class="empty action-empty"><strong>Audit events are protected.</strong><p>Start or restore an admin session to inspect account changes.</p></div>`;
+    return;
+  }
+  els.userAuditEvents.innerHTML = userAuditCache.length
+    ? userAuditCache.map((event) => `<article class="item audit-item"><div class="row"><span>${html(event.action)}</span>${statusBadge("Loaded")}</div><p>Target: ${html(event.targetUserId || "none")}</p><p>${html(time(event.createdAt))}</p></article>`).join("")
+    : `<div class="empty action-empty"><strong>No audit events yet.</strong><p>User changes will appear here after admins create, update, disable, or reactivate accounts.</p></div>`;
+}
+
+function renderUsers(users = usersCache, runtime = {}) {
   if (!els.users) return;
-  els.users.innerHTML = `<article class="item" id="profile"><div class="row"><span>User profile settings</span><small>${token ? "Admin session" : "Public view"}</small></div><p>Profile settings are ready for account preferences. Management-only user records still require protected backend admin access.</p></article><article class="item"><div class="row"><span>Manage users</span><small>${runtime.storageMode || "unknown"}</small></div><p>${token ? "Protected admin data is loaded through backend management routes." : "User management needs an admin session before account records can be managed."}</p><p>Total chats shown: ${html(summary.chats ?? chatsCache.length)}.</p></article>`;
+  setUserFormEnabled(Boolean(token));
+  if (!token) {
+    resetUserForm();
+    els.users.innerHTML = `<article class="item"><div class="row"><span>Admin session required</span>${statusBadge(runtime.storageMode || "Public view")}</div><p>User records are protected. Start or restore an admin session before creating or editing accounts.</p></article>`;
+    renderUserAuditEvents();
+    return;
+  }
+  const query = els.userSearch?.value || "";
+  const filteredUsers = users.filter((user) => textMatch(user.name, query) || textMatch(user.email, query) || textMatch(user.role, query) || textMatch(user.status, query));
+  els.users.innerHTML = filteredUsers.length ? filteredUsers.map((user) => {
+    const disabled = user.status === "disabled";
+    const statusAction = disabled
+      ? `<button data-user-reactivate="${html(user.id)}" type="button">Reactivate</button>`
+      : `<button data-user-disable="${html(user.id)}" type="button">Disable</button>`;
+    return `<article class="item user-item${user.id === editingUserId ? " active" : ""}"><div class="row"><span>${html(user.name)}</span>${statusBadge(user.status || "unknown")}</div><p>${html(user.email)} - ${html(user.role || "viewer")}</p><p>Updated ${html(time(user.updatedAt))}</p><div class="actions"><button data-user-edit="${html(user.id)}" type="button">Edit</button>${statusAction}</div></article>`;
+  }).join("") : `<div class="empty action-empty"><strong>No users match this search.</strong><p>Clear the search or create a new user record.</p></div>`;
+  els.users.querySelectorAll("[data-user-edit]").forEach((button) => button.addEventListener("click", () => {
+    const user = usersCache.find((item) => item.id === button.dataset.userEdit);
+    if (user) fillUserForm(user);
+    renderUsers();
+  }));
+  els.users.querySelectorAll("[data-user-disable]").forEach((button) => button.addEventListener("click", () => updateUserStatus(button.dataset.userDisable, "disable")));
+  els.users.querySelectorAll("[data-user-reactivate]").forEach((button) => button.addEventListener("click", () => updateUserStatus(button.dataset.userReactivate, "reactivate")));
+  renderUserAuditEvents();
 }
 
 function renderSystemHealth(status = lastStatus || {}) {
@@ -293,6 +374,44 @@ async function updateKnowledge(entryId, status) {
   }
 }
 
+async function saveUser(event) {
+  event.preventDefault();
+  if (!token) return setStatus("User management requires an admin session.", true);
+  const payload = {
+    name: els.userName?.value,
+    email: els.userEmail?.value,
+    photoUrl: els.userPhotoUrl?.value,
+    role: els.userRole?.value,
+    status: els.userStatus?.value
+  };
+  const password = els.userPassword?.value || "";
+  if (password) payload.password = password;
+  const url = editingUserId ? `/api/admin/users/${encodeURIComponent(editingUserId)}` : "/api/admin/users";
+  const method = editingUserId ? "PATCH" : "POST";
+  setStatus(editingUserId ? "Saving user changes..." : "Creating user...");
+  try {
+    await fetchJson(url, { method, body: JSON.stringify(payload) }, true);
+    resetUserForm();
+    await loadUserPage();
+    setStatus(method === "POST" ? "User created." : "User updated.");
+  } catch (error) {
+    setStatus(error.message, true);
+  }
+}
+
+async function updateUserStatus(userId, action) {
+  if (!token) return setStatus("User management requires an admin session.", true);
+  setStatus(action === "disable" ? "Disabling user..." : "Reactivating user...");
+  try {
+    await fetchJson(`/api/admin/users/${encodeURIComponent(userId)}/${action}`, { method: "POST", body: "{}" }, true);
+    if (editingUserId === userId) resetUserForm();
+    await loadUserPage();
+    setStatus(action === "disable" ? "User disabled." : "User reactivated.");
+  } catch (error) {
+    setStatus(error.message, true);
+  }
+}
+
 async function loadChatPage() {
   setStatus(token ? "Loading admin chats..." : "Loading recent chats...");
   const [status, chats] = await Promise.all([
@@ -321,18 +440,24 @@ async function loadKnowledgePage() {
 }
 
 async function loadUserPage() {
-  setStatus(token ? "Loading user management..." : "Loading public user management state...");
+  setStatus(token ? "Loading user records..." : "Loading public user management state...");
   const status = await fetchJson("/api/status");
   lastStatus = status;
   if (token) {
-    const summary = await fetchJson("/api/admin/summary", {}, true);
-    renderUsers(summary.summary, summary.status);
+    const [users, audit] = await Promise.all([
+      fetchJson("/api/admin/users", {}, true),
+      fetchJson("/api/admin/user-audit-events", {}, true)
+    ]);
+    usersCache = users.users || [];
+    userAuditCache = audit.events || [];
+    renderUsers(usersCache, status);
+    setStatus(`${usersCache.length} user records available.`);
   } else {
-    const chats = await fetchJson("/api/chats?includeArchived=true");
-    chatsCache = chats.chats || [];
-    renderUsers({ chats: chatsCache.length }, { storageMode: status.storageMode || "public" });
+    usersCache = [];
+    userAuditCache = [];
+    renderUsers([], { storageMode: status.storageMode || "public" });
+    setStatus("User management requires an admin session.", true);
   }
-  setStatus("User management page loaded.");
 }
 
 async function loadSettingsPage() {
@@ -364,6 +489,7 @@ async function loadPage() {
     setStatus(error.message, true);
     renderKnowledge();
     renderRuns();
+    renderUsers();
     renderSystemHealth(lastStatus || {});
   }
 }
@@ -379,6 +505,14 @@ els.profileMenuButton?.addEventListener("click", toggleProfileDropdown);
 els.profileLogoutButtons.forEach((button) => button.addEventListener("click", logout));
 els.profilePhoto?.addEventListener("input", () => updateProfilePreview(els.profilePhoto.value));
 els.profileForm?.addEventListener("submit", saveProfile);
+els.userForm?.addEventListener("submit", saveUser);
+els.cancelUserEditButton?.addEventListener("click", () => { resetUserForm(); renderUsers(); });
+els.manageUsersButton?.addEventListener("click", () => {
+  if (!token) return setStatus("User management requires an admin session.", true);
+  resetUserForm();
+  els.userName?.focus();
+  setStatus("Ready to create a new user.");
+});
 document.addEventListener("click", (event) => {
   if (!els.profileDropdown || !els.profileMenuButton) return;
   if (els.profileDropdown.hidden) return;
@@ -390,7 +524,7 @@ document.addEventListener("keydown", (event) => {
 });
 els.chatSearch?.addEventListener("input", renderChats);
 els.knowledgeSearch?.addEventListener("input", renderKnowledge);
+els.userSearch?.addEventListener("input", () => renderUsers());
 els.knowledgeStatus?.addEventListener("change", () => loadKnowledgePage().catch((error) => setStatus(error.message, true)));
-els.manageUsersButton?.addEventListener("click", () => setStatus("Manage users is ready for protected backend user records.", !token));
 loadPage().catch(() => {});
 setInterval(() => loadPage().catch(() => {}), refreshIntervalMs);
