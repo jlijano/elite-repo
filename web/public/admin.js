@@ -1,7 +1,9 @@
 const page = document.body.dataset.adminPage || "chat";
 const themeStorageKey = "switchboard-theme";
 const adminTokenStorageKey = "switchboard-admin-token";
+const userProfileStorageKey = "switchboard-user-profile";
 const refreshIntervalMs = 40000;
+const defaultProfile = { photo: "", name: "Switchboard User", email: "user@example.com", passwordUpdatedAt: "" };
 const projectKnowledgeEntries = [
   { id: "project-admin-token-ui", title: "Admin login panel cleanup", status: "project", createdAt: "2026-06-06T00:00:00.000Z", content: "The admin dashboard should not show visible token-entry, Login, or Run Review controls. Protected backend admin routes still require ADMIN_TOKEN, but that requirement stays backend-only rather than being presented as an on-screen token form." },
   { id: "project-chat-review-loading", title: "Chat page behavior", status: "project", createdAt: "2026-06-06T00:00:00.000Z", content: "The Chat admin page loads recent chats with /api/chats?includeArchived=true. Selecting Inspect loads chat details and message attachments into the same page." },
@@ -24,6 +26,17 @@ const els = {
   runs: $("runs"),
   systemHealth: $("systemHealth"),
   logoutButton: $("logoutButton"),
+  profileMenuButton: $("profileMenuButton"),
+  profileDropdown: $("profileDropdown"),
+  profileLogoutButtons: document.querySelectorAll(".profile-logout"),
+  profileForm: $("profileForm"),
+  profilePhoto: $("profilePhoto"),
+  profileName: $("profileName"),
+  profileEmail: $("profileEmail"),
+  profileCurrentPassword: $("profileCurrentPassword"),
+  profileNewPassword: $("profileNewPassword"),
+  profileConfirmPassword: $("profileConfirmPassword"),
+  profilePhotoPreview: $("profilePhotoPreview"),
   themeToggle: $("themeToggle"),
   themeToggleText: $("themeToggleText"),
   themeToggleIcon: document.querySelector(".theme-toggle-icon"),
@@ -98,7 +111,82 @@ function refreshTokenFromSession() {
 function logout() {
   token = "";
   sessionStorage.removeItem(adminTokenStorageKey);
-  window.location.href = "/";
+  closeProfileDropdown();
+  window.location.href = "/login.html";
+}
+
+function getStoredProfile() {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(userProfileStorageKey) || "{}");
+    return { ...defaultProfile, ...(parsed && typeof parsed === "object" ? parsed : {}) };
+  } catch (error) {
+    return { ...defaultProfile };
+  }
+}
+
+function saveStoredProfile(profile) {
+  const safeProfile = {
+    photo: String(profile.photo || "").slice(0, 600),
+    name: String(profile.name || "").trim().slice(0, 120),
+    email: String(profile.email || "").trim().slice(0, 160),
+    passwordUpdatedAt: profile.passwordUpdatedAt || ""
+  };
+  try { localStorage.setItem(userProfileStorageKey, JSON.stringify(safeProfile)); } catch (error) {}
+  return safeProfile;
+}
+
+function updateProfilePreview(photo = "") {
+  if (!els.profilePhotoPreview) return;
+  const safePhoto = String(photo || "").trim();
+  els.profilePhotoPreview.innerHTML = safePhoto ? `<img src="${html(safePhoto)}" alt="">` : "👤";
+}
+
+function loadProfileForm() {
+  if (!els.profileForm) return;
+  const profile = getStoredProfile();
+  els.profilePhoto.value = profile.photo || "";
+  els.profileName.value = profile.name || "";
+  els.profileEmail.value = profile.email || "";
+  updateProfilePreview(profile.photo);
+}
+
+function clearPasswordFields() {
+  [els.profileCurrentPassword, els.profileNewPassword, els.profileConfirmPassword].forEach((field) => {
+    if (field) field.value = "";
+  });
+}
+
+function saveProfile(event) {
+  event.preventDefault();
+  const newPassword = els.profileNewPassword?.value || "";
+  const confirmPassword = els.profileConfirmPassword?.value || "";
+  if (newPassword || confirmPassword) {
+    if (newPassword.length < 8) return setStatus("New password must be at least 8 characters.", true);
+    if (newPassword !== confirmPassword) return setStatus("New password and confirmation must match.", true);
+  }
+  const stored = saveStoredProfile({
+    photo: els.profilePhoto?.value,
+    name: els.profileName?.value,
+    email: els.profileEmail?.value,
+    passwordUpdatedAt: newPassword ? new Date().toISOString() : getStoredProfile().passwordUpdatedAt
+  });
+  clearPasswordFields();
+  updateProfilePreview(stored.photo);
+  setStatus(newPassword ? "Profile saved and password update accepted for this session." : "Profile saved.");
+}
+
+function setProfileDropdownOpen(open) {
+  if (!els.profileMenuButton || !els.profileDropdown) return;
+  els.profileMenuButton.setAttribute("aria-expanded", String(open));
+  els.profileDropdown.hidden = !open;
+}
+
+function closeProfileDropdown() {
+  setProfileDropdownOpen(false);
+}
+
+function toggleProfileDropdown() {
+  setProfileDropdownOpen(els.profileDropdown?.hidden !== false);
 }
 
 function renderFileManagementFromMessages(messages = []) {
@@ -252,6 +340,10 @@ async function loadPage() {
     if (page === "knowledge") await loadKnowledgePage();
     if (page === "user") await loadUserPage();
     if (page === "settings") await loadSettingsPage();
+    if (page === "update-profile") {
+      loadProfileForm();
+      setStatus("Update profile page loaded.");
+    }
   } catch (error) {
     setStatus(error.message, true);
     renderKnowledge();
@@ -267,6 +359,19 @@ refreshTokenFromSession();
 els.themeToggle?.addEventListener("click", toggleTheme);
 els.settingsThemeButton?.addEventListener("click", toggleTheme);
 els.logoutButton?.addEventListener("click", logout);
+els.profileMenuButton?.addEventListener("click", toggleProfileDropdown);
+els.profileLogoutButtons.forEach((button) => button.addEventListener("click", logout));
+els.profilePhoto?.addEventListener("input", () => updateProfilePreview(els.profilePhoto.value));
+els.profileForm?.addEventListener("submit", saveProfile);
+document.addEventListener("click", (event) => {
+  if (!els.profileDropdown || !els.profileMenuButton) return;
+  if (els.profileDropdown.hidden) return;
+  if (event.target.closest(".profile-menu")) return;
+  closeProfileDropdown();
+});
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape") closeProfileDropdown();
+});
 els.chatSearch?.addEventListener("input", renderChats);
 els.knowledgeSearch?.addEventListener("input", renderKnowledge);
 els.knowledgeStatus?.addEventListener("change", () => loadKnowledgePage().catch((error) => setStatus(error.message, true)));
