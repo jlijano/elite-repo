@@ -4,7 +4,7 @@ const express = require("express");
 const userManagement = require("./user-management");
 const { attachEntraManagementRoutes } = require("./entra-management");
 const { attachAccountVerificationRoutes } = require("./account-verification");
-const { attachPlaygroundRoutes } = require("./playground-management");
+const { attachPlaygroundRoutes } = require("./playground-crud-management");
 
 const originalListen = express.application.listen;
 const originalAttachUserManagementRoutes = userManagement.attachUserManagementRoutes;
