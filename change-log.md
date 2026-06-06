@@ -2,8 +2,7 @@
 
 ## [Unreleased]
 
-- Moved the admin header session status chip to the lower-right side of the header while keeping it responsive on small screens.
-- Fixed the admin header session label so the signed-in user name and `Logged in as ...` role text have readable spacing.
+- Removed the admin header session status chip so the top-right header only shows the clock and profile menu.
 - Added a logged-in chat sidebar Users section backed by `/api/users/available-chat-users`, showing only active users who share the current user's company, department, or group.
 - Updated Company, Department, and Group management pages to match the Users UI/UX with table-based records, search plus Add actions in the card header, and create/edit forms in modals.
 - Moved the audit report out of `/user.html` and into `/user-audit.html`, where it now shows User, Update, and Timestamp columns, includes actor/target identity details when available, and exports the report as CSV.
