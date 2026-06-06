@@ -48,6 +48,8 @@ The `web/` directory contains a Render-ready Express app that serves a plain HTM
 - Admin Settings includes a Light / Dark / System theme preference control. Explicit Light and Dark choices are restored after reload, while System follows the visitor's device preference.
 - Admin Settings includes a configurable refresh cadence control with Manual, 15 seconds, 40 seconds, 1 minute, and 5 minutes options. Manual mode cancels background refresh until Refresh now is used.
 - Admin Settings Access and security summarizes current browser access, protected-route behavior, secret-handling policy, and safe links to login, profile, and audit pages without displaying secret values.
+- Admin Settings Review runs shows protected/empty states plus summary cards for last run, messages reviewed, knowledge entries created, and failed runs before the detailed run history.
+- Admin Settings System health and Diagnostics show actionable health hints, live refresh/theme/access diagnostics, and secret-display guardrails.
 - Admin top headers include a Mac-style current day/time display and a user profile menu with Update Profile and Logout actions.
 - Logout clears browser-held auth tokens, calls backend session logout when a user session is present, and redirects to `/login.html`.
 - Admin pages no longer expose visible token-entry, Login, or Run Review controls; protected backend admin routes accept either `ADMIN_TOKEN` or an active owner/admin user session.
@@ -162,7 +164,7 @@ The review workflow is implemented as an idempotent backend route and optional b
 - Protected user-management routes, user creation/listing/loading/updating, duplicate email handling, disable/reactivate actions, and audit-event creation.
 - Real auth/profile behavior: failed and successful login, login rate limiting, session profile reads, backend-backed profile updates, current-password verification for password changes, stricter password rejection, password-change session rotation and old-token revocation, session-backed owner/admin access to all `/api/admin/*` routes, logout revocation, non-admin rejection from admin APIs, audit entries for login/profile activity, and new-password login.
 - User page controls for search, create/edit fields, role/status selection, password entry, audit events, and backend API wiring.
-- Admin navigation routes, page ownership for Chat, Knowledge base, User, Playground, Settings, Reports, Logs, Review runs, System health, and User audit, plus nested Attachments, Settings section structure, standardized Settings status badges, Settings Access and security session/protected-route summaries, safe action links, secret-display guardrails, Settings Light / Dark / System theme preference markup, theme persistence keys, reload restore behavior, System-mode handling, Settings refresh cadence markup, refresh persistence key, manual refresh timer cancellation, Refresh now wiring, Playground required workspace sections, the profile dropdown, Update Profile form, Logout redirect, profile-menu-only admin logout, and the Mac-style clock wiring.
+- Admin navigation routes, page ownership for Chat, Knowledge base, User, Playground, Settings, Reports, Logs, Review runs, System health, and User audit, plus nested Attachments, Settings section structure, standardized Settings status badges, Settings Access and security session/protected-route summaries, safe action links, secret-display guardrails, Settings Review runs summary cards, System health hints, live Diagnostics rendering, Settings Light / Dark / System theme preference markup, theme persistence keys, reload restore behavior, System-mode handling, Settings refresh cadence markup, refresh persistence key, manual refresh timer cancellation, Refresh now wiring, Playground required workspace sections, the profile dropdown, Update Profile form, Logout redirect, profile-menu-only admin logout, and the Mac-style clock wiring.
 - Static auth architecture checks for shared `server.js` admin middleware and guarded `register-user-management.js` compatibility behavior.
 
 ## GitHub Actions / auto-deploy
@@ -187,11 +189,3 @@ Before committing future work, use this checklist:
 4. Did I avoid committing secrets?
 5. Did I keep Render deploy hooks, API keys, and credentials out of the repository?
 6. Did I commit all related changes together?
-
-## Files
-
-- [agent-directory.md](agent-directory.md) - overview of the available agent roles and responsibilities.
-- [routing-rules.md](routing-rules.md) - rules for directing work and requests.
-- [memory-rules.md](memory-rules.md) - guidelines for persistent notes and context.
-- [handoff-template.md](handoff-template.md) - reusable handoff format for transferring tasks.
-- [change-log.md](change-log.md) - record of repository changes.
