@@ -60,10 +60,14 @@ For persistent PostgreSQL storage, set `DATABASE_URL`. The server creates these 
 
 - `chats`
 - `chat_messages`
+- `users`
+- `user_audit_events`
 - `knowledge_entries`
 - `review_runs`
 
-Existing PostgreSQL databases are updated additively with `chats.archived_at` so archived chats can be hidden without deleting chat history.
+The `users` and `user_audit_events` tables are the Phase 1 database foundation for protected user-management CRUD. They provide account identity fields, role and status constraints, case-insensitive email uniqueness, password hash storage, login/profile timestamps, and audit-event relationships. The current user-management UI and admin APIs still need later phases before real user records can be managed from the browser.
+
+Existing PostgreSQL databases are updated additively with `chats.archived_at` and user-management foundation tables so archived chats can be hidden without deleting chat history and future account records can be stored without replacing existing chat data.
 
 Without `DATABASE_URL`, the app starts in in-memory storage mode for local testing and storage-only operation.
 
