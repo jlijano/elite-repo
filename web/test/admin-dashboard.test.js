@@ -158,13 +158,37 @@ test("login page is the logout redirect target", () => {
 });
 
 test("theme mode control lives inside settings page", () => {
-  assert.match(settingsHtml, /id="settingsThemeButton"/);
-  assert.match(settingsHtml, />Toggle theme<\/button>/);
-  assert.doesNotMatch(chatHtml, /id="settingsThemeButton"/);
-  assert.doesNotMatch(knowledgeHtml, /id="settingsThemeButton"/);
-  assert.doesNotMatch(userHtml, /id="settingsThemeButton"/);
-  assert.doesNotMatch(updateProfileHtml, /id="settingsThemeButton"/);
-  assert.match(adminJs, /els\.settingsThemeButton\?\.addEventListener\("click", toggleTheme\)/);
+  assert.match(settingsHtml, /class="theme-mode-control"[\s\S]*aria-label="Theme preference"/);
+  assert.match(settingsHtml, /data-theme-choice="light"[\s\S]*>Light<\/button>/);
+  assert.match(settingsHtml, /data-theme-choice="dark"[\s\S]*>Dark<\/button>/);
+  assert.match(settingsHtml, /data-theme-choice="system"[\s\S]*>System<\/button>/);
+  assert.match(settingsHtml, /id="settingsThemeSummary"/);
+  assert.doesNotMatch(settingsHtml, /id="settingsThemeButton"/);
+  assert.doesNotMatch(settingsHtml, />Toggle theme<\/button>/);
+  assert.doesNotMatch(chatHtml, /data-theme-choice=/);
+  assert.doesNotMatch(knowledgeHtml, /data-theme-choice=/);
+  assert.doesNotMatch(userHtml, /data-theme-choice=/);
+  assert.doesNotMatch(updateProfileHtml, /data-theme-choice=/);
+  assert.match(adminCss, /\.theme-mode-control/);
+  assert.match(adminCss, /\.theme-mode-option\.active/);
+  assert.match(adminCss, /\.theme-mode-summary/);
+});
+
+test("theme preference persists explicit choices and restores system mode", () => {
+  assert.match(adminJs, /const themeStorageKey = "switchboard-theme"/);
+  assert.match(adminJs, /const themePreferenceStorageKey = "switchboard-theme-mode"/);
+  assert.match(adminJs, /const validThemeChoices = \["light", "dark", "system"\]/);
+  assert.match(adminJs, /const systemThemeQuery = window\.matchMedia\?\.\("\(prefers-color-scheme: dark\)"\)/);
+  assert.match(adminJs, /function getStoredThemePreference\(\)/);
+  assert.match(adminJs, /function applyThemePreference\(preference\)/);
+  assert.match(adminJs, /localStorage\.setItem\(themePreferenceStorageKey, choice\)/);
+  assert.match(adminJs, /localStorage\.removeItem\(themeStorageKey\)/);
+  assert.match(adminJs, /localStorage\.setItem\(themeStorageKey, choice\)/);
+  assert.match(adminJs, /function applyStoredThemePreference\(\)/);
+  assert.match(adminJs, /applyStoredThemePreference\(\)/);
+  assert.match(adminJs, /function handleSystemThemeChange\(\)/);
+  assert.match(adminJs, /systemThemeQuery\?\.addEventListener\?\.\("change", handleSystemThemeChange\)/);
+  assert.match(adminJs, /els\.settingsThemeOptions\?\.forEach\(\(button\) => button\.addEventListener\("click", \(\) => applyThemePreference\(button\.dataset\.themeChoice\)\)\)/);
 });
 
 test("admin javascript switches behavior by page", () => {
