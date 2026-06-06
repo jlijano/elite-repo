@@ -12,6 +12,8 @@ const themeToggleText = document.getElementById("themeToggleText");
 const themeToggleIcon = document.querySelector(".theme-toggle-icon");
 const newChatButton = document.getElementById("newChatButton");
 const mobileNewChatButton = document.getElementById("mobileNewChatButton");
+const shareChatButton = document.getElementById("shareChatButton");
+const loginLink = document.getElementById("loginLink");
 const chatList = document.getElementById("chatList");
 const availableUsersPanel = document.getElementById("availableUsersPanel");
 const availableUsersList = document.getElementById("availableUsersList");
@@ -26,6 +28,10 @@ const sessionTokenStorageKey = "switchboard-session-token";
 const refreshIntervalMs = 40000;
 const maxAttachmentFiles = 4;
 const maxAttachmentBytes = 180 * 1024;
+const shareParams = new URLSearchParams(window.location.search);
+const sharedChatId = shareParams.get("chat") || "";
+const sharedChatToken = shareParams.get("share") || "";
+const isSharedView = Boolean(sharedChatId && sharedChatToken);
 let currentChatId = null;
 let chatHistory = [];
 let selectedAttachments = [];
@@ -72,6 +78,10 @@ function currentSessionToken() {
   return getSessionStored(sessionTokenStorageKey) || "";
 }
 
+function hasChatAccount() {
+  return Boolean(currentSessionToken());
+}
+
 function authHeaders() {
   const token = currentSessionToken();
   return token ? { "x-session-token": token } : {};
@@ -80,6 +90,7 @@ function authHeaders() {
 function saveCurrentChat(chatId) {
   currentChatId = chatId;
   setStored(chatStorageKey, chatId);
+  updateShareButton();
 }
 
 function updateThemeToggle(theme) {
@@ -102,7 +113,13 @@ function initializeThemeToggle() {
 }
 
 async function requestJson(url, options = {}) {
-  const response = await fetch(url, options);
+  const { skipAuth = false, ...fetchOptions } = options;
+  const headers = {
+    "Content-Type": "application/json",
+    ...(!skipAuth ? authHeaders() : {}),
+    ...(fetchOptions.headers || {})
+  };
+  const response = await fetch(url, { ...fetchOptions, headers });
   const data = await response.json().catch(() => ({}));
   if (!response.ok) throw new Error(data.error || "The backend could not process the request.");
   return data;
@@ -177,6 +194,65 @@ function setStatus({ directoryAvailable, filesLoaded: loadedFiles, error, aiAvai
   }
 }
 
+function setChatAccessMode(mode) {
+  document.body.dataset.chatAccess = mode;
+  const locked = mode === "locked" || mode === "shared";
+  inputEl.disabled = locked;
+  sendButton.disabled = locked;
+  filePickerButton.disabled = locked;
+  fileInput.disabled = locked;
+  newChatButton.disabled = locked;
+  mobileNewChatButton.disabled = locked;
+  formEl.hidden = locked;
+  if (loginLink) loginLink.hidden = mode !== "locked";
+  updateShareButton();
+}
+
+function updateShareButton(text = "Share") {
+  if (!shareChatButton) return;
+  const canShare = hasChatAccount() && currentChatId && !isSharedView;
+  shareChatButton.hidden = !canShare;
+  shareChatButton.disabled = !canShare;
+  shareChatButton.textContent = text;
+}
+
+function renderAccessCard({ title, detail, actionHref = "/login.html", actionText = "Log in" }) {
+  messagesEl.innerHTML = `
+    <section class="access-card" aria-label="${escapeHtml(title)}">
+      <span class="brand-mark" aria-hidden="true">★</span>
+      <h1>${escapeHtml(title)}</h1>
+      <p>${escapeHtml(detail)}</p>
+      <a class="access-action" href="${escapeHtml(actionHref)}">${escapeHtml(actionText)}</a>
+    </section>
+  `;
+}
+
+function renderLoginGate() {
+  currentChatId = null;
+  chatHistory = [];
+  selectedAttachments = [];
+  renderSelectedAttachments();
+  currentChatTitle.textContent = "Login required";
+  chatList.innerHTML = "";
+  if (availableUsersPanel) availableUsersPanel.hidden = true;
+  renderAccessCard({
+    title: "Log in to view chats",
+    detail: "Chats are private. You need an account to create, read, or send chat messages. A shared chat link can still open one specific chat."
+  });
+  setChatAccessMode("locked");
+}
+
+function renderSharedGateError(message) {
+  currentChatTitle.textContent = "Shared chat unavailable";
+  renderAccessCard({
+    title: "Shared chat unavailable",
+    detail: message || "This shared chat link is invalid or expired.",
+    actionHref: "/login.html",
+    actionText: "Log in"
+  });
+  setChatAccessMode("shared");
+}
+
 function scrollToBottom() {
   messagesEl.scrollTop = messagesEl.scrollHeight;
 }
@@ -225,8 +301,9 @@ function renderWelcome() {
   messagesEl.appendChild(createMessageElement("assistant", "Hi. Send me a request and I will classify it, check the Agent Directory, route it to an active match, or recommend what is missing."));
 }
 
-function renderMessages(messages = []) {
-  renderWelcome();
+function renderMessages(messages = [], options = {}) {
+  if (options.includeWelcome === false) messagesEl.innerHTML = "";
+  else renderWelcome();
   chatHistory = [];
   for (const message of messages) {
     const attachments = Array.isArray(message.context?.attachments) ? message.context.attachments : [];
@@ -380,7 +457,7 @@ async function loadAvailableUsers() {
     return [];
   }
   try {
-    const data = await requestJson("/api/users/available-chat-users", { headers: authHeaders() });
+    const data = await requestJson("/api/users/available-chat-users");
     renderAvailableUsers(data.users || []);
     return data.users || [];
   } catch (error) {
@@ -392,13 +469,14 @@ async function loadAvailableUsers() {
 
 async function loadStatus() {
   try {
-    setStatus(await requestJson("/api/status"));
+    setStatus(await requestJson("/api/status", { skipAuth: true }));
   } catch (error) {
     setStatus({ error: true });
   }
 }
 
 async function loadChats() {
+  if (!hasChatAccount()) return [];
   try {
     const data = await requestJson("/api/chats");
     renderChatList(data.chats || []);
@@ -410,9 +488,9 @@ async function loadChats() {
 }
 
 async function createChat() {
+  if (!hasChatAccount()) return renderLoginGate();
   const data = await requestJson("/api/chats", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ title: "New chat" })
   });
   saveCurrentChat(data.chat.id);
@@ -424,7 +502,6 @@ async function createChat() {
 async function archiveChat(chatId) {
   await requestJson(`/api/chats/${encodeURIComponent(chatId)}/archive`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ archived: true })
   });
   const chats = await loadChats();
@@ -444,7 +521,21 @@ async function loadChat(chatId) {
   await loadChats();
 }
 
+async function loadSharedChat() {
+  setChatAccessMode("shared");
+  try {
+    const data = await requestJson(`/api/chats/${encodeURIComponent(sharedChatId)}?share=${encodeURIComponent(sharedChatToken)}`, { skipAuth: true });
+    currentChatId = data.chat.id;
+    currentChatTitle.textContent = data.chat.title || "Shared chat";
+    renderMessages(data.chat.messages || [], { includeWelcome: false });
+  } catch (error) {
+    renderSharedGateError(error.message);
+  }
+}
+
 async function ensureChatSession() {
+  if (!hasChatAccount()) return renderLoginGate();
+  setChatAccessMode("account");
   const chats = await loadChats();
   const saved = chats.find((chat) => chat.id === getStored(chatStorageKey));
   if (saved) return loadChat(saved.id);
@@ -454,6 +545,8 @@ async function ensureChatSession() {
 
 async function refreshCurrentSession() {
   await loadStatus();
+  if (isSharedView) return;
+  if (!hasChatAccount()) return renderLoginGate();
   await loadAvailableUsers();
   const chats = await loadChats();
   const active = chats.find((chat) => chat.id === currentChatId);
@@ -465,6 +558,7 @@ async function refreshCurrentSession() {
 }
 
 async function sendMessage() {
+  if (!hasChatAccount()) return renderLoginGate();
   const message = inputEl.value.trim();
   const attachments = selectedAttachments.slice();
   if ((!message && !attachments.length) || isSending) return;
@@ -482,7 +576,6 @@ async function sendMessage() {
   try {
     const data = await requestJson("/api/chat", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ chatId: currentChatId, message, attachments, history: chatHistory.slice(0, -1) })
     });
     hideTyping();
@@ -502,6 +595,22 @@ async function sendMessage() {
   }
 }
 
+async function shareCurrentChat() {
+  if (!currentChatId || !hasChatAccount()) return;
+  updateShareButton("Sharing...");
+  try {
+    const data = await requestJson(`/api/chats/${encodeURIComponent(currentChatId)}/share`, { method: "POST", body: "{}" });
+    const shareUrl = data.share?.url || `${window.location.origin}/?chat=${encodeURIComponent(currentChatId)}&share=${encodeURIComponent(data.share?.token || "")}`;
+    await navigator.clipboard?.writeText(shareUrl);
+    updateShareButton("Copied");
+    window.setTimeout(() => updateShareButton(), 1800);
+  } catch (error) {
+    updateShareButton("Share failed");
+    addMessage("assistant", error.message || "Could not create a share link.", { error: true, skipHistory: true });
+    window.setTimeout(() => updateShareButton(), 2200);
+  }
+}
+
 formEl.addEventListener("submit", (event) => {
   event.preventDefault();
   sendMessage();
@@ -517,14 +626,21 @@ filePickerButton.addEventListener("click", () => fileInput.click());
 fileInput.addEventListener("change", () => addFiles(fileInput.files).catch((error) => addMessage("assistant", error.message, { error: true, skipHistory: true })));
 newChatButton.addEventListener("click", () => createChat().catch((error) => addMessage("assistant", error.message, { error: true, skipHistory: true })));
 mobileNewChatButton.addEventListener("click", () => createChat().catch((error) => addMessage("assistant", error.message, { error: true, skipHistory: true })));
+shareChatButton?.addEventListener("click", () => shareCurrentChat());
 
 initializeThemeToggle();
 renderSelectedAttachments();
 loadStatus();
-loadAvailableUsers();
-ensureChatSession().catch((error) => {
-  renderWelcome();
-  addMessage("assistant", error.message, { error: true, skipHistory: true });
-});
+if (isSharedView) {
+  loadSharedChat();
+} else if (hasChatAccount()) {
+  loadAvailableUsers();
+  ensureChatSession().catch((error) => {
+    renderWelcome();
+    addMessage("assistant", error.message, { error: true, skipHistory: true });
+  });
+} else {
+  renderLoginGate();
+}
 setInterval(() => refreshCurrentSession().catch(() => {}), refreshIntervalMs);
 resizeInput();
