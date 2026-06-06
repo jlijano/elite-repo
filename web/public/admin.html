@@ -15,516 +15,82 @@
     </script>
     <link rel="stylesheet" href="style.css" />
     <style>
-      .admin-shell {
-        height: 100vh;
-        height: 100dvh;
-        overflow: hidden;
-      }
-
-      .admin-shell .sidebar {
-        position: sticky;
-        top: 0;
-        align-self: start;
-        height: 100vh;
-        height: 100dvh;
-        grid-template-rows: auto auto minmax(0, 1fr) auto;
-        overflow-y: auto;
-        overscroll-behavior: contain;
-      }
-
-      .admin-shell .nav-item {
-        text-decoration: none;
-      }
-
-      .admin-shell button.nav-item {
-        width: 100%;
-      }
-
-      .admin-shell .nav-item.active {
-        background: var(--sidebar-card);
-        box-shadow: inset 3px 0 0 var(--primary);
-        color: var(--sidebar-text);
-      }
-
-      .admin-shell .nav-item.active span {
-        color: var(--primary);
-      }
-
-      .admin-nav-stack {
-        min-height: 0;
-        display: grid;
-        grid-template-rows: auto minmax(0, 1fr) auto;
-        gap: var(--space-5);
-      }
-
-      .admin-section-list {
-        min-height: 0;
-        display: grid;
-        align-content: start;
-        gap: 2px;
-        overflow-y: auto;
-      }
-
-      .workspace-card {
-        display: grid;
-        gap: 8px;
-        padding: 10px;
-        border-radius: var(--radius);
-        background: var(--sidebar-card);
-        color: var(--sidebar-text);
-      }
-
-      .workspace-card strong {
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-      }
-
-      .workspace-card small {
-        color: var(--sidebar-subtle);
-        line-height: 1.35;
-      }
-
-      .admin-panel {
-        min-width: 0;
-        min-height: 0;
-        height: 100vh;
-        height: 100dvh;
-        display: grid;
-        grid-template-rows: 64px minmax(0, 1fr);
-        overflow: hidden;
-        background: var(--panel);
-      }
-
-      .admin-header-title {
-        min-width: 0;
-        display: grid;
-        gap: 2px;
-      }
-
-      .admin-header-title h1 {
-        margin: 0;
-        color: var(--text);
-        font-size: 1.05rem;
-        line-height: 1.2;
-      }
-
-      .admin-header-title p {
-        margin: 0;
-        color: var(--muted);
-        font-size: 0.86rem;
-        line-height: 1.35;
-      }
-
-      .admin-scroll {
-        min-height: 0;
-        height: 100%;
-        overflow-y: auto;
-        overflow-x: hidden;
-        overscroll-behavior: contain;
-        padding: 20px 24px max(40px, env(safe-area-inset-bottom));
-        background: var(--panel);
-        scroll-behavior: smooth;
-      }
-
-      .admin-layout {
-        width: min(1180px, 100%);
-        display: grid;
-        gap: 14px;
-        margin: 0 auto;
-      }
-
-      .summary,
-      .admin-card,
-      .admin-status {
-        border: 1px solid var(--line);
-        border-radius: var(--radius);
-        background: var(--panel);
-      }
-
-      input,
-      select {
-        width: 100%;
-        min-width: 0;
-        min-height: 38px;
-        padding: 0 10px;
-        border: 1px solid var(--composer-border);
-        border-radius: var(--radius);
-        background: var(--composer);
-        color: var(--text);
-        font: inherit;
-      }
-
-      input:focus-visible,
-      select:focus-visible,
-      .admin-panel button:focus-visible {
-        outline: 3px solid var(--focus-ring);
-        outline-offset: 2px;
-      }
-
-      .admin-panel button {
-        min-height: 38px;
-        padding: 0 12px;
-        border: 1px solid var(--line);
-        border-radius: var(--radius);
-        background: var(--panel-soft);
-        color: var(--text);
-        font-weight: 800;
-      }
-
-      .admin-panel button:hover:not(:disabled),
-      .admin-panel button:focus-visible:not(:disabled) {
-        border-color: var(--composer-border);
-        background: var(--sidebar-card);
-      }
-
-      .logout-action {
-        color: var(--sidebar-text);
-      }
-
-      .logout-action:hover,
-      .logout-action:focus-visible {
-        background: var(--sidebar-card);
-      }
-
-      .admin-status {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        min-height: 42px;
-        margin: 0;
-        padding: 10px 12px;
-        color: var(--muted);
-        font-size: 0.9rem;
-        font-weight: 650;
-      }
-
-      .admin-status[hidden],
-      .chat-review-card[hidden] {
-        display: none;
-      }
-
-      .admin-status::before {
-        content: "";
-        width: 0.55rem;
-        height: 0.55rem;
-        flex: 0 0 auto;
-        border-radius: 50%;
-        background: var(--success);
-        box-shadow: 0 0 0 4px rgba(25, 195, 125, 0.18);
-      }
-
-      .admin-status.error {
-        color: var(--error);
-        border-color: var(--error-line);
-        background: var(--error-bg);
-      }
-
-      .admin-status.error::before {
-        background: var(--error);
-        box-shadow: 0 0 0 4px rgba(180, 35, 24, 0.18);
-      }
-
-      .summary {
-        display: grid;
-        grid-template-columns: repeat(6, minmax(0, 1fr));
-        gap: 10px;
-        padding: 12px;
-      }
-
-      .metric {
-        min-width: 0;
-        padding: 12px;
-        border: 1px solid var(--line);
-        border-radius: var(--radius);
-        background: var(--panel-soft);
-      }
-
-      .metric span {
-        display: block;
-        overflow: hidden;
-        color: var(--muted);
-        font-size: 0.72rem;
-        font-weight: 800;
-        text-overflow: ellipsis;
-        text-transform: uppercase;
-        white-space: nowrap;
-      }
-
-      .metric strong {
-        display: block;
-        margin-top: 4px;
-        color: var(--text);
-        font-size: 1.2rem;
-        line-height: 1.2;
-      }
-
-      .admin-grid {
-        display: grid;
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-        gap: 14px;
-      }
-
-      .admin-card {
-        min-height: 280px;
-        overflow: hidden;
-        scroll-margin-top: 76px;
-      }
-
-      .admin-card.wide {
-        grid-column: 1 / -1;
-        min-height: 0;
-      }
-
-      .section-head {
-        min-height: 52px;
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 10px;
-        padding: 12px;
-        border-bottom: 1px solid var(--line);
-        background: var(--panel-soft);
-      }
-
-      .section-head h2 {
-        margin: 0;
-        color: var(--text);
-        font-size: 0.95rem;
-        line-height: 1.2;
-      }
-
-      .section-subtitle {
-        margin: 2px 0 0;
-        color: var(--muted);
-        font-size: 0.78rem;
-        line-height: 1.35;
-      }
-
-      .section-tools {
-        min-width: min(360px, 100%);
-        display: flex;
-        align-items: center;
-        gap: 8px;
-      }
-
-      .section-tools input {
-        flex: 1 1 170px;
-      }
-
-      .section-tools select {
-        flex: 0 0 150px;
-      }
-
-      .list,
-      .detail {
-        max-height: 460px;
-        overflow: auto;
-        padding: 12px;
-        color: var(--muted);
-      }
-
-      .compact-list {
-        max-height: 280px;
-      }
-
-      .settings-list {
-        display: grid;
-        gap: 10px;
-        padding: 12px;
-      }
-
-      .settings-row {
-        min-width: 0;
-        display: grid;
-        grid-template-columns: minmax(0, 1fr) minmax(180px, 260px);
-        align-items: center;
-        gap: 12px;
-        padding: 12px;
-        border: 1px solid var(--line);
-        border-radius: var(--radius);
-        background: var(--panel);
-      }
-
-      .settings-row strong,
-      .settings-row span {
-        color: var(--text);
-      }
-
-      .settings-row p {
-        margin: 3px 0 0;
-        color: var(--muted);
-        font-size: 0.82rem;
-        line-height: 1.4;
-      }
-
-      .item {
-        min-width: 0;
-        display: grid;
-        gap: 8px;
-        padding: 12px;
-        border: 1px solid var(--line);
-        border-radius: var(--radius);
-        background: var(--panel);
-      }
-
-      .item + .item {
-        margin-top: 10px;
-      }
-
-      .item.active {
-        border-color: var(--primary);
-        box-shadow: inset 3px 0 0 var(--primary);
-      }
-
-      .row {
-        min-width: 0;
-        display: flex;
-        align-items: flex-start;
-        justify-content: space-between;
-        gap: 10px;
-        color: var(--text);
-        font-weight: 800;
-      }
-
-      .row span {
-        min-width: 0;
-        overflow-wrap: anywhere;
-      }
-
-      .row small,
-      .item p,
-      .admin-message-meta {
-        color: var(--muted);
-      }
-
-      .item p {
-        margin: 0;
-        line-height: 1.45;
-        overflow-wrap: anywhere;
-      }
-
-      .actions {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 8px;
-      }
-
-      .admin-message {
-        display: grid;
-        gap: 4px;
-        padding-top: 10px;
-      }
-
-      .admin-message + .admin-message {
-        border-top: 1px solid var(--line);
-      }
-
-      .admin-message-content {
-        margin: 0;
-        color: var(--text);
-        line-height: 1.5;
-        overflow-wrap: anywhere;
-        white-space: pre-wrap;
-      }
-
-      .tag {
-        display: inline-flex;
-        align-items: center;
-        width: fit-content;
-        min-height: 24px;
-        padding: 0 8px;
-        border-radius: 999px;
-        background: rgba(25, 195, 125, 0.14);
-        color: var(--success);
-        font-size: 0.75rem;
-        font-weight: 800;
-      }
-
-      .tag.project {
-        color: var(--primary);
-        background: rgba(25, 195, 125, 0.1);
-      }
-
-      .tag.pending_review {
-        color: var(--warning);
-        background: rgba(242, 166, 13, 0.14);
-      }
-
-      .tag.archived {
-        color: var(--muted);
-        background: var(--panel-soft);
-      }
-
-      .empty {
-        padding: 12px;
-        border: 1px dashed var(--line);
-        border-radius: var(--radius);
-        background: var(--panel-soft);
-        color: var(--muted);
-      }
-
-      @media (max-width: 1060px) {
-        .summary {
-          grid-template-columns: repeat(3, minmax(0, 1fr));
-        }
-      }
-
-      @media (max-width: 900px) {
-        .app-shell {
-          grid-template-columns: 1fr;
-        }
-
-        .admin-shell .sidebar {
-          display: none;
-        }
-
-        .admin-panel,
-        .admin-scroll {
-          height: 100vh;
-          height: 100dvh;
-        }
-
-        .admin-panel {
-          grid-template-rows: auto minmax(0, 1fr);
-        }
-
-        .admin-scroll {
-          padding: 14px 16px 22px;
-        }
-      }
-
-      @media (max-width: 760px) {
-        .summary,
-        .admin-grid {
-          grid-template-columns: 1fr;
-        }
-
-        .admin-card.wide {
-          grid-column: auto;
-        }
-
-        .section-head,
-        .settings-row {
-          align-items: stretch;
-          grid-template-columns: 1fr;
-          flex-direction: column;
-        }
-
-        .section-tools {
-          width: 100%;
-          flex-direction: column;
-          align-items: stretch;
-        }
-
-        .section-tools select {
-          flex-basis: auto;
-        }
-
-        .admin-header-title p {
-          display: none;
-        }
-      }
+      .admin-shell { height: 100vh; height: 100dvh; overflow: hidden; }
+      .admin-shell .sidebar { position: sticky; top: 0; align-self: start; height: 100vh; height: 100dvh; grid-template-rows: auto auto minmax(0, 1fr) auto; overflow-y: auto; overscroll-behavior: contain; }
+      .admin-shell .nav-item { text-decoration: none; }
+      .admin-shell button.nav-item { width: 100%; }
+      .admin-shell .nav-item.active { background: var(--sidebar-card); box-shadow: inset 3px 0 0 var(--primary); color: var(--sidebar-text); }
+      .admin-shell .nav-item.active span { color: var(--primary); }
+      .admin-nav-stack { min-height: 0; display: grid; grid-template-rows: auto minmax(0, 1fr) auto; gap: var(--space-5); }
+      .admin-section-list { min-height: 0; display: grid; align-content: start; gap: 2px; overflow-y: auto; }
+      .workspace-card { display: grid; gap: 8px; padding: 10px; border-radius: var(--radius); background: var(--sidebar-card); color: var(--sidebar-text); }
+      .workspace-card strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+      .workspace-card small { color: var(--sidebar-subtle); line-height: 1.35; }
+      .admin-panel { min-width: 0; min-height: 0; height: 100vh; height: 100dvh; display: grid; grid-template-rows: 64px minmax(0, 1fr); overflow: hidden; background: var(--panel); }
+      .admin-header-title { min-width: 0; display: grid; gap: 2px; }
+      .admin-header-title h1 { margin: 0; color: var(--text); font-size: 1.05rem; line-height: 1.2; }
+      .admin-header-title p { margin: 0; color: var(--muted); font-size: 0.86rem; line-height: 1.35; }
+      .admin-scroll { min-height: 0; height: 100%; overflow-y: auto; overflow-x: hidden; overscroll-behavior: contain; padding: 20px 24px max(40px, env(safe-area-inset-bottom)); background: var(--panel); scroll-behavior: smooth; }
+      .admin-layout { width: min(1240px, 100%); display: grid; gap: 14px; margin: 0 auto; }
+      .admin-status, .dashboard-widget { border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel); }
+      input, select { width: 100%; min-width: 0; min-height: 38px; padding: 0 10px; border: 1px solid var(--composer-border); border-radius: var(--radius); background: var(--composer); color: var(--text); font: inherit; }
+      input:focus-visible, select:focus-visible, .admin-panel button:focus-visible { outline: 3px solid var(--focus-ring); outline-offset: 2px; }
+      .admin-panel button { min-height: 38px; padding: 0 12px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel-soft); color: var(--text); font-weight: 800; }
+      .admin-panel button:hover:not(:disabled), .admin-panel button:focus-visible:not(:disabled) { border-color: var(--composer-border); background: var(--sidebar-card); }
+      .logout-action { color: var(--sidebar-text); }
+      .logout-action:hover, .logout-action:focus-visible { background: var(--sidebar-card); }
+      .admin-status { display: flex; align-items: center; gap: 10px; min-height: 42px; margin: 0; padding: 10px 12px; color: var(--muted); font-size: 0.9rem; font-weight: 650; }
+      .admin-status[hidden], .dashboard-widget[hidden] { display: none; }
+      .admin-status::before { content: ""; width: 0.55rem; height: 0.55rem; flex: 0 0 auto; border-radius: 50%; background: var(--success); box-shadow: 0 0 0 4px rgba(25, 195, 125, 0.18); }
+      .admin-status.error { color: var(--error); border-color: var(--error-line); background: var(--error-bg); }
+      .admin-status.error::before { background: var(--error); box-shadow: 0 0 0 4px rgba(180, 35, 24, 0.18); }
+      .dashboard-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+      .dashboard-toolbar h2 { margin: 0; color: var(--text); font-size: 1rem; }
+      .dashboard-toolbar p { margin: 3px 0 0; color: var(--muted); font-size: 0.86rem; line-height: 1.4; }
+      .dashboard-grid { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 14px; align-items: start; }
+      .dashboard-widget { min-width: 0; min-height: 220px; overflow: hidden; scroll-margin-top: 76px; grid-column: span 6; }
+      .dashboard-widget.compact { min-height: 180px; }
+      .dashboard-widget.wide { grid-column: 1 / -1; }
+      .widget-head { min-height: 52px; display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 12px; border-bottom: 1px solid var(--line); background: var(--panel-soft); }
+      .widget-head h2 { margin: 0; color: var(--text); font-size: 0.95rem; line-height: 1.2; }
+      .widget-subtitle { margin: 2px 0 0; color: var(--muted); font-size: 0.78rem; line-height: 1.35; }
+      .widget-actions, .section-tools { min-width: min(360px, 100%); display: flex; align-items: center; gap: 8px; }
+      .section-tools input { flex: 1 1 170px; }
+      .section-tools select { flex: 0 0 150px; }
+      .widget-body, .list, .detail { max-height: 460px; overflow: auto; padding: 12px; color: var(--muted); }
+      .widget-body.short, .compact-list { max-height: 280px; }
+      .metrics-grid { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 10px; padding: 12px; }
+      .metric { min-width: 0; padding: 12px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel-soft); }
+      .metric span { display: block; overflow: hidden; color: var(--muted); font-size: 0.72rem; font-weight: 800; text-overflow: ellipsis; text-transform: uppercase; white-space: nowrap; }
+      .metric strong { display: block; margin-top: 4px; color: var(--text); font-size: 1.2rem; line-height: 1.2; }
+      .split-panel { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); min-height: 360px; }
+      .split-panel > div + div { border-left: 1px solid var(--line); }
+      .item { min-width: 0; display: grid; gap: 8px; padding: 12px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel); }
+      .item + .item { margin-top: 10px; }
+      .item.active { border-color: var(--primary); box-shadow: inset 3px 0 0 var(--primary); }
+      .row { min-width: 0; display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; color: var(--text); font-weight: 800; }
+      .row span { min-width: 0; overflow-wrap: anywhere; }
+      .row small, .item p, .admin-message-meta { color: var(--muted); }
+      .item p { margin: 0; line-height: 1.45; overflow-wrap: anywhere; }
+      .actions { display: flex; flex-wrap: wrap; gap: 8px; }
+      .admin-message { display: grid; gap: 4px; padding-top: 10px; }
+      .admin-message + .admin-message { border-top: 1px solid var(--line); }
+      .admin-message-content { margin: 0; color: var(--text); line-height: 1.5; overflow-wrap: anywhere; white-space: pre-wrap; }
+      .tag { display: inline-flex; align-items: center; width: fit-content; min-height: 24px; padding: 0 8px; border-radius: 999px; background: rgba(25, 195, 125, 0.14); color: var(--success); font-size: 0.75rem; font-weight: 800; }
+      .tag.project { color: var(--primary); background: rgba(25, 195, 125, 0.1); }
+      .tag.pending_review { color: var(--warning); background: rgba(242, 166, 13, 0.14); }
+      .tag.archived { color: var(--muted); background: var(--panel-soft); }
+      .empty { padding: 12px; border: 1px dashed var(--line); border-radius: var(--radius); background: var(--panel-soft); color: var(--muted); }
+      .settings-list { display: grid; gap: 10px; padding: 12px; }
+      .settings-row { min-width: 0; display: grid; grid-template-columns: minmax(0, 1fr) minmax(180px, 260px); align-items: center; gap: 12px; padding: 12px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel); }
+      .settings-row strong, .settings-row span { color: var(--text); }
+      .settings-row p { margin: 3px 0 0; color: var(--muted); font-size: 0.82rem; line-height: 1.4; }
+      .widget-toggle-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+      .widget-toggle { display: flex; align-items: center; gap: 8px; min-height: 34px; color: var(--text); font-weight: 700; }
+      .widget-toggle input { width: auto; min-height: auto; }
+      @media (max-width: 1060px) { .metrics-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } .dashboard-widget { grid-column: 1 / -1; } }
+      @media (max-width: 900px) { .app-shell { grid-template-columns: 1fr; } .admin-shell .sidebar { display: none; } .admin-panel, .admin-scroll { height: 100vh; height: 100dvh; } .admin-panel { grid-template-rows: auto minmax(0, 1fr); } .admin-scroll { padding: 14px 16px 22px; } }
+      @media (max-width: 760px) { .metrics-grid, .split-panel, .settings-row, .widget-toggle-list { grid-template-columns: 1fr; } .widget-head, .dashboard-toolbar { align-items: stretch; flex-direction: column; } .widget-actions, .section-tools { width: 100%; flex-direction: column; align-items: stretch; } .section-tools select { flex-basis: auto; } .split-panel > div + div { border-left: 0; border-top: 1px solid var(--line); } .admin-header-title p { display: none; } }
     </style>
   </head>
   <body>
@@ -539,12 +105,13 @@
 
         <nav class="primary-nav" aria-label="Admin navigation">
           <a class="nav-item" href="/"><span aria-hidden="true">←</span>Back to chat</a>
+          <button class="nav-item active" data-target="overviewSection" type="button" aria-current="page"><span aria-hidden="true">▣</span>Overview</button>
           <button class="nav-item" data-target="chatReviewSection" type="button"><span aria-hidden="true">□</span>Chat review</button>
+          <button class="nav-item" data-target="knowledgeQueueSection" type="button"><span aria-hidden="true">◇</span>Knowledge queue</button>
+          <button class="nav-item" data-target="reviewRunsSection" type="button"><span aria-hidden="true">≡</span>Review runs</button>
+          <button class="nav-item" data-target="attachmentsSection" type="button"><span aria-hidden="true">▤</span>Attachments</button>
           <button class="nav-item" data-target="adminAccessSection" type="button"><span aria-hidden="true">◉</span>Admin access</button>
-          <button class="nav-item" data-target="chatAttachmentsSection" type="button"><span aria-hidden="true">▤</span>Chat attachments</button>
-          <button class="nav-item" data-target="knowledgeSection" type="button"><span aria-hidden="true">◇</span>Knowledge</button>
-          <button class="nav-item" data-target="reviewLogsSection" type="button"><span aria-hidden="true">≡</span>Review logs</button>
-          <button class="nav-item" data-target="fileLibrarySection" type="button"><span aria-hidden="true">▦</span>File library</button>
+          <button class="nav-item" data-target="systemHealthSection" type="button"><span aria-hidden="true">●</span>System health</button>
           <button class="nav-item" data-target="settingsSection" type="button"><span aria-hidden="true">⚙</span>Settings</button>
         </nav>
 
@@ -573,16 +140,10 @@
         <header class="chat-header admin-header">
           <div class="admin-header-title">
             <h1>Switchboard Admin</h1>
-            <p>Review chats, manage access context, inspect attachments, check review logs, and tune application settings.</p>
+            <p>Review chats, inspect knowledge, track review runs, manage attachments, and tune application settings.</p>
           </div>
           <div class="header-actions">
-            <button
-              class="theme-toggle"
-              id="themeToggle"
-              type="button"
-              aria-label="Switch to dark mode"
-              aria-pressed="false"
-            >
+            <button class="theme-toggle" id="themeToggle" type="button" aria-label="Switch to dark mode" aria-pressed="false">
               <span class="theme-toggle-icon" aria-hidden="true">☾</span>
               <span id="themeToggleText">Dark Mode</span>
             </button>
@@ -592,50 +153,46 @@
         <div class="admin-scroll" id="adminScroll">
           <div class="admin-layout">
             <p class="admin-status" id="status">Loading recent chats...</p>
-            <div class="summary" id="summary"></div>
+            <div class="dashboard-toolbar">
+              <div>
+                <h2>Dashboard</h2>
+                <p>Configurable widgets for review operations and application health.</p>
+              </div>
+              <button id="customizeDashboardButton" type="button">Customize dashboard</button>
+            </div>
 
-            <div class="admin-grid">
-              <section class="admin-card chat-review-card" id="chatReviewSection" hidden>
-                <div class="section-head">
+            <div class="dashboard-grid" id="dashboardGrid">
+              <section class="dashboard-widget wide compact" id="overviewSection" data-widget="overview">
+                <div class="widget-head">
+                  <div>
+                    <h2>Overview</h2>
+                    <p class="widget-subtitle">Chats, review queue, knowledge status, and storage mode.</p>
+                  </div>
+                </div>
+                <div class="metrics-grid" id="summary"></div>
+              </section>
+
+              <section class="dashboard-widget wide chat-review-card" id="chatReviewSection" data-widget="chat-review" hidden>
+                <div class="widget-head">
                   <div>
                     <h2>Chat Review</h2>
-                    <p class="section-subtitle">Recent chats available for admin inspection.</p>
+                    <p class="widget-subtitle">Recent chats and selected chat detail.</p>
                   </div>
-                  <input id="chatSearch" type="search" placeholder="Search chats" autocomplete="off" aria-label="Search chats" />
-                </div>
-                <div class="list" id="chats">Loading chats...</div>
-              </section>
-
-              <section class="admin-card chat-review-card" id="chatDetailSection" hidden>
-                <div class="section-head"><h2>Chat Detail</h2></div>
-                <div class="detail" id="chatDetail">Select a chat to inspect messages.</div>
-              </section>
-
-              <section class="admin-card" id="adminAccessSection">
-                <div class="section-head">
-                  <div>
-                    <h2>Admin Access</h2>
-                    <p class="section-subtitle">Protected route status and admin-session context.</p>
+                  <div class="section-tools">
+                    <input id="chatSearch" type="search" placeholder="Search chats" autocomplete="off" aria-label="Search chats" />
                   </div>
                 </div>
-                <div class="list compact-list" id="users">Protected admin account data is not loaded.</div>
-              </section>
-
-              <section class="admin-card" id="chatAttachmentsSection">
-                <div class="section-head">
-                  <div>
-                    <h2>Chat Attachments</h2>
-                    <p class="section-subtitle">Files attached to the currently selected chat.</p>
-                  </div>
+                <div class="split-panel">
+                  <div class="list" id="chats">Loading chats...</div>
+                  <div class="detail" id="chatDetail">Select a chat to inspect messages.</div>
                 </div>
-                <div class="list compact-list" id="fileManagement">Select a chat to inspect attached files.</div>
               </section>
 
-              <section class="admin-card" id="knowledgeSection">
-                <div class="section-head">
+              <section class="dashboard-widget" id="knowledgeQueueSection" data-widget="knowledge-queue">
+                <div class="widget-head">
                   <div>
-                    <h2>Knowledge</h2>
-                    <p class="section-subtitle">Project notes plus review-created knowledge when admin data is available.</p>
+                    <h2>Knowledge Queue</h2>
+                    <p class="widget-subtitle">Pending, approved, archived, and project knowledge.</p>
                   </div>
                   <div class="section-tools">
                     <input id="knowledgeSearch" type="search" placeholder="Search knowledge" autocomplete="off" aria-label="Search knowledge" />
@@ -651,36 +208,54 @@
                 <div class="list" id="knowledge">Loading project knowledge...</div>
               </section>
 
-              <section class="admin-card" id="reviewLogsSection">
-                <div class="section-head">
+              <section class="dashboard-widget" id="reviewRunsSection" data-widget="review-runs">
+                <div class="widget-head">
                   <div>
-                    <h2>Review Logs</h2>
-                    <p class="section-subtitle">Review run history from the backend.</p>
+                    <h2>Review Runs</h2>
+                    <p class="widget-subtitle">Review history, run counts, and errors.</p>
                   </div>
                 </div>
                 <div class="list" id="runs">Protected review logs require an admin session.</div>
               </section>
 
-              <section class="admin-card wide" id="fileLibrarySection">
-                <div class="section-head">
+              <section class="dashboard-widget" id="attachmentsSection" data-widget="attachments">
+                <div class="widget-head">
                   <div>
-                    <h2>File Library</h2>
-                    <p class="section-subtitle">A future global library for uploaded files and source attachments.</p>
+                    <h2>Attachments</h2>
+                    <p class="widget-subtitle">Files found in selected chat messages.</p>
+                  </div>
+                  <div class="widget-actions">
+                    <button id="openChatReviewForAttachments" type="button">Select chat</button>
                   </div>
                 </div>
-                <div class="list compact-list" id="filesManagement">
-                  <article class="item">
-                    <div class="row"><span>Global file library is not configured</span><small>Not wired</small></div>
-                    <p>The current app stores uploaded text files as sanitized chat-message attachments. A separate file-library API is not available yet.</p>
-                  </article>
-                </div>
+                <div class="list compact-list" id="fileManagement">Select a chat to inspect attached files.</div>
               </section>
 
-              <section class="admin-card wide" id="settingsSection">
-                <div class="section-head">
+              <section class="dashboard-widget" id="adminAccessSection" data-widget="admin-access">
+                <div class="widget-head">
+                  <div>
+                    <h2>Admin Access</h2>
+                    <p class="widget-subtitle">Admin session and protected route status.</p>
+                  </div>
+                </div>
+                <div class="list compact-list" id="users">Protected admin account data is not loaded.</div>
+              </section>
+
+              <section class="dashboard-widget" id="systemHealthSection" data-widget="system-health">
+                <div class="widget-head">
+                  <div>
+                    <h2>System Health</h2>
+                    <p class="widget-subtitle">Storage, AI, directory, and protected route status.</p>
+                  </div>
+                </div>
+                <div class="list compact-list" id="systemHealth">Loading system health...</div>
+              </section>
+
+              <section class="dashboard-widget wide" id="settingsSection" data-widget="settings">
+                <div class="widget-head">
                   <div>
                     <h2>Settings</h2>
-                    <p class="section-subtitle">Application-wide preferences and dashboard customization controls.</p>
+                    <p class="widget-subtitle">Application-wide preferences and dashboard customization controls.</p>
                   </div>
                 </div>
                 <div class="settings-list">
@@ -693,6 +268,13 @@
                   </div>
                   <div class="settings-row">
                     <div>
+                      <strong>Visible dashboard widgets</strong>
+                      <p>Choose which report widgets appear in the dashboard. Overview and Settings stay available.</p>
+                    </div>
+                    <div class="widget-toggle-list" id="widgetToggleList"></div>
+                  </div>
+                  <div class="settings-row">
+                    <div>
                       <strong>Dashboard refresh</strong>
                       <p>Current dashboard data refreshes automatically every 40 seconds.</p>
                     </div>
@@ -700,8 +282,8 @@
                   </div>
                   <div class="settings-row">
                     <div>
-                      <strong>Dashboard customization</strong>
-                      <p>Drag-and-drop report ordering and visible-widget preferences are planned for the next dashboard build step.</p>
+                      <strong>Dashboard ordering</strong>
+                      <p>Drag-and-drop ordering is the next planned dashboard enhancement.</p>
                     </div>
                     <span>Planned</span>
                   </div>
@@ -727,7 +309,6 @@
         chats: document.getElementById("chats"),
         chatSearch: document.getElementById("chatSearch"),
         chatReviewSection: document.getElementById("chatReviewSection"),
-        chatDetailSection: document.getElementById("chatDetailSection"),
         chatDetail: document.getElementById("chatDetail"),
         knowledgeSearch: document.getElementById("knowledgeSearch"),
         knowledgeStatus: document.getElementById("knowledgeStatus"),
@@ -735,51 +316,40 @@
         runs: document.getElementById("runs"),
         users: document.getElementById("users"),
         fileManagement: document.getElementById("fileManagement"),
-        filesManagement: document.getElementById("filesManagement"),
+        systemHealth: document.getElementById("systemHealth"),
         logoutButton: document.getElementById("logoutButton"),
         adminScroll: document.getElementById("adminScroll"),
         themeToggle: document.getElementById("themeToggle"),
         themeToggleText: document.getElementById("themeToggleText"),
         themeToggleIcon: document.querySelector(".theme-toggle-icon"),
         settingsThemeButton: document.getElementById("settingsThemeButton"),
-        settingsAdminState: document.getElementById("settingsAdminState")
+        settingsAdminState: document.getElementById("settingsAdminState"),
+        widgetToggleList: document.getElementById("widgetToggleList"),
+        customizeDashboardButton: document.getElementById("customizeDashboardButton"),
+        openChatReviewForAttachments: document.getElementById("openChatReviewForAttachments")
       };
       const themeStorageKey = "switchboard-theme";
       const adminTokenStorageKey = "switchboard-admin-token";
+      const widgetStorageKey = "switchboard-admin-widgets";
+      const refreshIntervalMs = 40000;
+      const configurableWidgets = [
+        ["knowledge-queue", "Knowledge Queue"],
+        ["review-runs", "Review Runs"],
+        ["attachments", "Attachments"],
+        ["admin-access", "Admin Access"],
+        ["system-health", "System Health"]
+      ];
       const projectKnowledgeEntries = [
-        {
-          id: "project-admin-token-ui",
-          title: "Admin login panel cleanup",
-          status: "project",
-          createdAt: "2026-06-06T00:00:00.000Z",
-          content: "The admin dashboard should not show visible token-entry, Login, or Run Review controls. Protected backend admin routes still require ADMIN_TOKEN, but that requirement stays backend-only rather than being presented as an on-screen token form."
-        },
-        {
-          id: "project-chat-review-loading",
-          title: "Chat Review section behavior",
-          status: "project",
-          createdAt: "2026-06-06T00:00:00.000Z",
-          content: "The Chat Review section should post recent chats into the highlighted review list by loading /api/chats?includeArchived=true. Selecting Inspect loads the chat details and message attachments into the adjacent detail and file-management sections."
-        },
-        {
-          id: "project-knowledge-base-section",
-          title: "Knowledge section purpose",
-          status: "project",
-          createdAt: "2026-06-06T00:00:00.000Z",
-          content: "The Knowledge section should show project-level working notes from the current build conversation plus review-created backend knowledge when an admin session is available. Static project notes are informational cards, not database records requiring approval actions."
-        },
-        {
-          id: "project-deployment-rule",
-          title: "GitHub and Render deployment rule",
-          status: "project",
-          createdAt: "2026-06-06T00:00:00.000Z",
-          content: "Repository changes should be committed through GitHub and deployed by Render auto-deploy from main. Do not request, store, or expose Render credentials, deploy hooks, API keys, passwords, session cookies, or other secrets. If Render fails, diagnose from build logs and fix repository code."
-        }
+        { id: "project-admin-token-ui", title: "Admin login panel cleanup", status: "project", createdAt: "2026-06-06T00:00:00.000Z", content: "The admin dashboard should not show visible token-entry, Login, or Run Review controls. Protected backend admin routes still require ADMIN_TOKEN, but that requirement stays backend-only rather than being presented as an on-screen token form." },
+        { id: "project-chat-review-loading", title: "Chat Review section behavior", status: "project", createdAt: "2026-06-06T00:00:00.000Z", content: "The Chat Review section should post recent chats into the highlighted review list by loading /api/chats?includeArchived=true. Selecting Inspect loads the chat details and message attachments into the adjacent detail and file-management sections." },
+        { id: "project-knowledge-base-section", title: "Knowledge section purpose", status: "project", createdAt: "2026-06-06T00:00:00.000Z", content: "The Knowledge section should show project-level working notes from the current build conversation plus review-created backend knowledge when an admin session is available. Static project notes are informational cards, not database records requiring approval actions." },
+        { id: "project-deployment-rule", title: "GitHub and Render deployment rule", status: "project", createdAt: "2026-06-06T00:00:00.000Z", content: "Repository changes should be committed through GitHub and deployed by Render auto-deploy from main. Do not request, store, or expose Render credentials, deploy hooks, API keys, passwords, session cookies, or other secrets. If Render fails, diagnose from build logs and fix repository code." }
       ];
       let token = sessionStorage.getItem(adminTokenStorageKey) || "";
       let chatsCache = [];
       let knowledgeCache = [...projectKnowledgeEntries];
       let selectedChatId = "";
+      let lastStatus = null;
 
       const html = (value) => String(value ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
       const time = (value) => value ? new Intl.DateTimeFormat(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }).format(new Date(value)) : "";
@@ -788,6 +358,37 @@
       const publicHeaders = () => ({ "Content-Type": "application/json" });
       const adminHeaders = () => token ? { "Content-Type": "application/json", "x-admin-token": token } : publicHeaders();
       const getCurrentTheme = () => document.documentElement.dataset.theme === "dark" ? "dark" : "light";
+
+      function getWidgetPrefs() {
+        const defaults = Object.fromEntries(configurableWidgets.map(([id]) => [id, true]));
+        try { return { ...defaults, ...JSON.parse(localStorage.getItem(widgetStorageKey) || "{}") }; } catch (error) { return defaults; }
+      }
+
+      function saveWidgetPrefs(prefs) {
+        try { localStorage.setItem(widgetStorageKey, JSON.stringify(prefs)); } catch (error) {}
+      }
+
+      function applyWidgetPrefs() {
+        const prefs = getWidgetPrefs();
+        for (const [id] of configurableWidgets) {
+          const widget = document.querySelector(`[data-widget="${id}"]`);
+          if (widget) widget.hidden = prefs[id] === false;
+        }
+        for (const input of els.widgetToggleList.querySelectorAll("input[data-widget]")) input.checked = prefs[input.dataset.widget] !== false;
+      }
+
+      function renderWidgetToggles() {
+        els.widgetToggleList.innerHTML = configurableWidgets.map(([id, label]) => `<label class="widget-toggle"><input type="checkbox" data-widget="${html(id)}" />${html(label)}</label>`).join("");
+        els.widgetToggleList.querySelectorAll("input[data-widget]").forEach((input) => {
+          input.addEventListener("change", () => {
+            const prefs = getWidgetPrefs();
+            prefs[input.dataset.widget] = input.checked;
+            saveWidgetPrefs(prefs);
+            applyWidgetPrefs();
+          });
+        });
+        applyWidgetPrefs();
+      }
 
       function updateThemeToggle(theme) {
         const isDark = theme === "dark";
@@ -803,9 +404,7 @@
         updateThemeToggle(theme);
       }
 
-      function toggleTheme() {
-        applyTheme(getCurrentTheme() === "dark" ? "light" : "dark");
-      }
+      function toggleTheme() { applyTheme(getCurrentTheme() === "dark" ? "light" : "dark"); }
 
       function setActiveNav(targetId) {
         document.querySelectorAll(".primary-nav .nav-item[data-target]").forEach((item) => {
@@ -817,7 +416,6 @@
 
       function revealChatReviewSection() {
         els.chatReviewSection.hidden = false;
-        els.chatDetailSection.hidden = false;
         setActiveNav("chatReviewSection");
         els.chatReviewSection.scrollIntoView({ behavior: "smooth", block: "start" });
       }
@@ -841,15 +439,13 @@
         window.location.href = "/";
       }
 
-      function setBusy(isBusy) {
-        document.body.toggleAttribute("aria-busy", isBusy);
-      }
+      function setBusy(isBusy) { document.body.toggleAttribute("aria-busy", isBusy); }
 
       function renderSummary(summary = {}, runtime = {}) {
         const metrics = [
           ["Chats", summary.chats],
           ["Messages", summary.messages],
-          ["Unreviewed", summary.unreviewedMessages],
+          ["Pending Review", summary.unreviewedMessages],
           ["Pending KB", summary.pendingKnowledge],
           ["Approved KB", summary.approvedKnowledge],
           ["Storage", runtime.storageMode || "unknown"]
@@ -861,6 +457,16 @@
         els.users.innerHTML = `<article class="item"><div class="row"><span>Protected admin routes</span><small>${token ? "Admin session" : "Public view"}</small></div><p>${token ? "Protected admin data is loaded through backend management routes." : "Chat Review and project knowledge are visible, but account records require protected backend admin access."}</p><p>Storage mode: ${html(runtime.storageMode || "unknown")}. Total chats shown: ${html(summary.chats ?? chatsCache.length)}.</p></article>`;
       }
 
+      function renderSystemHealth(status = lastStatus || {}) {
+        const rows = [
+          ["Storage", status.storageAvailable === false ? "Unavailable" : "Ready", status.storageMode || "unknown"],
+          ["AI responder", status.aiAvailable ? "Online" : "Storage-only", status.aiAvailable ? "Responses enabled" : "Messages are saved for review"],
+          ["Agent Directory", status.directoryAvailable ? "Loaded" : "Unavailable", Array.isArray(status.filesLoaded) ? `${status.filesLoaded.length} files loaded` : "No file count"],
+          ["Protected routes", token ? "Admin session" : "Protected", token ? "Admin token present in session" : "Public dashboard view"]
+        ];
+        els.systemHealth.innerHTML = rows.map(([label, state, detail]) => `<article class="item"><div class="row"><span>${html(label)}</span><small>${html(state)}</small></div><p>${html(detail)}</p></article>`).join("");
+      }
+
       function renderFileManagementFromMessages(messages = []) {
         const attachments = [];
         for (const message of messages) {
@@ -869,7 +475,7 @@
         }
         els.fileManagement.innerHTML = attachments.length
           ? attachments.map((attachment) => `<article class="item"><div class="row"><span>${html(attachment.name || "Attachment")}</span><small>${html(attachment.role || "message")}</small></div><p>${html(attachment.type || "text attachment")} ${attachment.size ? `· ${html(attachment.size)} bytes` : ""}</p><p>Stored in sanitized chat message context ${attachment.createdAt ? `on ${html(time(attachment.createdAt))}` : ""}.</p></article>`).join("")
-          : `<article class="item"><div class="row"><span>No attachments in selected chat</span><small>Empty</small></div><p>Text file uploads are stored per message when users attach files in the chat composer.</p></article>`;
+          : `<article class="item"><div class="row"><span>No attachments in selected chat</span><small>Setup</small></div><p>Select a chat from Chat Review to inspect files attached to its messages.</p></article>`;
       }
 
       function renderChats() {
@@ -901,12 +507,14 @@
         els.runs.innerHTML = runs.length ? runs.map((run) => `<article class="item"><div class="row"><span>${html(run.status)}</span><small>${html(time(run.startedAt))}</small></div><p>${html(run.messagesReviewed)} messages reviewed, ${html(run.knowledgeEntriesCreated)} KB entries created.</p>${run.error ? `<p>${html(run.error)}</p>` : ""}</article>`).join("") : `<div class="empty">No review runs yet.</div>`;
       }
 
-      async function loadPublicChatReview() {
-        const chats = await fetchJson("/api/chats?includeArchived=true");
+      async function loadPublicDashboard() {
+        const [status, chats] = await Promise.all([fetchJson("/api/status"), fetchJson("/api/chats?includeArchived=true")]);
+        lastStatus = status;
         chatsCache = chats.chats || [];
         knowledgeCache = [...projectKnowledgeEntries];
-        renderSummary({ chats: chatsCache.length, messages: "-", unreviewedMessages: "-", pendingKnowledge: projectKnowledgeEntries.length, approvedKnowledge: "-" }, { storageMode: "public" });
-        renderUsers({ chats: chatsCache.length }, { storageMode: "public" });
+        renderSummary({ chats: chatsCache.length, messages: "-", unreviewedMessages: "-", pendingKnowledge: projectKnowledgeEntries.length, approvedKnowledge: "-" }, { storageMode: status.storageMode || "public" });
+        renderUsers({ chats: chatsCache.length }, { storageMode: status.storageMode || "public" });
+        renderSystemHealth(status);
         renderChats();
         renderKnowledge();
         renderRuns();
@@ -914,16 +522,19 @@
       }
 
       async function loadProtectedDashboard() {
-        const [summary, chats, knowledge, runs] = await Promise.all([
+        const [status, summary, chats, knowledge, runs] = await Promise.all([
+          fetchJson("/api/status"),
           fetchJson("/api/admin/summary", {}, true),
           fetchJson("/api/admin/chats", {}, true),
           fetchJson(`/api/admin/knowledge?status=${encodeURIComponent(els.knowledgeStatus.value === "project" ? "all" : els.knowledgeStatus.value)}`, {}, true),
           fetchJson("/api/admin/review-runs", {}, true)
         ]);
+        lastStatus = status;
         chatsCache = chats.chats || [];
         knowledgeCache = [...projectKnowledgeEntries, ...(knowledge.entries || [])];
         renderSummary(summary.summary, summary.status);
         renderUsers(summary.summary, summary.status);
+        renderSystemHealth(status);
         renderChats();
         renderKnowledge();
         renderRuns(runs.runs || []);
@@ -936,10 +547,11 @@
         setBusy(true);
         try {
           if (token) await loadProtectedDashboard();
-          else await loadPublicChatReview();
+          else await loadPublicDashboard();
         } catch (error) {
           knowledgeCache = [...projectKnowledgeEntries];
           renderKnowledge();
+          renderSystemHealth(lastStatus || {});
           setStatus(error.message, true);
           els.chats.innerHTML = `<div class="empty">${html(error.message)}</div>`;
         } finally {
@@ -958,7 +570,7 @@
           const messages = data.chat.messages || [];
           els.chatDetail.innerHTML = `<article class="item"><div class="row"><span>${html(data.chat.title)}</span><small>${html(messages.length)} messages</small></div>${messages.map((m) => `<div class="admin-message"><p class="admin-message-meta"><strong>${html(m.role)}</strong> ${html(time(m.createdAt))}</p><p class="admin-message-content">${html(m.content)}</p></div>`).join("")}</article>`;
           renderFileManagementFromMessages(messages);
-          els.chatDetailSection.scrollIntoView({ behavior: "smooth", block: "start" });
+          els.chatReviewSection.scrollIntoView({ behavior: "smooth", block: "start" });
         } catch (error) {
           els.chatDetail.innerHTML = `<div class="empty">${html(error.message)}</div>`;
         }
@@ -976,10 +588,18 @@
       }
 
       updateThemeToggle(getCurrentTheme());
+      renderWidgetToggles();
       renderKnowledge();
+      renderFileManagementFromMessages();
+      renderSystemHealth();
       refreshTokenFromSession();
       els.themeToggle.addEventListener("click", toggleTheme);
       els.settingsThemeButton.addEventListener("click", toggleTheme);
+      els.customizeDashboardButton.addEventListener("click", () => {
+        setActiveNav("settingsSection");
+        document.getElementById("settingsSection")?.scrollIntoView({ behavior: "smooth", block: "start" });
+      });
+      els.openChatReviewForAttachments.addEventListener("click", revealChatReviewSection);
       els.logoutButton.addEventListener("click", logout);
       document.querySelectorAll("[data-target]").forEach((button) => {
         button.addEventListener("click", () => {
@@ -996,7 +616,7 @@
       els.knowledgeSearch.addEventListener("input", renderKnowledge);
       els.knowledgeStatus.addEventListener("change", renderKnowledge);
       loadDashboard().catch(() => {});
-      setInterval(() => loadDashboard().catch(() => {}), 40000);
+      setInterval(() => loadDashboard().catch(() => {}), refreshIntervalMs);
     </script>
   </body>
 </html>
