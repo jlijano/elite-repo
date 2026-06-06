@@ -29,9 +29,11 @@ The `web/` directory contains a Render-ready Express app that serves a plain HTM
 - Admin dashboard highlights the active navigation section, scrolls each nav item to the matching widget, and presents Switchboard Admin as the current workspace rather than as a generic tool.
 - Admin dashboard removes the generic Dashboard/Overview landing block so the admin side starts directly with actionable management sections.
 - Admin dashboard uses configurable compact widgets instead of a static card grid, with consistent headers, actions, loading states, empty states, and useful setup messages for unavailable data.
+- Admin dashboard default view starts with Knowledge Queue while Chat Review remains hidden until selected from navigation or enabled in Settings.
 - Admin dashboard widgets currently include Chat Review, Knowledge Queue, Review Runs, Attachments, Admin Access, System Health, and Settings.
 - Admin dashboard frontend contract tests verify navigation targets, active-state behavior, hidden Chat Review behavior, Settings theme toggle wiring, clean labels, removed Overview markup, and configurable widget markup.
 - Admin dashboard includes a Settings widget for application-wide preferences, including theme control, visible widgets, refresh cadence, parked dashboard ordering status, and protected admin-data state.
+- Admin dashboard visible-widget settings include Chat Review as a default-off option so the cleaned dashboard view remains calm until the admin opens it.
 - Admin dashboard keeps the left sidebar fixed on desktop while the right dashboard panel scrolls independently so lower sections remain reachable.
 - Admin dashboard keeps the Chat Review and selected chat detail hidden until the Chat review navigation item is selected.
 - Admin dashboard no longer exposes visible token-entry, Login, or Run Review controls; Chat Review loads recent chats into the highlighted review section, while protected backend admin routes still require `ADMIN_TOKEN` for management-only data.
@@ -124,7 +126,7 @@ The review workflow is implemented as an idempotent backend route and optional b
 - Protected admin routes and admin token enforcement.
 - Review-run creation of pending knowledge entries.
 - Admin approval of knowledge entries and approved knowledge retrieval.
-- Admin dashboard navigation labels, matching section targets, active-state logic, hidden Chat Review behavior, Settings theme toggle wiring, removed Overview markup, and configurable widget markup.
+- Admin dashboard navigation labels, matching section targets, active-state logic, hidden Chat Review behavior, Settings theme toggle wiring, removed Overview markup, Chat Review visible-widget defaults, and configurable widget markup.
 
 ## GitHub Actions / auto-deploy
 
