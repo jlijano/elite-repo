@@ -11,8 +11,10 @@ const chatHtml = readPublic("chat.html");
 const knowledgeHtml = readPublic("knowledge.html");
 const userHtml = readPublic("user.html");
 const settingsHtml = readPublic("settings.html");
+const updateProfileHtml = readPublic("update-profile.html");
+const loginHtml = readPublic("login.html");
 const adminJs = readPublic("admin.js");
-const allAdminPages = [chatHtml, knowledgeHtml, userHtml, settingsHtml];
+const allAdminPages = [chatHtml, knowledgeHtml, userHtml, settingsHtml, updateProfileHtml];
 
 test("admin.html redirects to the dedicated chat admin page", () => {
   assert.match(adminRedirectHtml, /url=\/chat\.html/);
@@ -80,7 +82,9 @@ test("settings page owns review runs and system health", () => {
 test("top nav includes current time and profile settings person icon", () => {
   for (const pageHtml of allAdminPages) {
     assert.match(pageHtml, /id="menuClock"/);
-    assert.match(pageHtml, /class="profile-settings" href="\/user\.html#profile" aria-label="User profile settings">👤<\/a>/);
+    assert.match(pageHtml, /id="profileMenuButton"/);
+    assert.match(pageHtml, /aria-label="Open profile menu"/);
+    assert.match(pageHtml, />👤<\/button>/);
     assert.doesNotMatch(pageHtml, /id="themeToggle"/);
     assert.doesNotMatch(pageHtml, /id="themeToggleText"/);
   }
@@ -92,12 +96,47 @@ test("top nav includes current time and profile settings person icon", () => {
   assert.match(adminJs, /minute: "2-digit"/);
 });
 
+test("profile dropdown links to update profile and logout", () => {
+  for (const pageHtml of allAdminPages) {
+    assert.match(pageHtml, /id="profileDropdown"/);
+    assert.match(pageHtml, /href="\/update-profile\.html"[\s\S]*>Update Profile<\/a>/);
+    assert.match(pageHtml, /class="profile-logout"[\s\S]*>Logout<\/button>/);
+  }
+
+  assert.match(adminJs, /function toggleProfileDropdown\(\)/);
+  assert.match(adminJs, /sessionStorage\.removeItem\(adminTokenStorageKey\)/);
+  assert.match(adminJs, /window\.location\.href = "\/login\.html"/);
+});
+
+test("update profile page supports photo name email and password inputs", () => {
+  assert.match(updateProfileHtml, /<body data-admin-page="update-profile">/);
+  assert.match(updateProfileHtml, /<h1>Update Profile<\/h1>/);
+  assert.match(updateProfileHtml, /id="profileForm"/);
+  assert.match(updateProfileHtml, /id="profilePhoto"[\s\S]*type="url"/);
+  assert.match(updateProfileHtml, /id="profileName"[\s\S]*autocomplete="name"/);
+  assert.match(updateProfileHtml, /id="profileEmail"[\s\S]*type="email"/);
+  assert.match(updateProfileHtml, /id="profileCurrentPassword"[\s\S]*type="password"/);
+  assert.match(updateProfileHtml, /id="profileNewPassword"[\s\S]*autocomplete="new-password"/);
+  assert.match(updateProfileHtml, /id="profileConfirmPassword"[\s\S]*autocomplete="new-password"/);
+  assert.match(adminJs, /const userProfileStorageKey = "switchboard-user-profile"/);
+  assert.match(adminJs, /function saveProfile\(event\)/);
+  assert.match(adminJs, /clearPasswordFields\(\)/);
+  assert.doesNotMatch(adminJs, /password: els\.profile/);
+});
+
+test("login page is the logout redirect target", () => {
+  assert.match(loginHtml, /<title>Switchboard Login<\/title>/);
+  assert.match(loginHtml, /<h1>Login<\/h1>/);
+  assert.match(loginHtml, /href="\/chat\.html"[\s\S]*>Admin chat<\/a>/);
+});
+
 test("theme mode control lives inside settings page", () => {
   assert.match(settingsHtml, /id="settingsThemeButton"/);
   assert.match(settingsHtml, />Toggle theme<\/button>/);
   assert.doesNotMatch(chatHtml, /id="settingsThemeButton"/);
   assert.doesNotMatch(knowledgeHtml, /id="settingsThemeButton"/);
   assert.doesNotMatch(userHtml, /id="settingsThemeButton"/);
+  assert.doesNotMatch(updateProfileHtml, /id="settingsThemeButton"/);
   assert.match(adminJs, /els\.settingsThemeButton\?\.addEventListener\("click", toggleTheme\)/);
 });
 
@@ -107,4 +146,5 @@ test("admin javascript switches behavior by page", () => {
   assert.match(adminJs, /async function loadKnowledgePage\(\)/);
   assert.match(adminJs, /async function loadUserPage\(\)/);
   assert.match(adminJs, /async function loadSettingsPage\(\)/);
+  assert.match(adminJs, /page === "update-profile"/);
 });
