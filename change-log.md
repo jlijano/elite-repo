@@ -2,7 +2,7 @@
 
 ## [Unreleased]
 
-- Added a User navigation item that reveals a hidden User widget only when selected, keeping the user-management placeholder out of the default admin dashboard view.
+- Finalized admin dashboard frontend contract tests for navigation targets, active states, hidden Chat Review behavior, Settings theme toggling, visible labels, and configurable widget markup before drag-and-drop work begins.
 - Added admin dashboard frontend contract tests and replaced the static admin grid with configurable widgets for Overview, Chat Review, Knowledge Queue, Review Runs, Attachments, Admin Access, System Health, and Settings.
 - Cleaned the admin dashboard navigation labels, clarified the file-related sections, relabeled the workspace identity area, added active navigation states, and introduced a Settings section for application-wide preferences.
 - Changed the admin dashboard so the Chat Review and Chat Detail cards stay hidden until the Chat review navigation item is selected.
