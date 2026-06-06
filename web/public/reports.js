@@ -6,6 +6,7 @@ const reportsEntraPages = [
   { href: "/group.html", label: "Group", icon: "▦" },
   { href: "/user.html", label: "User", icon: "◉" }
 ];
+let reportsAuditCache = [];
 
 function initReportsEntraNav() {
   const nav = document.querySelector(".primary-nav");
@@ -55,6 +56,7 @@ const reportsEls = {
   reviewRunsReport: document.getElementById("reviewRunsReport"),
   systemHealthReport: document.getElementById("systemHealthReport"),
   userAuditReport: document.getElementById("userAuditReport"),
+  exportUserAuditReportButton: document.getElementById("exportUserAuditReportButton"),
 };
 
 function setReportsStatus(message) {
@@ -149,23 +151,108 @@ function protectedMessage(label) {
   return `<article class="item"><div class="row"><span>${label}</span>${reportsBadge("Protected", "public")}</div><p>Sign in with an owner/admin session to view this report data.</p></article>`;
 }
 
+function auditTimestamp(event = {}) {
+  return event.created_at || event.createdAt || event.timestamp || "";
+}
+
+function auditActorName(event = {}) {
+  return event.actorName || event.actor_name || event.actorEmail || event.actor_email || event.details?.actorName || event.details?.actorEmail || "System";
+}
+
+function auditActorEmail(event = {}) {
+  return event.actorEmail || event.actor_email || event.details?.actorEmail || "";
+}
+
+function auditTargetName(event = {}) {
+  return event.targetName || event.target_name || event.targetEmail || event.target_email || event.details?.targetName || event.details?.email || event.targetUserId || event.target_user_id || "User record";
+}
+
+function auditTargetEmail(event = {}) {
+  return event.targetEmail || event.target_email || event.details?.targetEmail || event.details?.email || "";
+}
+
+function auditActionLabel(action = "") {
+  const labels = {
+    "user.login": "Logged in",
+    "user.logout": "Logged out",
+    "user.activity": "Recorded account activity",
+    "user.updated": "Updated user record",
+    "profile.updated": "Updated profile",
+    "user.disabled": "Disabled user",
+    "user.reactivated": "Reactivated user",
+    "user.created": "Created user",
+    "user.duration": "Recorded session duration"
+  };
+  return labels[action] || action || "Audit event";
+}
+
+function auditUpdateText(event = {}) {
+  const action = event.action || event.event || "Audit event";
+  const label = auditActionLabel(action);
+  const target = auditTargetName(event);
+  const fields = Array.isArray(event.details?.fields) && event.details.fields.length
+    ? ` Fields: ${event.details.fields.join(", ")}.`
+    : "";
+  const status = event.details?.status ? ` Status: ${event.details.status}.` : "";
+  const activity = event.details?.activity ? ` Activity: ${event.details.activity}.` : "";
+  return `${label} for ${target}.${fields}${status}${activity}`;
+}
+
+function auditCsvEscape(value) {
+  return `"${String(value || "").replace(/"/g, '""')}"`;
+}
+
 function renderReviewRunItems(runs = []) {
   if (!runs.length) return protectedMessage("Review run history");
   return runs.slice(0, 20).map((run) => {
     const status = run.status || run.result || "completed";
     const count = run.knowledgeCreated ?? run.created_count ?? run.entriesCreated ?? 0;
-    return `<article class="item"><div class="row"><span>${escapeReportsText(run.id || "Review run")}</span>${reportsBadge(escapeReportsText(status), status)}</div><p>${formatReportsDate(run.created_at || run.createdAt || run.started_at)} · ${escapeReportsText(count)} knowledge entries created</p></article>`;
+    return `<article class="item"><div class="row"><span>${escapeReportsText(run.id || "Review run")}</span>${reportsBadge(escapeReportsText(status), status)}</div><p>${formatReportsDate(run.created_at || run.createdAt || run.started_at)} - ${escapeReportsText(count)} knowledge entries created</p></article>`;
   }).join("");
 }
 
 function renderAuditItems(audit = []) {
   if (!audit.length) return protectedMessage("User audit events");
   return audit.slice(0, 20).map((event) => {
-    const action = event.action || event.event || "Audit event";
-    const actor = event.actor_email || event.actorEmail || event.actor_user_id || "System";
-    const target = event.target_email || event.targetEmail || event.target_user_id || "User record";
-    return `<article class="item"><div class="row"><span>${escapeReportsText(action)}</span>${reportsBadge("Audit", "loaded")}</div><p>${formatReportsDate(event.created_at || event.createdAt)} · ${escapeReportsText(actor)} on ${escapeReportsText(target)}</p></article>`;
+    return `<article class="item"><div class="row"><span>${escapeReportsText(auditActorName(event))}</span>${reportsBadge("Audit", "loaded")}</div><p>${escapeReportsText(auditUpdateText(event))}</p><p>${formatReportsDate(auditTimestamp(event))}</p></article>`;
   }).join("");
+}
+
+function renderAuditTable(audit = []) {
+  if (!audit.length) return protectedMessage("User audit events");
+  const rows = audit.slice(0, 100).map((event) => {
+    const actorName = auditActorName(event);
+    const actorEmail = auditActorEmail(event);
+    return `<tr><td><span class="audit-user-name">${escapeReportsText(actorName)}</span>${actorEmail ? `<span class="audit-user-email">${escapeReportsText(actorEmail)}</span>` : ""}</td><td class="update-cell">${escapeReportsText(auditUpdateText(event))}</td><td class="muted-cell">${escapeReportsText(formatReportsDate(auditTimestamp(event)))}</td></tr>`;
+  }).join("");
+  return `<div class="audit-table-wrap"><table class="audit-table"><thead><tr><th>User</th><th>Update</th><th>Timestamp</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+}
+
+function exportUserAuditReport() {
+  if (!reportsAuditCache.length) {
+    setReportsStatus("No user audit events available to export.");
+    return;
+  }
+  const rows = reportsAuditCache.map((event) => [
+    auditActorName(event),
+    auditActorEmail(event),
+    auditUpdateText(event),
+    formatReportsDate(auditTimestamp(event)),
+    auditTimestamp(event),
+    auditTargetName(event),
+    auditTargetEmail(event)
+  ].map(auditCsvEscape).join(","));
+  const csv = ["User,User email,Update,Timestamp,Raw timestamp,Target,Target email", ...rows].join("\n");
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `user-audit-report-${new Date().toISOString().slice(0, 10)}.csv`;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+  setReportsStatus("User audit report exported.");
 }
 
 function renderHealthItems(status = {}) {
@@ -186,8 +273,8 @@ function renderReportsOverview(status, summary, runs, audit) {
     <article class="item"><div class="row"><span>Logs</span>${reportsBadge("Available", "ready")}</div><p>Combined review-run and user-audit activity.</p></article>
     <article class="item"><div class="row"><span>Review runs</span>${reportsBadge(String(runs.length || "Protected"), runs.length ? "loaded" : "public")}</div><p>Review workflow history and created knowledge counts.</p></article>
     <article class="item"><div class="row"><span>System health</span>${reportsBadge("Loaded", "loaded")}</div><p>Directory, AI, storage, and admin-route status.</p></article>
-    <article class="item"><div class="row"><span>User audit</span>${reportsBadge(String(audit.length || "Protected"), audit.length ? "loaded" : "public")}</div><p>Recent user-management audit events.</p></article>
-    <article class="item"><div class="row"><span>Protected summary</span>${reportsBadge(String(chats), typeof chats === "number" ? "loaded" : "public")}</div><p>Chats: ${escapeReportsText(chats)} · Knowledge: ${escapeReportsText(knowledge)} · Storage: ${escapeReportsText(status.storage?.status || status.storageStatus || "loaded")}</p></article>
+    <article class="item"><div class="row"><span>User audit</span>${reportsBadge(String(audit.length || "Protected"), audit.length ? "loaded" : "public")}</div><p>User, update, and timestamp for recent account activity.</p></article>
+    <article class="item"><div class="row"><span>Protected summary</span>${reportsBadge(String(chats), typeof chats === "number" ? "loaded" : "public")}</div><p>Chats: ${escapeReportsText(chats)} - Knowledge: ${escapeReportsText(knowledge)} - Storage: ${escapeReportsText(status.storage?.status || status.storageStatus || "loaded")}</p></article>
   `;
 }
 
@@ -205,7 +292,7 @@ function renderSystemHealth(status) {
 }
 
 function renderUserAudit(audit) {
-  if (reportsEls.userAuditReport) reportsEls.userAuditReport.innerHTML = renderAuditItems(audit);
+  if (reportsEls.userAuditReport) reportsEls.userAuditReport.innerHTML = renderAuditTable(audit);
 }
 
 async function loadReportsPage() {
@@ -242,6 +329,7 @@ async function loadReportsPage() {
     audit = [];
   }
 
+  reportsAuditCache = audit;
   if (page === "reports") renderReportsOverview(status, summary, runs, audit);
   if (page === "logs") renderLogs(runs, audit);
   if (page === "review-runs") renderReviewRuns(runs);
@@ -252,6 +340,7 @@ async function loadReportsPage() {
 
 reportsEls.profileMenuButton?.addEventListener("click", toggleReportsProfileDropdown);
 reportsEls.profileLogoutButtons?.forEach((button) => button.addEventListener("click", logoutReportsUser));
+reportsEls.exportUserAuditReportButton?.addEventListener("click", exportUserAuditReport);
 document.addEventListener("click", (event) => {
   if (!reportsEls.profileDropdown || !reportsEls.profileMenuButton) return;
   if (reportsEls.profileDropdown.hidden) return;
