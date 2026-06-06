@@ -26,41 +26,18 @@
           <a class="nav-item" href="/knowledge.html"><span aria-hidden="true">◇</span>Knowledge base</a>
           <a class="nav-item" href="/user.html"><span aria-hidden="true">◉</span>User</a>
           <a class="nav-item" href="/playground.html"><span aria-hidden="true">▦</span>Playground</a>
-          <details class="admin-section-list reports-nav" open>
-            <summary class="reports-summary"><span class="reports-summary-label">Reports</span><span class="reports-summary-chevron" aria-hidden="true">⌄</span></summary>
-            <div class="reports-nav-items" aria-label="Reports navigation">
-              <a class="nav-item" href="/reports.html"><span aria-hidden="true">▣</span>Overview</a>
-              <a class="nav-item" href="/logs.html"><span aria-hidden="true">≡</span>Logs</a>
-              <a class="nav-item" href="/review-runs.html"><span aria-hidden="true">↻</span>Review runs</a>
-              <a class="nav-item" href="/system-health.html"><span aria-hidden="true">✚</span>System health</a>
-              <a class="nav-item" href="/user-audit.html"><span aria-hidden="true">◎</span>User audit</a>
-              <a class="nav-item" href="/settings.html"><span aria-hidden="true">⚙</span>Settings</a>
-            </div>
-          </details>
+          <details class="admin-section-list reports-nav" open><summary class="reports-summary"><span class="reports-summary-label">Reports</span><span class="reports-summary-chevron" aria-hidden="true">⌄</span></summary><div class="reports-nav-items" aria-label="Reports navigation"><a class="nav-item" href="/reports.html"><span aria-hidden="true">▣</span>Overview</a><a class="nav-item" href="/logs.html"><span aria-hidden="true">≡</span>Logs</a><a class="nav-item" href="/review-runs.html"><span aria-hidden="true">↻</span>Review runs</a><a class="nav-item" href="/system-health.html"><span aria-hidden="true">✚</span>System health</a><a class="nav-item" href="/user-audit.html"><span aria-hidden="true">◎</span>User audit</a><a class="nav-item" href="/settings.html"><span aria-hidden="true">⚙</span>Settings</a></div></details>
         </nav>
-        <section class="admin-section-list" aria-label="Admin workspace">
-          <h2 class="session-heading">Workspace</h2>
-          <div class="workspace-card"><strong>Switchboard Admin</strong><small>Entra group structure.</small></div>
-        </section>
-        <div class="directory-card"><div class="status-row"><span class="status-dot online" aria-hidden="true"></span><span>Group</span></div><p>Prepare group-level access grouping.</p></div>
+        <section class="admin-section-list" aria-label="Admin workspace"><h2 class="session-heading">Workspace</h2><div class="workspace-card"><strong>Switchboard Admin</strong><small>Entra group structure.</small></div></section>
+        <div class="directory-card"><div class="status-row"><span class="status-dot online" aria-hidden="true"></span><span>Group</span></div><p>Groups belong to companies and can map to departments.</p></div>
       </aside>
       <section class="admin-panel" aria-label="Group controls">
-        <header class="chat-header admin-header">
-          <div class="admin-header-title"><h1>Group</h1><p>Manage the third level of the Entra hierarchy.</p></div>
-          <div class="header-actions"><span class="admin-clock" id="menuClock" aria-live="polite"></span><div class="profile-menu"><button class="profile-settings" id="profileMenuButton" type="button" aria-label="Open profile menu" aria-haspopup="true" aria-expanded="false">👤</button><div class="profile-dropdown" id="profileDropdown" role="menu" hidden><a href="/update-profile.html" role="menuitem">Update Profile</a><button class="profile-logout" type="button" role="menuitem">Logout</button></div></div></div>
-        </header>
-        <div class="admin-scroll">
-          <div class="admin-layout">
-            <p class="admin-status" id="status">Group directory ready.</p>
-            <section class="admin-card wide" id="groupPage" data-dashboard-panel="group">
-              <div class="card-head"><div><h2>Group</h2><p class="card-subtitle">Groups will sit below departments and above user-level access mapping.</p></div></div>
-              <div class="list"><div class="empty"><strong>Group management coming soon.</strong><p>Create and assign groups here when the Entra access model is expanded.</p></div></div>
-            </section>
-          </div>
-        </div>
+        <header class="chat-header admin-header"><div class="admin-header-title"><h1>Group</h1><p>Create and manage groups for app access planning.</p></div><div class="header-actions"><span class="admin-clock" id="menuClock" aria-live="polite"></span><div class="profile-menu"><button class="profile-settings" id="profileMenuButton" type="button" aria-label="Open profile menu" aria-haspopup="true" aria-expanded="false">👤</button><div class="profile-dropdown" id="profileDropdown" role="menu" hidden><a href="/update-profile.html" role="menuitem">Update Profile</a><button class="profile-logout" type="button" role="menuitem">Logout</button></div></div></div></header>
+        <div class="admin-scroll"><div class="admin-layout"><p class="admin-status" id="status">Loading groups...</p><section class="admin-card wide" id="groupPage" data-dashboard-panel="group"><div class="card-head"><div><h2>Group management</h2><p class="card-subtitle">Create, edit, archive, and reactivate groups by company and department.</p></div><div class="card-actions entra-toolbar"><label class="sr-only" for="entraSearch">Search groups</label><input id="entraSearch" type="search" placeholder="Search groups" autocomplete="off" /></div></div><div class="entra-management-grid"><section class="list entra-list" id="entraList" aria-label="Group records">Loading group records...</section><section class="entra-form-panel" aria-label="Group form"><form class="management-form" id="entraForm" autocomplete="off"><div class="form-heading"><h3 id="entraFormTitle">Create Group</h3><button id="cancelEntraEditButton" type="button" hidden>Cancel edit</button></div><div class="entra-scope-row"><label><span>Company</span><select id="entraCompany" name="companyId" required><option value="">Select company</option></select></label><label><span>Department</span><select id="entraDepartment" name="departmentId"><option value="">No department</option></select></label></div><div class="entra-scope-row"><label><span>Name</span><input id="entraName" name="name" type="text" required placeholder="Group name" /></label><label><span>Status</span><select id="entraStatus" name="status"><option value="active">Active</option><option value="archived">Archived</option></select></label></div><label><span>Description</span><input id="entraDescription" name="description" type="text" placeholder="Optional group notes" /></label><div class="form-actions"><button id="saveEntraButton" type="submit">Create Group</button></div></form></section></div></section></div></div>
       </section>
     </main>
     <script src="admin-session.js"></script>
     <script src="admin.js"></script>
+    <script src="entra-management.js"></script>
   </body>
 </html>
