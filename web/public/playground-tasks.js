@@ -30,8 +30,8 @@ function taskListSetStatus(message, error = false) {
   status.classList.toggle("error", error);
 }
 
-async function taskListFetch(url) {
-  const response = await fetch(url, { headers: taskListHeaders() });
+async function taskListFetch(url, options = {}) {
+  const response = await fetch(url, { ...options, headers: { ...taskListHeaders(), ...(options.headers || {}) } });
   const data = await response.json().catch(() => ({}));
   if (!response.ok) throw new Error(data.error || "Task list request failed.");
   return data;
@@ -66,13 +66,19 @@ function renderTaskListFilters() {
   if (assigneeSelect) assigneeSelect.innerHTML = taskListOptions(taskListState.users, taskListState.filters.assigneeId, "All assignees");
 }
 
+function taskListCustomFields(task) {
+  const fields = Array.isArray(task.customFields) ? task.customFields : [];
+  if (!fields.length) return `<span class="muted-cell">No custom fields</span>`;
+  return `<div class="task-custom-fields">${fields.map((field) => `<span><strong>${taskListHtml(field.name || "Field")}</strong>${taskListHtml(field.value || "-")}</span>`).join("")}</div>`;
+}
+
 function renderTaskList() {
   const body = document.getElementById("taskListBody");
   if (!body) return;
   if (!taskListState.tasks.length) {
-    body.innerHTML = `<tr><td colspan="6"><div class="empty compact-empty">No tasks match these filters.</div></td></tr>`;
+    body.innerHTML = `<tr><td colspan="7"><div class="empty compact-empty">No tasks match these filters.</div></td></tr>`;
   } else {
-    body.innerHTML = taskListState.tasks.map((task) => `<tr><td><strong>${taskListHtml(task.title)}</strong><small>${taskListHtml(task.description || "No description yet.")}</small></td><td><span class="status-badge ${taskListStatusClass(task.status)}">${taskListHtml(taskListStatusLabels[task.status] || task.status || "Open")}</span></td><td><span class="priority ${taskListHtml(task.priority || "medium")}">${taskListHtml(taskListPriorityLabels[task.priority] || task.priority || "Medium")}</span></td><td>${taskListHtml(task.projectTitle || "No project")}</td><td>${taskListHtml(taskListAssignees(task))}</td><td>${taskListHtml(task.dueLabel || task.dueDate || "No due date")}</td></tr>`).join("");
+    body.innerHTML = taskListState.tasks.map((task) => `<tr><td><strong>${taskListHtml(task.title)}</strong><small>${taskListHtml(task.description || "Created from Tasks module.")}</small></td><td>${taskListCustomFields(task)}</td><td><span class="status-badge ${taskListStatusClass(task.status)}">${taskListHtml(taskListStatusLabels[task.status] || task.status || "Open")}</span></td><td><span class="priority ${taskListHtml(task.priority || "medium")}">${taskListHtml(taskListPriorityLabels[task.priority] || task.priority || "Medium")}</span></td><td>${taskListHtml(task.projectTitle || "No project")}</td><td>${taskListHtml(taskListAssignees(task))}</td><td>${taskListHtml(task.dueLabel || task.dueDate || "No due date")}</td></tr>`).join("");
   }
   const total = taskListState.page.total ?? taskListState.tasks.length;
   const count = document.getElementById("taskListCount");
@@ -123,14 +129,138 @@ function changeTaskListPage(direction) {
   loadTaskList().catch((error) => taskListSetStatus(error.message, true));
 }
 
+function injectTaskListModal() {
+  if (document.getElementById("taskListTaskModal")) return;
+  document.body.insertAdjacentHTML("beforeend", `
+    <div class="playground-modal-backdrop" id="taskListTaskModal" hidden>
+      <form class="playground-modal task-list-modal" id="taskListTaskForm" aria-labelledby="taskListTaskModalTitle">
+        <div class="playground-modal-head"><div><p class="section-kicker">Task module</p><h2 id="taskListTaskModalTitle">New Task</h2></div><button type="button" class="icon-button" id="taskListTaskModalClose" aria-label="Close task form">x</button></div>
+        <p class="playground-form-message" id="taskListTaskFormMessage" hidden></p>
+        <div class="playground-form-grid title-only-form">
+          <label class="wide-field">Title<input id="taskListTaskTitle" name="title" required maxlength="140" placeholder="Task title" /></label>
+        </div>
+        <details class="task-custom-field-panel" id="taskListCustomFieldPanel">
+          <summary>Add custom fields</summary>
+          <div class="custom-field-builder" id="taskListCustomFields" aria-label="Custom fields"></div>
+          <button type="button" class="secondary-action" id="taskListAddCustomField">Add Field</button>
+        </details>
+        <div class="playground-modal-actions"><button type="button" id="taskListTaskCancel">Cancel</button><button class="primary-action" id="taskListTaskSave" type="button">Create Task</button></div>
+      </form>
+    </div>
+  `);
+  document.getElementById("taskListTaskModalClose")?.addEventListener("click", closeTaskListModal);
+  document.getElementById("taskListTaskCancel")?.addEventListener("click", closeTaskListModal);
+  document.getElementById("taskListTaskSave")?.addEventListener("click", () => document.getElementById("taskListTaskForm")?.requestSubmit());
+  document.getElementById("taskListAddCustomField")?.addEventListener("click", () => addTaskListCustomField());
+  document.getElementById("taskListTaskModal")?.addEventListener("click", (event) => {
+    if (event.target.id === "taskListTaskModal") closeTaskListModal();
+  });
+  document.getElementById("taskListTaskForm")?.addEventListener("submit", (event) => saveTaskListTask(event).catch((error) => {
+    setTaskListModalBusy(false);
+    setTaskListModalMessage(error.message, true);
+    taskListSetStatus(error.message, true);
+  }));
+}
+
+function addTaskListCustomField(name = "", value = "") {
+  const container = document.getElementById("taskListCustomFields");
+  if (!container) return;
+  const row = document.createElement("div");
+  row.className = "custom-field-row";
+  row.innerHTML = `<label><span>Field</span><input data-custom-field-name maxlength="60" value="${taskListHtml(name)}" placeholder="Owner" /></label><label><span>Value</span><input data-custom-field-value maxlength="240" value="${taskListHtml(value)}" placeholder="Design" /></label><button type="button" class="icon-button" aria-label="Remove custom field">x</button>`;
+  row.querySelector("button")?.addEventListener("click", () => row.remove());
+  container.appendChild(row);
+  row.querySelector("input")?.focus();
+}
+
+function setTaskListModalMessage(message = "", error = false) {
+  const messageEl = document.getElementById("taskListTaskFormMessage");
+  if (!messageEl) return;
+  messageEl.textContent = message;
+  messageEl.hidden = !message;
+  messageEl.classList.toggle("error", error);
+}
+
+function setTaskListModalBusy(busy) {
+  const form = document.getElementById("taskListTaskForm");
+  const saveButton = document.getElementById("taskListTaskSave");
+  form?.querySelectorAll("input, button").forEach((field) => {
+    if (["taskListTaskModalClose", "taskListTaskCancel"].includes(field.id)) return;
+    field.disabled = busy;
+  });
+  if (saveButton) saveButton.textContent = busy ? "Creating..." : "Create Task";
+}
+
+function openTaskListModal() {
+  injectTaskListModal();
+  setTaskListModalBusy(false);
+  setTaskListModalMessage("");
+  const form = document.getElementById("taskListTaskForm");
+  form?.reset();
+  const fields = document.getElementById("taskListCustomFields");
+  if (fields) fields.innerHTML = "";
+  const panel = document.getElementById("taskListCustomFieldPanel");
+  if (panel) panel.open = false;
+  document.getElementById("taskListTaskModal").hidden = false;
+  document.getElementById("taskListTaskTitle")?.focus();
+}
+
+function closeTaskListModal() {
+  const modal = document.getElementById("taskListTaskModal");
+  if (modal) modal.hidden = true;
+  setTaskListModalBusy(false);
+}
+
+function taskListFormPayload() {
+  const customFields = [...document.querySelectorAll("#taskListCustomFields .custom-field-row")]
+    .map((row) => ({
+      name: row.querySelector("[data-custom-field-name]")?.value || "",
+      value: row.querySelector("[data-custom-field-value]")?.value || ""
+    }))
+    .filter((field) => field.name.trim() || field.value.trim());
+  return {
+    title: document.getElementById("taskListTaskTitle")?.value || "",
+    status: "todo",
+    priority: "medium",
+    category: "Tasks",
+    description: "",
+    dueLabel: "No due date",
+    dueDate: "",
+    projectId: "",
+    assigneeIds: [],
+    customFields
+  };
+}
+
+async function saveTaskListTask(event) {
+  event.preventDefault();
+  setTaskListModalBusy(true);
+  setTaskListModalMessage("Creating task...");
+  taskListSetStatus("Creating task...");
+  await taskListFetch("/api/admin/playground/tasks", {
+    method: "POST",
+    body: JSON.stringify(taskListFormPayload())
+  });
+  closeTaskListModal();
+  taskListState.filters.cursor = "0";
+  await loadTaskList();
+  taskListSetStatus("Task saved to Playground storage.");
+}
+
 function initTaskListPage() {
   ["taskListSearch", "taskListStatus", "taskListPriority", "taskListProject", "taskListAssignee"].forEach((id) => {
     document.getElementById(id)?.addEventListener("input", applyTaskListFilters);
     document.getElementById(id)?.addEventListener("change", applyTaskListFilters);
   });
   document.getElementById("refreshTasksButton")?.addEventListener("click", () => loadTaskList().catch((error) => taskListSetStatus(error.message, true)));
+  document.getElementById("taskListNewTaskButton")?.addEventListener("click", openTaskListModal);
+  document.getElementById("taskListCardNewTaskButton")?.addEventListener("click", openTaskListModal);
   document.getElementById("taskListPrev")?.addEventListener("click", () => changeTaskListPage(-1));
   document.getElementById("taskListNext")?.addEventListener("click", () => changeTaskListPage(1));
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") closeTaskListModal();
+  });
+  injectTaskListModal();
   loadTaskList().catch((error) => taskListSetStatus(error.message, true));
 }
 
