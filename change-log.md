@@ -2,6 +2,7 @@
 
 ## [Unreleased]
 
+- Added protected user-management backend CRUD APIs for listing, creating, loading, updating, disabling, and reactivating users, plus user audit-event reads and focused backend tests.
 - Added Phase 1 user-management database foundation tables for `users` and `user_audit_events`, including role/status constraints, case-insensitive email uniqueness, password hash storage, and audit lookup indexes.
 - Added an admin profile dropdown with Update Profile and Logout actions, plus dedicated `/update-profile.html` and `/login.html` pages.
 - Moved the admin light/dark mode control out of the top header and into the Settings page.
