@@ -9,6 +9,7 @@ const adminToken = "test-admin-token";
 const reviewToken = "test-review-token";
 let baseUrl;
 let serverProcess;
+let chatSessionToken;
 
 async function getFreePort() {
   return new Promise((resolve, reject) => {
@@ -38,15 +39,34 @@ async function waitForHealth(url) {
 }
 
 async function jsonFetch(pathname, options = {}) {
+  const { skipAutoSession = false, ...fetchOptions } = options;
+  const shouldAttachChatSession = !skipAutoSession && chatSessionToken && (pathname === "/api/chat" || pathname.startsWith("/api/chats"));
   const response = await fetch(`${baseUrl}${pathname}`, {
-    ...options,
+    ...fetchOptions,
     headers: {
       "Content-Type": "application/json",
-      ...(options.headers || {})
+      ...(shouldAttachChatSession ? { "x-session-token": chatSessionToken } : {}),
+      ...(fetchOptions.headers || {})
     }
   });
   const data = await response.json().catch(() => ({}));
   return { response, data };
+}
+
+async function createChatUserSession() {
+  const created = await jsonFetch("/api/admin/users", {
+    method: "POST",
+    headers: { "x-admin-token": adminToken },
+    body: JSON.stringify({ name: "Chat Session User", email: "chat-session@example.com", role: "member", status: "active", password: "ChatSessionPass123" })
+  });
+  assert.equal(created.response.status, 201);
+  const login = await jsonFetch("/api/auth/login", {
+    method: "POST",
+    body: JSON.stringify({ email: "chat-session@example.com", password: "ChatSessionPass123" })
+  });
+  assert.equal(login.response.status, 200);
+  assert.ok(login.data.sessionToken);
+  chatSessionToken = login.data.sessionToken;
 }
 
 async function createReviewedMessage(message = "Review me") {
@@ -91,6 +111,7 @@ before(async () => {
   });
   serverProcess.stderr.on("data", (chunk) => process.stderr.write(chunk));
   await waitForHealth(baseUrl);
+  await createChatUserSession();
 });
 
 after(() => {
@@ -106,6 +127,51 @@ test("reports health and storage-only status", async () => {
   assert.equal(status.response.status, 200);
   assert.equal(status.data.storageMode, "memory");
   assert.equal(status.data.aiAvailable, false);
+});
+
+test("requires login for normal chat access and allows read-only shared chat links", async () => {
+  const blockedList = await jsonFetch("/api/chats", { skipAutoSession: true });
+  assert.equal(blockedList.response.status, 401);
+
+  const blockedCreate = await jsonFetch("/api/chats", { method: "POST", body: JSON.stringify({ title: "Blocked" }), skipAutoSession: true });
+  assert.equal(blockedCreate.response.status, 401);
+
+  const created = await jsonFetch("/api/chats", {
+    method: "POST",
+    body: JSON.stringify({ title: "Shared access chat" })
+  });
+  assert.equal(created.response.status, 201);
+  const chatId = created.data.chat.id;
+
+  const saved = await jsonFetch(`/api/chats/${chatId}/messages`, {
+    method: "POST",
+    body: JSON.stringify({ role: "user", content: "This can be read with a share link" })
+  });
+  assert.equal(saved.response.status, 201);
+
+  const blockedRead = await jsonFetch(`/api/chats/${chatId}`, { skipAutoSession: true });
+  assert.equal(blockedRead.response.status, 401);
+
+  const shared = await jsonFetch(`/api/chats/${chatId}/share`, { method: "POST", body: "{}" });
+  assert.equal(shared.response.status, 200);
+  assert.ok(shared.data.share.token);
+  assert.match(shared.data.share.url, new RegExp(`chat=${chatId}`));
+
+  const sharedRead = await jsonFetch(`/api/chats/${chatId}?share=${encodeURIComponent(shared.data.share.token)}`, { skipAutoSession: true });
+  assert.equal(sharedRead.response.status, 200);
+  assert.equal(sharedRead.data.chat.id, chatId);
+  assert.equal(sharedRead.data.chat.messages.length, 1);
+
+  const badSharedRead = await jsonFetch(`/api/chats/${chatId}?share=bad-token`, { skipAutoSession: true });
+  assert.equal(badSharedRead.response.status, 401);
+
+  const blockedSharedWrite = await jsonFetch(`/api/chats/${chatId}/messages`, {
+    method: "POST",
+    body: JSON.stringify({ role: "user", content: "Do not save" }),
+    headers: { "x-chat-share-token": shared.data.share.token },
+    skipAutoSession: true
+  });
+  assert.equal(blockedSharedWrite.response.status, 401);
 });
 
 test("stores chat messages and returns the pending-review chat fallback", async () => {
