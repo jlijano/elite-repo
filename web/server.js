@@ -427,6 +427,58 @@ const userManagementStore = attachUserManagementRoutes(app, {
 });
 app.locals.userManagementAttached = true;
 
+const shareSecret = process.env.CHAT_SHARE_SECRET || process.env.ADMIN_TOKEN || "switchboard-chat-share";
+
+function chatShareToken(chatId) {
+  return crypto.createHmac("sha256", shareSecret).update(String(chatId)).digest("base64url").slice(0, 32);
+}
+
+function constantTimeTextEqual(left, right) {
+  const leftBuffer = Buffer.from(String(left || ""));
+  const rightBuffer = Buffer.from(String(right || ""));
+  if (leftBuffer.length !== rightBuffer.length) return false;
+  return crypto.timingSafeEqual(leftBuffer, rightBuffer);
+}
+
+function requestShareToken(req) {
+  return typeof req.query.share === "string" ? req.query.share : req.get("x-chat-share-token") || "";
+}
+
+function shareUrlFor(req, chatId, token) {
+  const protocol = req.get("x-forwarded-proto") || req.protocol || "https";
+  const host = req.get("host") || "localhost";
+  return `${protocol}://${host}/?chat=${encodeURIComponent(chatId)}&share=${encodeURIComponent(token)}`;
+}
+
+async function getRequestSession(req) {
+  const sessionToken = req.get("x-session-token");
+  return sessionToken ? userManagementStore.getSessionUser(sessionToken) : null;
+}
+
+async function requireChatAccount(req, res, next) {
+  try {
+    const session = await getRequestSession(req);
+    if (session) {
+      req.chatSession = session;
+      return next();
+    }
+
+    const sharedChatMatch = req.method === "GET" ? req.path.match(/^\/api\/chats\/([^/]+)$/) : null;
+    if (sharedChatMatch) {
+      const chatId = decodeURIComponent(sharedChatMatch[1]);
+      const suppliedShareToken = requestShareToken(req);
+      if (suppliedShareToken && constantTimeTextEqual(suppliedShareToken, chatShareToken(chatId))) {
+        req.sharedChatAccess = true;
+        return next();
+      }
+    }
+
+    return res.status(401).json({ error: "Login required." });
+  } catch (error) {
+    return next(error);
+  }
+}
+
 function scopeValue(user, field) {
   return typeof user?.[field] === "string" ? user[field].trim().toLowerCase() : "";
 }
@@ -462,8 +514,7 @@ function availableChatUsers(currentUser, users = []) {
 
 async function requireAdmin(req, res, next) {
   try {
-    const sessionToken = req.get("x-session-token");
-    const session = sessionToken ? await userManagementStore.getSessionUser(sessionToken) : null;
+    const session = await getRequestSession(req);
     if (["owner", "admin"].includes(session?.user?.role)) return next();
     if (adminTokenOk(req, res)) return next();
     return undefined;
@@ -486,14 +537,18 @@ app.get("/api/status", async (req, res) => {
 
 app.get("/api/users/available-chat-users", async (req, res) => {
   try {
-    const sessionToken = req.get("x-session-token");
-    const session = sessionToken ? await userManagementStore.getSessionUser(sessionToken) : null;
+    const session = await getRequestSession(req);
     if (!session) return res.status(401).json({ error: "Login required." });
     const users = await userManagementStore.listUsers();
     res.json({ users: availableChatUsers(session.user, users) });
   } catch (error) {
     res.status(500).json({ error: "Could not load available users." });
   }
+});
+
+app.use((req, res, next) => {
+  if (req.path === "/api/chat" || req.path.startsWith("/api/chats")) return requireChatAccount(req, res, next);
+  return next();
 });
 
 app.post("/api/chats", async (req, res) => {
@@ -512,6 +567,15 @@ app.get("/api/chats/:chatId", async (req, res) => {
     if (!chat) return res.status(404).json({ error: "Chat not found." });
     res.json({ chat });
   } catch { res.status(500).json({ error: "Could not load chat history." }); }
+});
+
+app.post("/api/chats/:chatId/share", async (req, res) => {
+  try {
+    const chat = await db.getChat(req.params.chatId);
+    if (!chat) return res.status(404).json({ error: "Chat not found." });
+    const token = chatShareToken(req.params.chatId);
+    res.json({ share: { chatId: req.params.chatId, token, url: shareUrlFor(req, req.params.chatId, token) } });
+  } catch { res.status(500).json({ error: "Could not create a share link." }); }
 });
 
 app.post("/api/chats/:chatId/archive", async (req, res) => {
