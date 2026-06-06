@@ -9,6 +9,7 @@ const adminJs = fs.readFileSync(path.join(webDir, "public", "admin.js"), "utf8")
 const adminCss = fs.readFileSync(path.join(webDir, "public", "admin.css"), "utf8");
 const userPageJs = fs.readFileSync(path.join(webDir, "public", "user-page.js"), "utf8");
 const userPageCss = fs.readFileSync(path.join(webDir, "public", "user-page.css"), "utf8");
+const packageJson = fs.readFileSync(path.join(webDir, "package.json"), "utf8");
 
 test("user page exposes account management controls", () => {
   [
@@ -55,6 +56,10 @@ test("user page script covers modal photo and table behavior", () => {
     "transformUsersToTable",
     "MutationObserver"
   ].forEach((needle) => assert.match(userPageJs, new RegExp(needle.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"))));
+});
+
+test("user page script is included in the validation command", () => {
+  assert.match(packageJson, /node --check public\/user-page\.js/);
 });
 
 test("user management styles cover responsive management layout", () => {
