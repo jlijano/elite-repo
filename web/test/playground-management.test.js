@@ -26,7 +26,7 @@ test("playground store seeds tasks, projects, notes, and metrics", async () => {
   assert.ok(Array.isArray(data.tasks[0].customFields));
 });
 
-test("playground store persists created tasks, custom fields, and projects in memory mode", async () => {
+test("playground store persists created tasks, typed custom fields, and projects in memory mode", async () => {
   const store = createStore();
   const task = await store.createTask({
     title: "Stored task",
@@ -38,7 +38,14 @@ test("playground store persists created tasks, custom fields, and projects in me
     dueDate: null,
     projectId: "00000000-0000-4000-9000-000000000201",
     assigneeIds: ["00000000-0000-4000-8000-000000000002"],
-    customFields: [{ name: "Client", value: "Acme" }]
+    customFields: [
+      { type: "person", name: "Owner", value: "00000000-0000-4000-8000-000000000002" },
+      { type: "date", name: "Start", value: "2026-06-06" },
+      { type: "status", name: "Approval", value: "review" },
+      { type: "dropdown", name: "Client", value: "Acme" },
+      { type: "text", name: "Notes", value: "Needs review" },
+      { type: "file", name: "Brief", value: "brief.pdf", fileName: "brief.pdf", fileType: "application/pdf", fileSize: 42, fileData: "data:application/pdf;base64,JVBERi0=" }
+    ]
   }, "Tester");
   const project = await store.createProject({
     title: "Stored project",
@@ -48,9 +55,17 @@ test("playground store persists created tasks, custom fields, and projects in me
     taskCount: 0
   });
   const data = await store.listAll({ search: "acme" });
+  const saved = data.tasks.find((item) => item.id === task.id);
 
   assert.ok(data.tasks.some((item) => item.id === task.id && item.title === "Stored task" && item.projectTitle === "Website Redesign"));
-  assert.deepEqual(data.tasks.find((item) => item.id === task.id).customFields, [{ name: "Client", value: "Acme" }]);
+  assert.deepEqual(saved.customFields, [
+    { type: "person", name: "Owner", value: "00000000-0000-4000-8000-000000000002" },
+    { type: "date", name: "Start", value: "2026-06-06" },
+    { type: "status", name: "Approval", value: "review" },
+    { type: "dropdown", name: "Client", value: "Acme" },
+    { type: "text", name: "Notes", value: "Needs review" },
+    { type: "file", name: "Brief", value: "brief.pdf", fileName: "brief.pdf", fileType: "application/pdf", fileSize: 42, fileData: "data:application/pdf;base64,JVBERi0=" }
+  ]);
   assert.ok((await store.listAll()).projects.some((item) => item.id === project.id && item.title === "Stored project"));
   assert.equal((await store.listAll()).metrics.totalTasks, 7);
   assert.equal((await store.listAll()).metrics.activeProjects, 5);
@@ -76,13 +91,13 @@ test("playground store filters and paginates task records", async () => {
 test("playground store updates task detail, comments, custom fields, and activity", async () => {
   const store = createStore();
   const created = await store.createTask({ title: "Detail task", description: "Before", status: "todo", category: "QA", priority: "medium", dueLabel: "Today", dueDate: null, projectId: "", assigneeIds: [], customFields: [] }, "Tester");
-  const updated = await store.updateTask(created.id, { title: "Detail task", description: "After", status: "in_progress", category: "QA", priority: "high", dueLabel: "Tomorrow", dueDate: "2026-06-07", projectId: "00000000-0000-4000-9000-000000000201", assigneeIds: ["user-1"], customFields: [{ name: "Stage", value: "Build" }] }, "Tester");
+  const updated = await store.updateTask(created.id, { title: "Detail task", description: "After", status: "in_progress", category: "QA", priority: "high", dueLabel: "Tomorrow", dueDate: "2026-06-07", projectId: "00000000-0000-4000-9000-000000000201", assigneeIds: ["user-1"], customFields: [{ type: "text", name: "Stage", value: "Build" }] }, "Tester");
   const comment = await store.createTaskUpdate(created.id, { body: "Progress note" }, "Tester");
   const detail = await store.getTask(created.id);
 
   assert.equal(updated.statusKey, "in_progress");
   assert.equal(updated.projectTitle, "Website Redesign");
-  assert.deepEqual(updated.customFields, [{ name: "Stage", value: "Build" }]);
+  assert.deepEqual(updated.customFields, [{ type: "text", name: "Stage", value: "Build" }]);
   assert.equal(comment.body, "Progress note");
   assert.equal(detail.task.description, "After");
   assert.ok(detail.updates.some((item) => item.body === "Progress note"));
@@ -137,7 +152,7 @@ test("shared admin navigation nests Tasks under Playground", () => {
   assert.ok(script.includes("tasksLink?.remove()"));
 });
 
-test("playground tasks script creates saved tasks with common optional custom fields", () => {
+test("playground tasks script creates saved tasks with real typed optional custom fields", () => {
   const script = fs.readFileSync(path.join(__dirname, "..", "public", "playground-tasks.js"), "utf8");
 
   assert.ok(script.includes("/api/admin/playground?"));
@@ -147,10 +162,17 @@ test("playground tasks script creates saved tasks with common optional custom fi
   assert.ok(script.includes("taskListTaskModal"));
   assert.ok(script.includes("taskListTaskTitle"));
   assert.ok(script.includes("taskListCommonFieldTypes"));
-  assert.ok(script.includes("taskListCommonFieldType"));
-  assert.ok(script.includes("taskListAddCommonField"));
-  assert.ok(script.includes("Due Date"));
-  assert.ok(script.includes("Dropdown"));
+  assert.ok(script.includes('["person", "Person"]'));
+  assert.ok(script.includes('["date", "Date"]'));
+  assert.ok(script.includes('["status", "Status"]'));
+  assert.ok(script.includes('["dropdown", "Dropdown"]'));
+  assert.ok(script.includes('["text", "Text"]'));
+  assert.ok(script.includes('["file", "File Attachment"]'));
+  assert.ok(script.includes("taskListFieldValueControl"));
+  assert.ok(script.includes("data-custom-field-type"));
+  assert.ok(script.includes('type="file"'));
+  assert.ok(script.includes("FileReader"));
+  assert.ok(script.includes("fileData"));
   assert.ok(script.includes("customFields"));
   assert.ok(script.includes("/api/admin/playground/tasks"));
   assert.ok(script.includes("Loaded ${total} saved task"));
