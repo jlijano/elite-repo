@@ -10,7 +10,7 @@
 .playground-task-controls label { min-width: 0; display: grid; gap: 5px; color: var(--muted); font-size: 0.74rem; font-weight: 900; text-transform: uppercase; }
 .playground-task-controls input, .playground-task-controls select, .playground-modal input, .playground-modal select, .playground-modal textarea, .drawer-update-form textarea { width: 100%; min-width: 0; min-height: 38px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel); color: var(--text); font: inherit; padding: 8px 10px; }
 .playground-task-controls input:focus, .playground-task-controls select:focus, .playground-modal input:focus, .playground-modal select:focus, .playground-modal textarea:focus, .drawer-update-form textarea:focus { outline: 3px solid var(--focus-ring); outline-offset: 1px; border-color: var(--primary); }
-.playground-page-actions { display: flex; gap: 8px; align-items: center; }
+.playground-page-actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
 .playground-page-actions button, .task-actions button, .playground-modal-actions button, .icon-button { min-height: 36px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel-soft); color: var(--text); font: inherit; font-weight: 900; cursor: pointer; padding: 0 10px; }
 .playground-page-actions button:disabled { cursor: not-allowed; opacity: 0.45; }
 .kanban-board { display: grid; grid-template-columns: repeat(5, minmax(190px, 1fr)); gap: 12px; padding: 14px; overflow-x: auto; }
@@ -39,6 +39,7 @@
 .playground-modal-backdrop { position: fixed; inset: 0; z-index: 80; display: grid; place-items: center; padding: 20px; background: rgba(0, 0, 0, 0.58); }
 .playground-modal-backdrop[hidden], .playground-task-drawer[hidden] { display: none; }
 .playground-modal { width: min(760px, 100%); max-height: min(88vh, 760px); overflow: auto; display: grid; gap: 14px; padding: 16px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel); color: var(--text); box-shadow: 0 28px 80px rgba(0, 0, 0, 0.42); }
+.task-list-modal { width: min(560px, 100%); }
 .playground-modal-head, .playground-drawer-head { display: flex; align-items: start; justify-content: space-between; gap: 12px; }
 .playground-modal h2, .playground-drawer-head h2, .drawer-section h3 { margin: 0; color: var(--text); }
 .icon-button { width: 38px; padding: 0; font-size: 1.2rem; line-height: 1; }
@@ -46,10 +47,19 @@
 .playground-form-message.error { color: var(--error); background: var(--error-bg); border-color: var(--error-line); }
 .playground-form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
 .playground-form-grid label { min-width: 0; display: grid; gap: 6px; color: var(--muted); font-size: 0.78rem; font-weight: 900; text-transform: uppercase; }
-.playground-form-grid .wide-field { grid-column: 1 / -1; }
+.playground-form-grid .wide-field, .title-only-form { grid-column: 1 / -1; }
 .playground-modal textarea { resize: vertical; min-height: 96px; }
 .playground-modal select[multiple] { min-height: 110px; }
 .playground-modal-actions { display: flex; justify-content: flex-end; gap: 10px; }
+.task-custom-field-panel { display: grid; gap: 10px; padding: 10px 0 0; border-top: 1px solid var(--line); }
+.task-custom-field-panel summary { width: fit-content; cursor: pointer; color: var(--text); font-weight: 900; }
+.custom-field-builder { display: grid; gap: 10px; margin-top: 10px; }
+.custom-field-row { display: grid; grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr) auto; gap: 10px; align-items: end; }
+.custom-field-row label { min-width: 0; display: grid; gap: 5px; color: var(--muted); font-size: 0.72rem; font-weight: 900; text-transform: uppercase; }
+.task-custom-fields { display: flex; flex-wrap: wrap; gap: 6px; min-width: 0; }
+.task-custom-fields span { display: inline-flex; align-items: center; gap: 5px; max-width: 220px; min-height: 26px; padding: 0 8px; border: 1px solid var(--line); border-radius: 999px; background: var(--panel-soft); color: var(--muted); font-size: 0.75rem; font-weight: 800; }
+.task-custom-fields strong { color: var(--text); font-size: inherit; }
+.muted-cell { color: var(--muted); font-size: 0.8rem; font-weight: 800; }
 .playground-task-drawer { position: fixed; top: 0; right: 0; bottom: 0; z-index: 70; width: min(460px, 100vw); display: grid; grid-template-rows: auto minmax(0, 1fr); border-left: 1px solid var(--line); background: var(--panel); color: var(--text); box-shadow: -24px 0 70px rgba(0, 0, 0, 0.35); }
 .playground-drawer-head { padding: 16px; border-bottom: 1px solid var(--line); }
 .playground-drawer-body { min-height: 0; overflow: auto; display: grid; align-content: start; gap: 14px; padding: 14px; }
@@ -65,7 +75,7 @@
 .playground-task-list-card { min-height: auto; }
 .task-list-controls { grid-template-columns: minmax(220px, 1.35fr) repeat(4, minmax(140px, 1fr)); border-bottom: 1px solid var(--line); }
 .playground-task-table-wrap { width: 100%; overflow-x: auto; }
-.playground-task-table { width: 100%; min-width: 860px; border-collapse: collapse; color: var(--text); }
+.playground-task-table { width: 100%; min-width: 980px; border-collapse: collapse; color: var(--text); }
 .playground-task-table th, .playground-task-table td { padding: 12px 14px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; }
 .playground-task-table th { color: var(--muted); background: var(--panel-soft); font-size: 0.74rem; font-weight: 900; text-transform: uppercase; }
 .playground-task-table td { font-size: 0.86rem; line-height: 1.45; }
@@ -73,4 +83,4 @@
 .playground-task-table td small { margin-top: 4px; color: var(--muted); }
 .playground-task-list-footer { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 14px; color: var(--muted); font-size: 0.82rem; font-weight: 850; }
 @media (max-width: 1180px) { .playground-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); } .playground-task-controls { grid-template-columns: repeat(3, minmax(0, 1fr)); } .kanban-board { grid-template-columns: repeat(5, minmax(220px, 1fr)); } .playground-lower-grid { grid-template-columns: 1fr; } }
-@media (max-width: 760px) { .playground-header .header-actions { width: 100%; justify-content: flex-start; } .playground-metrics, .playground-task-controls, .playground-form-grid { grid-template-columns: 1fr; } .kanban-board { grid-template-columns: 1fr; overflow-x: visible; } .todo-item { grid-template-columns: auto minmax(0, 1fr); } .todo-item small, .todo-item .priority { justify-self: start; grid-column: 2; } .playground-task-drawer { width: 100vw; } .task-detail-grid { grid-template-columns: 1fr; } .playground-task-list-footer { align-items: stretch; flex-direction: column; } }
+@media (max-width: 760px) { .playground-header .header-actions { width: 100%; justify-content: flex-start; } .playground-metrics, .playground-task-controls, .playground-form-grid, .custom-field-row { grid-template-columns: 1fr; } .kanban-board { grid-template-columns: 1fr; overflow-x: visible; } .todo-item { grid-template-columns: auto minmax(0, 1fr); } .todo-item small, .todo-item .priority { justify-self: start; grid-column: 2; } .playground-task-drawer { width: 100vw; } .task-detail-grid { grid-template-columns: 1fr; } .playground-task-list-footer { align-items: stretch; flex-direction: column; } }
