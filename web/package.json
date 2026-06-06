@@ -4,9 +4,9 @@
   "description": "Render-ready messaging app for the Switchboard Agent.",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js",
+    "start": "node --require ./register-user-management.js server.js",
     "test": "node --test test/*.test.js",
-    "check": "node --check server.js && node --check public/app.js && node --check public/admin.js && npm test"
+    "check": "node --check server.js && node --check user-management.js && node --check register-user-management.js && node --check public/app.js && node --check public/admin.js && npm test"
   },
   "dependencies": {
     "cors": "^2.8.5",
