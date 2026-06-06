@@ -61,6 +61,24 @@ function playgroundSetStatus(message, error = false) {
   status.classList.toggle("error", error);
 }
 
+function setTaskFormMessage(message = "", error = false) {
+  const messageEl = document.getElementById("playgroundTaskFormMessage");
+  if (!messageEl) return;
+  messageEl.textContent = message;
+  messageEl.hidden = !message;
+  messageEl.classList.toggle("error", error);
+}
+
+function setTaskFormBusy(busy) {
+  const form = document.getElementById("playgroundTaskForm");
+  const saveButton = document.getElementById("playgroundTaskSave");
+  form?.querySelectorAll("input, select, textarea, button").forEach((field) => {
+    if (["playgroundTaskModalClose", "playgroundTaskCancel"].includes(field.id)) return;
+    field.disabled = busy;
+  });
+  if (saveButton) saveButton.textContent = busy ? "Saving..." : "Save Task";
+}
+
 async function playgroundFetch(url, options = {}) {
   const response = await fetch(url, { ...options, headers: { ...playgroundHeaders(), ...(options.headers || {}) } });
   const data = await response.json().catch(() => ({}));
@@ -223,7 +241,8 @@ function injectTaskSurfaces() {
   document.body.insertAdjacentHTML("beforeend", `
     <div class="playground-modal-backdrop" id="playgroundTaskModal" hidden>
       <form class="playground-modal" id="playgroundTaskForm" aria-labelledby="playgroundTaskModalTitle">
-        <div class="playground-modal-head"><div><p class="section-kicker">Task storage</p><h2 id="playgroundTaskModalTitle">New Task</h2></div><button type="button" class="icon-button" id="playgroundTaskModalClose" aria-label="Close task form">×</button></div>
+        <div class="playground-modal-head"><div><p class="section-kicker">Task storage</p><h2 id="playgroundTaskModalTitle">New Task</h2></div><button type="button" class="icon-button" id="playgroundTaskModalClose" aria-label="Close task form">x</button></div>
+        <p class="playground-form-message" id="playgroundTaskFormMessage" hidden></p>
         <div class="playground-form-grid">
           <label>Title<input id="playgroundTaskTitle" name="title" required maxlength="140" /></label>
           <label>Status<select id="playgroundTaskStatusInput" name="status">${playgroundStatusOrder.map((status) => `<option value="${status}">${playgroundStatusLabels[status]}</option>`).join("")}</select></label>
@@ -235,20 +254,25 @@ function injectTaskSurfaces() {
           <label>Category<input id="playgroundTaskCategory" name="category" maxlength="80" placeholder="Tasks" /></label>
           <label class="wide-field">Description<textarea id="playgroundTaskDescription" name="description" rows="4" maxlength="1200"></textarea></label>
         </div>
-        <div class="playground-modal-actions"><button type="button" id="playgroundTaskCancel">Cancel</button><button class="primary-action" type="submit">Save Task</button></div>
+        <div class="playground-modal-actions"><button type="button" id="playgroundTaskCancel">Cancel</button><button class="primary-action" id="playgroundTaskSave" type="submit">Save Task</button></div>
       </form>
     </div>
     <aside class="playground-task-drawer" id="playgroundTaskDrawer" aria-label="Task details" hidden>
-      <div class="playground-drawer-head"><div><p class="section-kicker">Task detail</p><h2 id="playgroundDrawerTitle">Task</h2></div><button type="button" class="icon-button" id="playgroundTaskDrawerClose" aria-label="Close task details">×</button></div>
+      <div class="playground-drawer-head"><div><p class="section-kicker">Task detail</p><h2 id="playgroundDrawerTitle">Task</h2></div><button type="button" class="icon-button" id="playgroundTaskDrawerClose" aria-label="Close task details">x</button></div>
       <div id="playgroundTaskDrawerBody" class="playground-drawer-body"></div>
     </aside>
   `);
   document.getElementById("playgroundTaskModalClose")?.addEventListener("click", closeTaskModal);
   document.getElementById("playgroundTaskCancel")?.addEventListener("click", closeTaskModal);
+  document.getElementById("playgroundTaskSave")?.addEventListener("click", () => document.getElementById("playgroundTaskForm")?.requestSubmit());
   document.getElementById("playgroundTaskModal")?.addEventListener("click", (event) => {
     if (event.target.id === "playgroundTaskModal") closeTaskModal();
   });
-  document.getElementById("playgroundTaskForm")?.addEventListener("submit", saveTaskForm);
+  document.getElementById("playgroundTaskForm")?.addEventListener("submit", (event) => saveTaskForm(event).catch((error) => {
+    setTaskFormBusy(false);
+    setTaskFormMessage(error.message, true);
+    playgroundSetStatus(error.message, true);
+  }));
   document.getElementById("playgroundTaskDrawerClose")?.addEventListener("click", closeTaskDetail);
 }
 
@@ -264,6 +288,8 @@ function fillTaskSelects(task = {}) {
 function openTaskModal(task = null) {
   injectTaskSurfaces();
   playgroundState.editingTaskId = task?.id || "";
+  setTaskFormBusy(false);
+  setTaskFormMessage("");
   document.getElementById("playgroundTaskModalTitle").textContent = task ? "Edit Task" : "New Task";
   fillTaskSelects(task || {});
   document.getElementById("playgroundTaskTitle").value = task?.title || "";
@@ -280,6 +306,7 @@ function openTaskModal(task = null) {
 function closeTaskModal() {
   const modal = document.getElementById("playgroundTaskModal");
   if (modal) modal.hidden = true;
+  setTaskFormBusy(false);
   playgroundState.editingTaskId = "";
 }
 
@@ -301,6 +328,8 @@ function taskFormPayload() {
 async function saveTaskForm(event) {
   event.preventDefault();
   const taskId = playgroundState.editingTaskId;
+  setTaskFormBusy(true);
+  setTaskFormMessage(taskId ? "Saving task changes..." : "Creating task...");
   playgroundSetStatus(taskId ? "Saving task changes..." : "Creating task...");
   await playgroundFetch(taskId ? `/api/admin/playground/tasks/${encodeURIComponent(taskId)}` : "/api/admin/playground/tasks", {
     method: taskId ? "PATCH" : "POST",
@@ -345,7 +374,7 @@ async function openTaskDetail(taskId) {
 
 function renderActivityDetails(details = {}) {
   if (!Array.isArray(details.changes) || !details.changes.length) return "";
-  return `<ul class="activity-change-list">${details.changes.map((change) => `<li><strong>${playgroundHtml(change.field)}</strong>: ${playgroundHtml(Array.isArray(change.from) ? change.from.join(", ") : change.from)} → ${playgroundHtml(Array.isArray(change.to) ? change.to.join(", ") : change.to)}</li>`).join("")}</ul>`;
+  return `<ul class="activity-change-list">${details.changes.map((change) => `<li><strong>${playgroundHtml(change.field)}</strong>: ${playgroundHtml(Array.isArray(change.from) ? change.from.join(", ") : change.from)} to ${playgroundHtml(Array.isArray(change.to) ? change.to.join(", ") : change.to)}</li>`).join("")}</ul>`;
 }
 
 async function postTaskUpdate(event) {
