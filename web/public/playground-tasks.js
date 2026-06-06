@@ -3,24 +3,15 @@ const taskListAdminTokenKey = "switchboard-admin-token";
 const taskListStatusLabels = { backlog: "Backlog", todo: "To Do", in_progress: "In Progress", review: "Review", done: "Done" };
 const taskListPriorityLabels = { low: "Low", medium: "Medium", high: "High" };
 const taskListCommonFieldTypes = [
-  ["status", "Status"],
-  ["priority", "Priority"],
-  ["assignee", "Assignee"],
-  ["due_date", "Due Date"],
+  ["person", "Person"],
   ["date", "Date"],
-  ["timeline", "Timeline"],
-  ["text", "Text"],
-  ["number", "Number"],
-  ["currency", "Currency"],
-  ["link", "Link"],
-  ["email", "Email"],
-  ["phone", "Phone"],
-  ["checkbox", "Checkbox"],
+  ["status", "Status"],
   ["dropdown", "Dropdown"],
-  ["files", "Files"],
-  ["tags", "Tags"],
-  ["progress", "Progress"]
+  ["text", "Text"],
+  ["file", "File Attachment"]
 ];
+const taskListDropdownDefaults = ["Option 1", "Option 2", "Option 3"];
+const taskListFileLimitBytes = 1024 * 1024;
 
 const taskListState = {
   tasks: [],
@@ -30,7 +21,7 @@ const taskListState = {
   filters: { search: "", status: "", priority: "", projectId: "", assigneeId: "", cursor: "0", limit: "100" }
 };
 
-const taskListHtml = (value) => String(value ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+const taskListHtml = (value) => String(value ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/\"/g, "&quot;");
 
 function taskListHeaders() {
   const headers = { "Content-Type": "application/json" };
@@ -93,10 +84,28 @@ function renderTaskListFilters() {
   if (assigneeSelect) assigneeSelect.innerHTML = taskListOptions(taskListState.users, taskListState.filters.assigneeId, "All assignees");
 }
 
+function taskListFieldTypeLabel(type = "text") {
+  return commonFieldLabel(type);
+}
+
+function taskListFieldDownload(field = {}) {
+  const fileData = String(field.fileData || "");
+  const fileName = field.fileName || field.value || "attachment";
+  if (!fileData.startsWith("data:")) return taskListHtml(fileName || "Attached file");
+  return `<a href="${taskListHtml(fileData)}" download="${taskListHtml(fileName)}">${taskListHtml(fileName)}</a>`;
+}
+
+function taskListFieldDisplayValue(field = {}) {
+  const type = field.type || "text";
+  if (type === "person") return taskListHtml(taskListUserName(field.value) || field.value || "-");
+  if (type === "file") return taskListFieldDownload(field);
+  return taskListHtml(field.value || "-");
+}
+
 function taskListCustomFields(task) {
   const fields = Array.isArray(task.customFields) ? task.customFields : [];
   if (!fields.length) return `<span class="muted-cell">No custom fields</span>`;
-  return `<div class="task-custom-fields">${fields.map((field) => `<span><strong>${taskListHtml(field.name || "Field")}</strong>${taskListHtml(field.value || "-")}</span>`).join("")}</div>`;
+  return `<div class="task-custom-fields">${fields.map((field) => `<span><em>${taskListHtml(taskListFieldTypeLabel(field.type))}</em><strong>${taskListHtml(field.name || "Field")}</strong>${taskListFieldDisplayValue(field)}</span>`).join("")}</div>`;
 }
 
 function renderTaskList() {
@@ -156,6 +165,29 @@ function changeTaskListPage(direction) {
   loadTaskList().catch((error) => taskListSetStatus(error.message, true));
 }
 
+function taskListFieldValueControl(type = "text", value = "", meta = {}) {
+  if (type === "person") {
+    const options = taskListState.users.map((user) => `<option value="${taskListHtml(user.id)}"${user.id === value ? " selected" : ""}>${taskListHtml(user.name || user.email)}</option>`).join("");
+    return `<label><span>Value</span><select data-custom-field-value><option value="">Select person</option>${options}</select></label>`;
+  }
+  if (type === "date") {
+    return `<label><span>Value</span><input data-custom-field-value type="date" value="${taskListHtml(value)}" /></label>`;
+  }
+  if (type === "status") {
+    const options = Object.entries(taskListStatusLabels).map(([key, label]) => `<option value="${taskListHtml(key)}"${key === value ? " selected" : ""}>${taskListHtml(label)}</option>`).join("");
+    return `<label><span>Value</span><select data-custom-field-value><option value="">Select status</option>${options}</select></label>`;
+  }
+  if (type === "dropdown") {
+    const options = taskListDropdownDefaults.map((label) => `<option value="${taskListHtml(label)}"${label === value ? " selected" : ""}>${taskListHtml(label)}</option>`).join("");
+    return `<label><span>Value</span><select data-custom-field-value><option value="">Select option</option>${options}</select></label>`;
+  }
+  if (type === "file") {
+    const fileName = meta.fileName || value || "No file selected";
+    return `<label><span>Value</span><input data-custom-field-file type="file" /><input data-custom-field-value type="hidden" value="${taskListHtml(value)}" /><small class="file-field-preview" data-file-preview>${taskListHtml(fileName)}</small></label>`;
+  }
+  return `<label><span>Value</span><input data-custom-field-value maxlength="240" value="${taskListHtml(value)}" placeholder="Type text" /></label>`;
+}
+
 function injectTaskListModal() {
   if (document.getElementById("taskListTaskModal")) return;
   document.body.insertAdjacentHTML("beforeend", `
@@ -169,11 +201,11 @@ function injectTaskListModal() {
         <details class="task-custom-field-panel" id="taskListCustomFieldPanel">
           <summary>Add custom fields</summary>
           <div class="common-field-picker">
-            <label><span>Common field type</span><select id="taskListCommonFieldType">${commonFieldTypeOptions()}</select></label>
+            <label><span>Custom field data type</span><select id="taskListCommonFieldType">${commonFieldTypeOptions()}</select></label>
             <button type="button" class="secondary-action" id="taskListAddCommonField">Add Selected</button>
           </div>
           <div class="custom-field-builder" id="taskListCustomFields" aria-label="Custom fields"></div>
-          <button type="button" class="secondary-action" id="taskListAddCustomField">Add Blank Field</button>
+          <button type="button" class="secondary-action" id="taskListAddCustomField">Add Text Field</button>
         </details>
         <div class="playground-modal-actions"><button type="button" id="taskListTaskCancel">Cancel</button><button class="primary-action" id="taskListTaskSave" type="button">Create Task</button></div>
       </form>
@@ -183,7 +215,7 @@ function injectTaskListModal() {
   document.getElementById("taskListTaskCancel")?.addEventListener("click", closeTaskListModal);
   document.getElementById("taskListTaskSave")?.addEventListener("click", () => document.getElementById("taskListTaskForm")?.requestSubmit());
   document.getElementById("taskListAddCommonField")?.addEventListener("click", addTaskListCommonField);
-  document.getElementById("taskListAddCustomField")?.addEventListener("click", () => addTaskListCustomField());
+  document.getElementById("taskListAddCustomField")?.addEventListener("click", () => addTaskListCustomField("", "", "text"));
   document.getElementById("taskListTaskModal")?.addEventListener("click", (event) => {
     if (event.target.id === "taskListTaskModal") closeTaskListModal();
   });
@@ -196,18 +228,49 @@ function injectTaskListModal() {
 
 function addTaskListCommonField() {
   const selected = document.getElementById("taskListCommonFieldType")?.value || "text";
-  addTaskListCustomField(commonFieldLabel(selected));
+  addTaskListCustomField(commonFieldLabel(selected), "", selected);
 }
 
-function addTaskListCustomField(name = "", value = "") {
+function handleTaskListFileField(event, row) {
+  const file = event.target.files?.[0];
+  if (!file) return;
+  if (file.size > taskListFileLimitBytes) {
+    event.target.value = "";
+    taskListSetStatus("File custom fields support files up to 1 MB for now.", true);
+    return;
+  }
+  const reader = new FileReader();
+  reader.onload = () => {
+    row.dataset.fileName = file.name;
+    row.dataset.fileType = file.type || "application/octet-stream";
+    row.dataset.fileSize = String(file.size);
+    row.dataset.fileData = String(reader.result || "");
+    const value = row.querySelector("[data-custom-field-value]");
+    if (value) value.value = file.name;
+    const preview = row.querySelector("[data-file-preview]");
+    if (preview) preview.textContent = file.name;
+    taskListSetStatus(`Attached ${file.name} to the custom field.`);
+  };
+  reader.onerror = () => taskListSetStatus("Could not read that file attachment.", true);
+  reader.readAsDataURL(file);
+}
+
+function addTaskListCustomField(name = "", value = "", type = "text", meta = {}) {
   const container = document.getElementById("taskListCustomFields");
   if (!container) return;
   const row = document.createElement("div");
+  const safeType = taskListCommonFieldTypes.some(([key]) => key === type) ? type : "text";
   row.className = "custom-field-row";
-  row.innerHTML = `<label><span>Field</span><input data-custom-field-name maxlength="60" value="${taskListHtml(name)}" placeholder="Owner" /></label><label><span>Value</span><input data-custom-field-value maxlength="240" value="${taskListHtml(value)}" placeholder="Design" /></label><button type="button" class="icon-button" aria-label="Remove custom field">x</button>`;
+  row.dataset.customFieldType = safeType;
+  if (meta.fileName) row.dataset.fileName = meta.fileName;
+  if (meta.fileType) row.dataset.fileType = meta.fileType;
+  if (meta.fileSize) row.dataset.fileSize = String(meta.fileSize);
+  if (meta.fileData) row.dataset.fileData = meta.fileData;
+  row.innerHTML = `<div class="field-type-pill"><span>Type</span><strong>${taskListHtml(taskListFieldTypeLabel(safeType))}</strong></div><label><span>Field</span><input data-custom-field-name maxlength="60" value="${taskListHtml(name)}" placeholder="${taskListHtml(taskListFieldTypeLabel(safeType))}" /></label>${taskListFieldValueControl(safeType, value, meta)}<button type="button" class="icon-button" aria-label="Remove custom field">x</button>`;
   row.querySelector("button")?.addEventListener("click", () => row.remove());
+  row.querySelector("[data-custom-field-file]")?.addEventListener("change", (event) => handleTaskListFileField(event, row));
   container.appendChild(row);
-  row.querySelector("[data-custom-field-value]")?.focus();
+  row.querySelector("[data-custom-field-value], [data-custom-field-file]")?.focus();
 }
 
 function setTaskListModalMessage(message = "", error = false) {
@@ -250,11 +313,21 @@ function closeTaskListModal() {
 
 function taskListFormPayload() {
   const customFields = [...document.querySelectorAll("#taskListCustomFields .custom-field-row")]
-    .map((row) => ({
-      name: row.querySelector("[data-custom-field-name]")?.value || "",
-      value: row.querySelector("[data-custom-field-value]")?.value || ""
-    }))
-    .filter((field) => field.name.trim() || field.value.trim());
+    .map((row) => {
+      const field = {
+        type: row.dataset.customFieldType || "text",
+        name: row.querySelector("[data-custom-field-name]")?.value || "",
+        value: row.querySelector("[data-custom-field-value]")?.value || ""
+      };
+      if (field.type === "file") {
+        field.fileName = row.dataset.fileName || field.value;
+        field.fileType = row.dataset.fileType || "";
+        field.fileSize = Number(row.dataset.fileSize || 0);
+        field.fileData = row.dataset.fileData || "";
+      }
+      return field;
+    })
+    .filter((field) => field.name.trim() || field.value.trim() || field.fileName);
   return {
     title: document.getElementById("taskListTaskTitle")?.value || "",
     status: "todo",
