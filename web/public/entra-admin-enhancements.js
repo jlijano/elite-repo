@@ -199,6 +199,32 @@
         min-width: 0;
       }
 
+      .entra-name-edit-trigger {
+        display: inline-flex !important;
+        flex-direction: column;
+        align-items: flex-start;
+        max-width: 100%;
+        padding: 0;
+        border: 0;
+        background: transparent;
+        color: inherit;
+        font: inherit;
+        text-align: left;
+        cursor: pointer;
+      }
+
+      .entra-name-edit-trigger .entra-record-name {
+        color: var(--primary);
+        text-decoration: underline;
+        text-decoration-thickness: 1px;
+        text-underline-offset: 3px;
+      }
+
+      .entra-name-edit-trigger:hover .entra-record-name,
+      .entra-name-edit-trigger:focus-visible .entra-record-name {
+        color: var(--primary-strong, var(--primary));
+      }
+
       .danger-action {
         border-color: rgba(239, 68, 68, 0.28) !important;
         color: #b91c1c !important;
@@ -321,6 +347,24 @@
       if (!recordId) return;
 
       const actions = row.querySelector(".actions");
+      const editButton = actions?.querySelector("[data-edit]");
+      if (editButton) editButton.remove();
+
+      const firstCell = row.querySelector("td:first-child");
+      const existingTrigger = firstCell?.querySelector(".entra-name-edit-trigger");
+      const name = firstCell?.querySelector(".entra-record-name");
+      if (firstCell && name && !existingTrigger) {
+        const trigger = document.createElement("button");
+        trigger.type = "button";
+        trigger.className = "entra-name-edit-trigger";
+        trigger.dataset.edit = recordId;
+        trigger.setAttribute("aria-label", `Edit ${name.textContent || labels[page]}`);
+        firstCell.insertBefore(trigger, name);
+        trigger.appendChild(name);
+        const note = firstCell.querySelector(".entra-record-note");
+        if (note) trigger.appendChild(note);
+      }
+
       if (isGlobalAdmin() && actions && !actions.querySelector("[data-purge]")) {
         const button = document.createElement("button");
         button.type = "button";
@@ -331,8 +375,7 @@
       }
 
       if (page === "company" && logoByCompanyId.has(recordId) && !row.querySelector(".company-logo-mark")) {
-        const firstCell = row.querySelector("td:first-child");
-        const name = firstCell?.querySelector(".entra-record-name");
+        const target = firstCell?.querySelector(".entra-name-edit-trigger") || firstCell;
         if (!firstCell || !name) return;
         const logo = document.createElement("span");
         logo.className = "company-logo-mark";
@@ -345,6 +388,7 @@
         name.replaceWith(group);
         group.appendChild(logo);
         group.appendChild(name);
+        if (target && target !== firstCell) target.insertBefore(group, target.firstChild);
       }
     });
   }
