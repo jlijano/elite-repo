@@ -13,9 +13,9 @@
   function isGlobalAdmin() {
     try {
       const user = JSON.parse(sessionStorage.getItem("switchboard-session-user") || "{}");
-      return user.role === "owner" || Boolean(sessionStorage.getItem("switchboard-admin-token") || localStorage.getItem("switchboard_admin_token"));
+      return user.role === "owner";
     } catch (error) {
-      return Boolean(sessionStorage.getItem("switchboard-admin-token") || localStorage.getItem("switchboard_admin_token"));
+      return false;
     }
   }
 
