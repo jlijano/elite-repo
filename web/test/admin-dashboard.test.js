@@ -117,12 +117,12 @@ test("knowledge base is its own page", () => {
   assert.match(knowledgeHtml, /id="knowledgeStatus"/);
 });
 
-test("user page includes user management and new user action", () => {
+test("user page includes user management and add user action", () => {
   assert.match(userHtml, /<body data-admin-page="user">/);
   assert.match(userHtml, /<h1>User<\/h1>/);
   assert.match(userHtml, /id="userManagementPage"/);
   assert.match(userHtml, /id="manageUsersButton"/);
-  assert.match(userHtml, />New user<\/button>/);
+  assert.match(userHtml, />Add user<\/button>/);
 });
 
 test("playground page is reachable from admin navigation", () => {
@@ -250,7 +250,7 @@ test("update profile page supports photo name email and password inputs", () => 
 test("login page is the logout redirect target", () => {
   assert.match(loginHtml, /<title>Switchboard Login<\/title>/);
   assert.match(loginHtml, /<h1>Login<\/h1>/);
-  assert.match(loginHtml, /href="\/chat\.html"[\s\S]*>Admin chat<\/a>/);
+  assert.match(loginHtml, /href="\/"[\s\S]*>Back to chat<\/a>/);
 });
 
 test("theme mode control lives inside settings page", () => {
@@ -296,7 +296,7 @@ test("refresh cadence preference persists and controls the admin refresh timer",
   assert.match(adminJs, /function schedulePageRefresh\(cadence = getStoredRefreshCadence\(\)\)/);
   assert.match(adminJs, /if \(refreshTimerId\) clearInterval\(refreshTimerId\)/);
   assert.match(adminJs, /if \(intervalMs > 0\) refreshTimerId = setInterval\(\(\) => loadPage\(\)\.catch\(\(\) => \{\}\), intervalMs\)/);
-  assert.match(adminJs, /els\.settingsRefreshOptions\?\.forEach\(\(button\) => button\.addEventListener\("click", \(\) => applyRefreshCadence\(button\.dataset\.refreshChoice\)\)\)/);
+  assert.match(adminJs, /els\.settingsRefreshOptions\?\.forEach\(\(button\) => button\.addEventListener\("click", \(\) => applyRefreshCadence\(button\.datasetRefreshChoice \|\| button\.dataset\.refreshChoice\)\)\)/);
   assert.match(adminJs, /els\.settingsRefreshNow\?\.addEventListener\("click", \(\) => loadPage\(\)\.catch\(\(error\) => setStatus\(error\.message, true\)\)\)/);
   assert.match(adminJs, /applyRefreshCadence\(getStoredRefreshCadence\(\)\)/);
   assert.doesNotMatch(adminJs, /const refreshIntervalMs = 40000/);
