@@ -22,6 +22,8 @@ const maxAttachments = 4;
 const maxAttachmentChars = 2000000;
 const maxAttachmentNameLength = 160;
 const anonymousChatRetentionDays = 30;
+const typingTimeoutMs = 6000;
+const chatParticipants = new Map();
 const pendingReviewReply =
   "I saved your message for Switchboard review. The AI responder is unavailable right now, so this chat is in storage-only mode and can be reviewed later.";
 
@@ -85,6 +87,83 @@ function attachmentSummary(attachments = []) {
   }).join("\n\n");
 }
 
+function cleanParticipantContext(context = {}) {
+  if (!context || typeof context !== "object" || Array.isArray(context)) return {};
+  const participantId = typeof context.participantId === "string" ? redact(context.participantId).slice(0, 120) : "";
+  const participantType = context.participantType === "original" ? "original" : "shared";
+  const fallbackLabel = participantType === "original" ? "Original" : "Shared link";
+  const participantLabel = typeof context.participantLabel === "string" && context.participantLabel.trim()
+    ? redact(context.participantLabel.trim()).slice(0, 80)
+    : fallbackLabel;
+  const deviceType = ["desktop", "mobile", "tablet"].includes(context.deviceType) ? context.deviceType : "desktop";
+  const shareCount = Number.isFinite(Number(context.shareCount)) ? Math.max(0, Math.min(9999, Number(context.shareCount))) : 0;
+  return { participantId, participantType, participantLabel, deviceType, shareCount };
+}
+
+function participantBucket(chatId) {
+  if (!chatParticipants.has(chatId)) chatParticipants.set(chatId, new Map());
+  return chatParticipants.get(chatId);
+}
+
+function participantPublicRecord(record = {}) {
+  return {
+    participantId: record.participantId,
+    participantType: record.participantType,
+    participantLabel: record.participantLabel,
+    deviceType: record.deviceType,
+    shareCount: Number(record.shareCount || 0),
+    isTyping: Boolean(record.isTyping),
+    lastSeenAt: record.lastSeenAt,
+    lastTypingAt: record.lastTypingAt || null
+  };
+}
+
+function upsertChatParticipant(chatId, context = {}) {
+  const participant = cleanParticipantContext(context);
+  if (!chatId || !participant.participantId) return null;
+  const bucket = participantBucket(chatId);
+  const existing = bucket.get(participant.participantId) || {};
+  const record = {
+    ...existing,
+    ...participant,
+    shareCount: Math.max(Number(existing.shareCount || 0), participant.shareCount),
+    isTyping: Boolean(existing.isTyping),
+    lastTypingAt: existing.lastTypingAt || null,
+    lastSeenAt: now()
+  };
+  bucket.set(participant.participantId, record);
+  return participantPublicRecord(record);
+}
+
+function chatParticipantList(chatId) {
+  const bucket = chatParticipants.get(chatId);
+  return bucket ? [...bucket.values()].map(participantPublicRecord) : [];
+}
+
+function setChatTyping(chatId, context = {}, isTyping = true) {
+  const record = upsertChatParticipant(chatId, context);
+  if (!record) return null;
+  const bucket = participantBucket(chatId);
+  const stored = bucket.get(record.participantId);
+  stored.isTyping = Boolean(isTyping);
+  stored.lastTypingAt = isTyping ? now() : null;
+  stored.lastSeenAt = now();
+  bucket.set(record.participantId, stored);
+  return participantPublicRecord(stored);
+}
+
+function typingParticipantsForChat(chatId, currentParticipantId = "") {
+  const cutoff = Date.now() - typingTimeoutMs;
+  const bucket = chatParticipants.get(chatId);
+  if (!bucket) return [];
+  return [...bucket.values()]
+    .filter((participant) => {
+      if (!participant.isTyping || participant.participantId === currentParticipantId) return false;
+      return participant.lastTypingAt && new Date(participant.lastTypingAt).getTime() >= cutoff;
+    })
+    .map(participantPublicRecord);
+}
+
 function cleanContext(context = {}) {
   if (!context || typeof context !== "object" || Array.isArray(context)) return {};
   return Object.fromEntries(
@@ -93,6 +172,11 @@ function cleanContext(context = {}) {
       .map(([key, value]) => {
         if (/secret|token|password|cookie|key/i.test(key)) return [key, "[REDACTED]"];
         if (key === "attachments") return [key, cleanAttachments(value)];
+        if (key === "participantId") return [key, redact(String(value)).slice(0, 120)];
+        if (key === "participantLabel") return [key, redact(String(value)).slice(0, 80)];
+        if (key === "participantType") return [key, value === "original" ? "original" : "shared"];
+        if (key === "deviceType") return [key, ["desktop", "mobile", "tablet"].includes(value) ? value : "desktop"];
+        if (key === "shareCount") return [key, Number.isFinite(Number(value)) ? Math.max(0, Math.min(9999, Number(value))) : 0];
         if (typeof value === "string") return [key, redact(value).slice(0, maxAttachmentChars)];
         if (typeof value === "number" || typeof value === "boolean" || value === null) return [key, value];
         return [key, "[unsupported]"];
@@ -250,6 +334,7 @@ function createStore() {
     },
     async saveMessage(chatId, role, content, context = {}) {
       await ready();
+      upsertChatParticipant(chatId, context);
       const clean = redact(content).slice(0, 12000);
       const result = await pool.query(
         "INSERT INTO chat_messages (id, chat_id, role, content, context) VALUES ($1, $2, $3, $4, $5) RETURNING *",
@@ -337,6 +422,7 @@ function createMemoryStore() {
       for (const [chatId, chat] of chats.entries()) {
         if (!chat.isAnonymous || !chat.expiresAt || new Date(chat.expiresAt).getTime() >= currentTime) continue;
         chats.delete(chatId);
+        chatParticipants.delete(chatId);
         for (let index = messages.length - 1; index >= 0; index -= 1) {
           if (messages[index].chatId === chatId) messages.splice(index, 1);
         }
@@ -379,6 +465,7 @@ function createMemoryStore() {
     async saveMessage(chatId, role, content, context = {}) {
       const chat = chats.get(chatId);
       if (!chat) return null;
+      upsertChatParticipant(chatId, context);
       const message = { id: id(), chatId, role, content: redact(content).slice(0, 12000), context: cleanContext(context), reviewed: false, createdAt: now() };
       messages.push(message);
       chat.updatedAt = now();
@@ -558,14 +645,45 @@ app.get("/api/chats/:chatId", async (req, res) => {
   try {
     const chat = await db.getChat(req.params.chatId);
     if (!chat) return res.status(404).json({ error: "Chat not found." });
+    chat.participants = chatParticipantList(chat.id);
+    chat.typingParticipants = typingParticipantsForChat(chat.id, req.query.participantId || "");
     res.json({ chat });
   } catch { res.status(500).json({ error: "Could not load chat history." }); }
+});
+
+app.post("/api/chats/:chatId/participants", async (req, res) => {
+  try {
+    const chat = await db.getChat(req.params.chatId);
+    if (!chat) return res.status(404).json({ error: "Chat not found." });
+    const participant = upsertChatParticipant(req.params.chatId, req.body?.context || req.body || {});
+    if (!participant) return res.status(400).json({ error: "A participant id is required." });
+    res.status(201).json({ participant, participants: chatParticipantList(req.params.chatId) });
+  } catch { res.status(500).json({ error: "Could not update chat participant." }); }
+});
+
+app.get("/api/chats/:chatId/typing", async (req, res) => {
+  try {
+    const chat = await db.getChat(req.params.chatId);
+    if (!chat) return res.status(404).json({ error: "Chat not found." });
+    res.json({ typingParticipants: typingParticipantsForChat(req.params.chatId, req.query.participantId || "") });
+  } catch { res.status(500).json({ error: "Could not load typing status." }); }
+});
+
+app.post("/api/chats/:chatId/typing", async (req, res) => {
+  try {
+    const chat = await db.getChat(req.params.chatId);
+    if (!chat) return res.status(404).json({ error: "Chat not found." });
+    const participant = setChatTyping(req.params.chatId, req.body?.context || {}, req.body?.isTyping !== false);
+    if (!participant) return res.status(400).json({ error: "A participant id is required." });
+    res.json({ participant, typingParticipants: typingParticipantsForChat(req.params.chatId, participant.participantId) });
+  } catch { res.status(500).json({ error: "Could not update typing status." }); }
 });
 
 app.post("/api/chats/:chatId/archive", async (req, res) => {
   try {
     const chat = await db.archiveChat(req.params.chatId, req.body?.archived !== false);
     if (!chat) return res.status(404).json({ error: "Chat not found." });
+    if (chat.archivedAt) chatParticipants.delete(req.params.chatId);
     res.json({ chat });
   } catch { res.status(500).json({ error: "Could not update chat archive status." }); }
 });
@@ -578,7 +696,8 @@ app.post("/api/chats/:chatId/messages", async (req, res) => {
     if (!chat) return res.status(404).json({ error: "Chat not found." });
     if (chat.archivedAt) return res.status(409).json({ error: "Archived chats cannot receive new messages." });
     const message = await db.saveMessage(req.params.chatId, role, content.trim(), context);
-    res.status(201).json({ message });
+    setChatTyping(req.params.chatId, context, false);
+    res.status(201).json({ message, participants: chatParticipantList(req.params.chatId) });
   } catch { res.status(500).json({ error: "Could not save the message." }); }
 });
 
@@ -599,6 +718,10 @@ app.get("/api/admin/summary", requireAdmin, async (req, res) => {
 app.get("/api/admin/chats", requireAdmin, async (req, res) => { res.json({ chats: await db.listChats({ includeArchived: true }) }); });
 app.get("/api/admin/chats/:chatId", requireAdmin, async (req, res) => {
   const chat = await db.getChat(req.params.chatId);
+  if (chat) {
+    chat.participants = chatParticipantList(chat.id);
+    chat.typingParticipants = typingParticipantsForChat(chat.id);
+  }
   chat ? res.json({ chat }) : res.status(404).json({ error: "Chat not found." });
 });
 app.get("/api/admin/knowledge", requireAdmin, async (req, res) => { res.json({ entries: await db.listKnowledge(req.query.status || "all") }); });
@@ -626,8 +749,8 @@ app.post("/api/chat", async (req, res) => {
       if (!existingChat) return res.status(404).json({ error: "Chat not found. Start a new chat and try again." });
       if (existingChat.archivedAt) return res.status(409).json({ error: "Archived chats cannot receive new messages. Start a new chat and try again." });
     }
-    savedUser = await db.saveMessage(chatId, "user", clean, { source: "api/chat", attachments });
-    return res.json({ chatId, reply: null, pendingReview: false, messageSaved: true, messages: [savedUser], ...knowledge, aiAvailable: false, storageMode: db.mode });
+    savedUser = await db.saveMessage(chatId, "user", clean, { source: "api/chat", attachments, ...cleanParticipantContext(req.body?.context || {}) });
+    return res.json({ chatId, reply: null, pendingReview: false, messageSaved: true, messages: [savedUser], participants: chatParticipantList(chatId), ...knowledge, aiAvailable: false, storageMode: db.mode });
   } catch (error) {
     console.error("Chat request failed:", error.message);
     res.status(savedUser ? 200 : 503).json({
@@ -636,6 +759,7 @@ app.post("/api/chat", async (req, res) => {
       pendingReview: false,
       messageSaved: Boolean(savedUser),
       messages: savedUser ? [savedUser] : [],
+      participants: chatId ? chatParticipantList(chatId) : [],
       ...knowledge,
       aiAvailable: false,
       storageMode: db.mode
