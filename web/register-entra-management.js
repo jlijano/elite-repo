@@ -1,10 +1,20 @@
 const path = require("path");
+const crypto = require("crypto");
 const express = require("express");
+const userManagement = require("./user-management");
 const { attachEntraManagementRoutes } = require("./entra-management");
-const { createUserManagementStore } = require("./user-management");
 
 const originalListen = express.application.listen;
+const originalAttachUserManagementRoutes = userManagement.attachUserManagementRoutes;
 const attachedApps = new WeakSet();
+let attachedUserStore = null;
+
+userManagement.attachUserManagementRoutes = function patchedAttachUserManagementRoutes(app, options = {}) {
+  const store = originalAttachUserManagementRoutes(app, options);
+  attachedUserStore = store;
+  if (app?.locals) app.locals.userManagementStore = store;
+  return store;
+};
 
 function suppliedToken(req, headerName) {
   return req.get(headerName) || req.get("authorization")?.replace(/^Bearer\s+/i, "");
@@ -25,7 +35,7 @@ function adminTokenOk(req, res) {
 }
 
 const schemaPath = path.join(__dirname, "db", "schema.sql");
-const userStore = createUserManagementStore({
+const fallbackUserStore = userManagement.createUserManagementStore({
   databaseUrl: process.env.DATABASE_URL,
   databaseSsl: process.env.DATABASE_SSL,
   schemaPath
@@ -34,7 +44,8 @@ const userStore = createUserManagementStore({
 async function requireAdmin(req, res, next) {
   try {
     const sessionToken = req.get("x-session-token");
-    const session = sessionToken ? await userStore.getSessionUser(sessionToken) : null;
+    const store = attachedUserStore || req.app?.locals?.userManagementStore || fallbackUserStore;
+    const session = sessionToken ? await store.getSessionUser(sessionToken) : null;
     if (["owner", "admin"].includes(session?.user?.role)) return next();
     if (adminTokenOk(req, res)) return next();
     return undefined;
@@ -50,7 +61,7 @@ express.application.listen = function patchedListen(...args) {
       databaseUrl: process.env.DATABASE_URL,
       databaseSsl: process.env.DATABASE_SSL,
       schemaPath,
-      makeId: () => require("crypto").randomUUID(),
+      makeId: () => crypto.randomUUID(),
       now: () => new Date().toISOString()
     });
     attachedApps.add(this);
