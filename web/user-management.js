@@ -5,6 +5,10 @@ const { Pool } = require("pg");
 const allowedRoles = new Set(["owner", "admin", "member", "viewer"]);
 const allowedStatuses = new Set(["invited", "active", "disabled"]);
 const sessionTtlMs = 1000 * 60 * 60 * 12;
+const minPasswordLength = 12;
+const loginWindowMs = 1000 * 60 * 15;
+const maxLoginAttempts = 5;
+const loginAttempts = new Map();
 
 function publicUser(row) {
   return {
@@ -77,10 +81,18 @@ function cleanStatus(value, fallback = "active") {
   return status;
 }
 
+function passwordPolicyError(password) {
+  if (password.length < minPasswordLength) return `Password must be at least ${minPasswordLength} characters.`;
+  if (!/[A-Za-z]/.test(password)) return "Password must include at least one letter.";
+  if (new Set(password).size < 4) return "Password must use at least four different characters.";
+  return "";
+}
+
 function hashPassword(password) {
   const value = typeof password === "string" ? password : "";
   if (!value) return null;
-  if (value.length < 8) throw appError(400, "Password must be at least 8 characters.");
+  const policyError = passwordPolicyError(value);
+  if (policyError) throw appError(400, policyError);
   const salt = crypto.randomBytes(16).toString("hex");
   const hash = crypto.scryptSync(value, salt, 64).toString("hex");
   return `scrypt:${salt}:${hash}`;
@@ -106,6 +118,43 @@ function hashSessionToken(token) {
 
 function sessionTokenFromRequest(req) {
   return cleanString(req.get("x-session-token"), 200);
+}
+
+function clientIp(req) {
+  const forwarded = cleanString(req.get("x-forwarded-for"), 120).split(",")[0].trim();
+  return forwarded || req.ip || req.socket?.remoteAddress || "unknown";
+}
+
+function loginRateLimitKey(req, email) {
+  return `${clientIp(req)}:${email}`;
+}
+
+function loginRateLimitStatus(req, email) {
+  const key = loginRateLimitKey(req, email);
+  const nowMs = Date.now();
+  const attempt = loginAttempts.get(key);
+  if (!attempt || attempt.resetAt <= nowMs) return { allowed: true, key, resetAt: nowMs + loginWindowMs };
+  if (attempt.count >= maxLoginAttempts) return { allowed: false, key, retryAfterMs: attempt.resetAt - nowMs };
+  return { allowed: true, key, resetAt: attempt.resetAt };
+}
+
+function recordLoginFailure(req, email) {
+  const status = loginRateLimitStatus(req, email);
+  const current = loginAttempts.get(status.key);
+  loginAttempts.set(status.key, {
+    count: current && current.resetAt > Date.now() ? current.count + 1 : 1,
+    resetAt: status.resetAt
+  });
+}
+
+function clearLoginFailures(req, email) {
+  loginAttempts.delete(loginRateLimitKey(req, email));
+}
+
+function auditFields(updates) {
+  return Object.keys(updates)
+    .filter((field) => field !== "currentPassword")
+    .map((field) => (field === "passwordHash" ? "password" : field));
 }
 
 function createUserPayload(body = {}) {
@@ -216,7 +265,7 @@ function createPostgresUserStore(options) {
       const result = await pool.query(`UPDATE users SET ${fields.join(", ")} WHERE id = $1 RETURNING *`, values);
       if (!result.rows[0]) return null;
       const user = publicUser(result.rows[0]);
-      await writeAudit(source === "profile" ? "profile.updated" : "user.updated", user.id, { fields: Object.keys(updates).filter((field) => field !== "currentPassword"), source }, actorUserId);
+      await writeAudit(source === "profile" ? "profile.updated" : "user.updated", user.id, { fields: auditFields(updates), source }, actorUserId);
       return user;
     } catch (error) {
       if (error.code === "23505") throw appError(409, "A user with that email already exists.");
@@ -225,6 +274,7 @@ function createPostgresUserStore(options) {
   }
 
   return {
+    writeAudit,
     async listUsers() {
       await ready();
       const result = await pool.query("SELECT * FROM users ORDER BY created_at DESC LIMIT 200");
@@ -343,11 +393,14 @@ function createMemoryUserStore(options) {
     if (updates.passwordHash) user.passwordUpdatedAt = timestamp;
     delete user.currentPassword;
     user.updatedAt = timestamp;
-    writeAudit(source === "profile" ? "profile.updated" : "user.updated", user.id, { fields: Object.keys(updates).filter((field) => field !== "currentPassword"), source }, actorUserId);
+    writeAudit(source === "profile" ? "profile.updated" : "user.updated", user.id, { fields: auditFields(updates), source }, actorUserId);
     return publicUser(user);
   }
 
   return {
+    async writeAudit(action, targetUserId, details = {}, actorUserId = null) {
+      return writeAudit(action, targetUserId, details, actorUserId);
+    },
     async listUsers() {
       return [...users.values()].sort((a, b) => b.createdAt.localeCompare(a.createdAt)).map(publicUser);
     },
@@ -467,17 +520,31 @@ function attachUserManagementRoutes(app, options = {}) {
       const email = normalizeEmail(req.body?.email);
       const password = typeof req.body?.password === "string" ? req.body.password : "";
       if (!email || !password) throw appError(400, "Email and password are required.");
+      const rateLimit = loginRateLimitStatus(req, email);
+      if (!rateLimit.allowed) {
+        res.set("Retry-After", String(Math.ceil(rateLimit.retryAfterMs / 1000)));
+        throw appError(429, "Too many login attempts. Try again later.");
+      }
       const user = await store.getPrivateUserByEmail(email);
-      if (!user || user.status !== "active" || !verifyPassword(password, user.passwordHash)) throw appError(401, "Invalid email or password.");
+      if (!user || user.status !== "active" || !verifyPassword(password, user.passwordHash)) {
+        recordLoginFailure(req, email);
+        throw appError(401, "Invalid email or password.");
+      }
+      clearLoginFailures(req, email);
       const session = await store.createSession(user.id);
       const updatedUser = await store.updateLastLogin(user.id);
-      res.json({ sessionToken: session.token, expiresAt: session.expiresAt, user: updatedUser || publicUser(user) });
+      const publicLoginUser = updatedUser || publicUser(user);
+      await store.writeAudit("user.login", user.id, { source: "session" }, user.id).catch(() => {});
+      res.json({ sessionToken: session.token, expiresAt: session.expiresAt, user: publicLoginUser });
     } catch (error) { sendError(res, error, "Could not log in."); }
   });
 
   app.post("/api/auth/logout", async (req, res) => {
     try {
-      await store.revokeSession(sessionTokenFromRequest(req));
+      const token = sessionTokenFromRequest(req);
+      const session = await store.getSessionUser(token);
+      await store.revokeSession(token);
+      if (session) await store.writeAudit("user.logout", session.user.id, { source: "session" }, session.user.id).catch(() => {});
       res.json({ ok: true });
     } catch (error) { sendError(res, error, "Could not log out."); }
   });
@@ -494,8 +561,17 @@ function attachUserManagementRoutes(app, options = {}) {
     try {
       const session = await requireSession(req, res);
       if (!session) return;
-      const user = await store.updateProfile(session.user.id, profileUpdatePayload(req.body || {}));
-      user ? res.json({ user }) : res.status(404).json({ error: "User not found." });
+      const token = sessionTokenFromRequest(req);
+      const payload = profileUpdatePayload(req.body || {});
+      const passwordChanged = Boolean(payload.passwordHash);
+      const user = await store.updateProfile(session.user.id, payload);
+      if (!user) return res.status(404).json({ error: "User not found." });
+      if (passwordChanged) {
+        await store.revokeSession(token);
+        const rotatedSession = await store.createSession(user.id);
+        return res.json({ user, sessionToken: rotatedSession.token, expiresAt: rotatedSession.expiresAt, passwordChanged: true });
+      }
+      return res.json({ user, expiresAt: session.expiresAt });
     } catch (error) { sendError(res, error, "Could not update profile."); }
   });
 
@@ -553,7 +629,7 @@ function attachUserManagementRoutes(app, options = {}) {
     const actor = await requireAdmin(req, res);
     if (!actor) return;
     try { res.json({ events: await store.listAuditEvents(req.query.targetUserId || "") }); }
-    catch (error) { sendError(res, error, "Could not load user audit events."); }
+    catch (error) { sendError(res, error, "Could not load user audit events." ); }
   });
 
   return store;
