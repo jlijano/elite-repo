@@ -2,6 +2,7 @@
 
 ## [Unreleased]
 
+- Updated the Playground left sidebar so Playground renders as an Entra-style text dropdown with Board and Tasks as nested modules.
 - Added `/playground-tasks.html` as a nested Tasks module under the Playground dropdown, listing every stored task from the Playground API with search, filters, and pagination.
 - Added a chat bubble color picker that sends each participant's chosen `bubbleColor`, disables colors already used in the shared chat, colors saved message bubbles, and rejects duplicate colors server-side.
 - Added sanitized `bubbleColor` support to chat participant metadata so future color selection can identify each participant's message bubbles safely.
