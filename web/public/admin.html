@@ -43,12 +43,8 @@
       .admin-status::before { content: ""; width: 0.55rem; height: 0.55rem; flex: 0 0 auto; border-radius: 50%; background: var(--success); box-shadow: 0 0 0 4px rgba(25, 195, 125, 0.18); }
       .admin-status.error { color: var(--error); border-color: var(--error-line); background: var(--error-bg); }
       .admin-status.error::before { background: var(--error); box-shadow: 0 0 0 4px rgba(180, 35, 24, 0.18); }
-      .dashboard-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-      .dashboard-toolbar h2 { margin: 0; color: var(--text); font-size: 1rem; }
-      .dashboard-toolbar p { margin: 3px 0 0; color: var(--muted); font-size: 0.86rem; line-height: 1.4; }
       .dashboard-grid { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 14px; align-items: start; }
       .dashboard-widget { min-width: 0; min-height: 220px; overflow: hidden; scroll-margin-top: 76px; grid-column: span 6; }
-      .dashboard-widget.compact { min-height: 180px; }
       .dashboard-widget.wide { grid-column: 1 / -1; }
       .widget-head { min-height: 52px; display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 12px; border-bottom: 1px solid var(--line); background: var(--panel-soft); }
       .widget-head h2 { margin: 0; color: var(--text); font-size: 0.95rem; line-height: 1.2; }
@@ -56,12 +52,8 @@
       .widget-actions, .section-tools { min-width: min(360px, 100%); display: flex; align-items: center; gap: 8px; }
       .section-tools input { flex: 1 1 170px; }
       .section-tools select { flex: 0 0 150px; }
-      .widget-body, .list, .detail { max-height: 460px; overflow: auto; padding: 12px; color: var(--muted); }
+      .list, .detail { max-height: 460px; overflow: auto; padding: 12px; color: var(--muted); }
       .compact-list { max-height: 280px; }
-      .metrics-grid { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 10px; padding: 12px; }
-      .metric { min-width: 0; padding: 12px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel-soft); }
-      .metric span { display: block; overflow: hidden; color: var(--muted); font-size: 0.72rem; font-weight: 800; text-overflow: ellipsis; text-transform: uppercase; white-space: nowrap; }
-      .metric strong { display: block; margin-top: 4px; color: var(--text); font-size: 1.2rem; line-height: 1.2; }
       .split-panel { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); min-height: 360px; }
       .split-panel > div + div { border-left: 1px solid var(--line); }
       .item { min-width: 0; display: grid; gap: 8px; padding: 12px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel); }
@@ -87,9 +79,9 @@
       .widget-toggle-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
       .widget-toggle { display: flex; align-items: center; gap: 8px; min-height: 34px; color: var(--text); font-weight: 700; }
       .widget-toggle input { width: auto; min-height: auto; }
-      @media (max-width: 1060px) { .metrics-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } .dashboard-widget { grid-column: 1 / -1; } }
+      @media (max-width: 1060px) { .dashboard-widget { grid-column: 1 / -1; } }
       @media (max-width: 900px) { .app-shell { grid-template-columns: 1fr; } .admin-shell .sidebar { display: none; } .admin-panel, .admin-scroll { height: 100vh; height: 100dvh; } .admin-panel { grid-template-rows: auto minmax(0, 1fr); } .admin-scroll { padding: 14px 16px 22px; } }
-      @media (max-width: 760px) { .metrics-grid, .split-panel, .settings-row, .widget-toggle-list { grid-template-columns: 1fr; } .widget-head, .dashboard-toolbar { align-items: stretch; flex-direction: column; } .widget-actions, .section-tools { width: 100%; flex-direction: column; align-items: stretch; } .section-tools select { flex-basis: auto; } .split-panel > div + div { border-left: 0; border-top: 1px solid var(--line); } .admin-header-title p { display: none; } }
+      @media (max-width: 760px) { .split-panel, .settings-row, .widget-toggle-list { grid-template-columns: 1fr; } .widget-head { align-items: stretch; flex-direction: column; } .widget-actions, .section-tools { width: 100%; flex-direction: column; align-items: stretch; } .section-tools select { flex-basis: auto; } .split-panel > div + div { border-left: 0; border-top: 1px solid var(--line); } .admin-header-title p { display: none; } }
     </style>
   </head>
   <body>
@@ -104,9 +96,8 @@
 
         <nav class="primary-nav" aria-label="Admin navigation">
           <a class="nav-item" href="/"><span aria-hidden="true">←</span>Back to chat</a>
-          <button class="nav-item active" data-target="overviewSection" type="button" aria-current="page"><span aria-hidden="true">▣</span>Overview</button>
           <button class="nav-item" data-target="chatReviewSection" type="button"><span aria-hidden="true">□</span>Chat review</button>
-          <button class="nav-item" data-target="knowledgeQueueSection" type="button"><span aria-hidden="true">◇</span>Knowledge queue</button>
+          <button class="nav-item active" data-target="knowledgeQueueSection" type="button" aria-current="page"><span aria-hidden="true">◇</span>Knowledge queue</button>
           <button class="nav-item" data-target="reviewRunsSection" type="button"><span aria-hidden="true">≡</span>Review runs</button>
           <button class="nav-item" data-target="attachmentsSection" type="button"><span aria-hidden="true">▤</span>Attachments</button>
           <button class="nav-item" data-target="adminAccessSection" type="button"><span aria-hidden="true">◉</span>Admin access</button>
@@ -150,25 +141,7 @@
         <div class="admin-scroll" id="adminScroll">
           <div class="admin-layout">
             <p class="admin-status" id="status">Loading recent chats...</p>
-            <div class="dashboard-toolbar">
-              <div>
-                <h2>Dashboard</h2>
-                <p>Configurable widgets for review operations and application health.</p>
-              </div>
-              <button id="customizeDashboardButton" type="button">Customize dashboard</button>
-            </div>
-
             <div class="dashboard-grid" id="dashboardGrid">
-              <section class="dashboard-widget wide compact" id="overviewSection" data-widget="overview">
-                <div class="widget-head">
-                  <div>
-                    <h2>Overview</h2>
-                    <p class="widget-subtitle">Chats, review queue, knowledge status, and storage mode.</p>
-                  </div>
-                </div>
-                <div class="metrics-grid" id="summary"></div>
-              </section>
-
               <section class="dashboard-widget wide chat-review-card" id="chatReviewSection" data-widget="chat-review" hidden>
                 <div class="widget-head">
                   <div>
@@ -265,24 +238,24 @@
                   </div>
                   <div class="settings-row">
                     <div>
-                      <strong>Visible dashboard widgets</strong>
-                      <p>Choose which report widgets appear in the dashboard. Overview and Settings stay available.</p>
+                      <strong>Visible widgets</strong>
+                      <p>Choose which admin sections appear. Settings stays available.</p>
                     </div>
                     <div class="widget-toggle-list" id="widgetToggleList"></div>
                   </div>
                   <div class="settings-row">
                     <div>
-                      <strong>Dashboard refresh</strong>
-                      <p>Current dashboard data refreshes automatically every 40 seconds.</p>
+                      <strong>Refresh cadence</strong>
+                      <p>Current admin data refreshes automatically every 40 seconds.</p>
                     </div>
                     <span>40 seconds</span>
                   </div>
                   <div class="settings-row">
                     <div>
                       <strong>Dashboard ordering</strong>
-                      <p>Drag-and-drop ordering is the next planned dashboard enhancement.</p>
+                      <p>Drag-and-drop ordering is parked until the admin side is cleaned section by section.</p>
                     </div>
-                    <span>Planned</span>
+                    <span>Parked</span>
                   </div>
                   <div class="settings-row">
                     <div>
@@ -302,7 +275,6 @@
     <script>
       const els = {
         status: document.getElementById("status"),
-        summary: document.getElementById("summary"),
         chats: document.getElementById("chats"),
         chatSearch: document.getElementById("chatSearch"),
         chatReviewSection: document.getElementById("chatReviewSection"),
@@ -315,14 +287,12 @@
         fileManagement: document.getElementById("fileManagement"),
         systemHealth: document.getElementById("systemHealth"),
         logoutButton: document.getElementById("logoutButton"),
-        adminScroll: document.getElementById("adminScroll"),
         themeToggle: document.getElementById("themeToggle"),
         themeToggleText: document.getElementById("themeToggleText"),
         themeToggleIcon: document.querySelector(".theme-toggle-icon"),
         settingsThemeButton: document.getElementById("settingsThemeButton"),
         settingsAdminState: document.getElementById("settingsAdminState"),
         widgetToggleList: document.getElementById("widgetToggleList"),
-        customizeDashboardButton: document.getElementById("customizeDashboardButton"),
         openChatReviewForAttachments: document.getElementById("openChatReviewForAttachments")
       };
       const themeStorageKey = "switchboard-theme";
@@ -439,18 +409,6 @@
 
       function setBusy(isBusy) { document.body.toggleAttribute("aria-busy", isBusy); }
 
-      function renderSummary(summary = {}, runtime = {}) {
-        const metrics = [
-          ["Chats", summary.chats],
-          ["Messages", summary.messages],
-          ["Pending review", summary.unreviewedMessages],
-          ["Pending KB", summary.pendingKnowledge],
-          ["Approved KB", summary.approvedKnowledge],
-          ["Storage", runtime.storageMode || "unknown"]
-        ];
-        els.summary.innerHTML = metrics.map(([label, value]) => `<div class="metric"><span>${html(label)}</span><strong>${html(value ?? 0)}</strong></div>`).join("");
-      }
-
       function renderUsers(summary = {}, runtime = {}) {
         els.users.innerHTML = `<article class="item"><div class="row"><span>Protected admin routes</span><small>${token ? "Admin session" : "Public view"}</small></div><p>${token ? "Protected admin data is loaded through backend management routes." : "Chat review and project knowledge are visible, but account records require protected backend admin access."}</p><p>Storage mode: ${html(runtime.storageMode || "unknown")}. Total chats shown: ${html(summary.chats ?? chatsCache.length)}.</p></article>`;
       }
@@ -510,7 +468,6 @@
         lastStatus = status;
         chatsCache = chats.chats || [];
         knowledgeCache = [...projectKnowledgeEntries];
-        renderSummary({ chats: chatsCache.length, messages: "-", unreviewedMessages: "-", pendingKnowledge: projectKnowledgeEntries.length, approvedKnowledge: "-" }, { storageMode: status.storageMode || "public" });
         renderUsers({ chats: chatsCache.length }, { storageMode: status.storageMode || "public" });
         renderSystemHealth(status);
         renderChats();
@@ -530,7 +487,6 @@
         lastStatus = status;
         chatsCache = chats.chats || [];
         knowledgeCache = [...projectKnowledgeEntries, ...(knowledge.entries || [])];
-        renderSummary(summary.summary, summary.status);
         renderUsers(summary.summary, summary.status);
         renderSystemHealth(status);
         renderChats();
@@ -593,10 +549,6 @@
       refreshTokenFromSession();
       els.themeToggle.addEventListener("click", toggleTheme);
       els.settingsThemeButton.addEventListener("click", toggleTheme);
-      els.customizeDashboardButton.addEventListener("click", () => {
-        setActiveNav("settingsSection");
-        document.getElementById("settingsSection")?.scrollIntoView({ behavior: "smooth", block: "start" });
-      });
       els.openChatReviewForAttachments.addEventListener("click", revealChatReviewSection);
       els.logoutButton.addEventListener("click", logout);
       document.querySelectorAll("[data-target]").forEach((button) => {
