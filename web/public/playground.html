@@ -56,10 +56,10 @@
         display: flex;
         align-items: center;
         justify-content: flex-start;
-        padding: 0 10px;
-        border: 0;
+        padding: 0 10px !important;
+        border: 1px solid transparent !important;
         border-radius: calc(var(--radius) - 2px);
-        background: transparent;
+        background: transparent !important;
         color: var(--text);
         font: inherit;
         font-weight: 850;
@@ -68,9 +68,12 @@
       }
       .playground-add-dropdown button:hover,
       .playground-add-dropdown button:focus-visible,
+      .playground-add-dropdown button:active,
       .playground-add-dropdown a:hover,
-      .playground-add-dropdown a:focus-visible {
-        background: var(--panel-soft);
+      .playground-add-dropdown a:focus-visible,
+      .playground-add-dropdown a:active {
+        border-color: var(--line) !important;
+        background: var(--panel-soft) !important;
         outline: 3px solid var(--focus-ring);
         outline-offset: 1px;
       }
