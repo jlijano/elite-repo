@@ -16,8 +16,7 @@
           storedTheme = null;
         }
 
-        const theme = storedTheme || (systemPrefersDark ? "dark" : "light");
-        document.documentElement.dataset.theme = theme;
+        document.documentElement.dataset.theme = storedTheme || (systemPrefersDark ? "dark" : "light");
       })();
     </script>
     <link rel="stylesheet" href="style.css" />
@@ -258,7 +257,7 @@
       }
 
       .section-tools {
-        min-width: min(320px, 100%);
+        min-width: min(360px, 100%);
         display: flex;
         align-items: center;
         gap: 8px;
@@ -367,6 +366,11 @@
         font-weight: 800;
       }
 
+      .tag.project {
+        color: var(--primary);
+        background: rgba(25, 195, 125, 0.1);
+      }
+
       .tag.pending_review {
         color: var(--warning);
         background: rgba(242, 166, 13, 0.14);
@@ -447,6 +451,7 @@
           <button class="nav-item" data-target="chatReviewSection" type="button"><span aria-hidden="true">□</span>Chat review</button>
           <button class="nav-item" data-target="userManagementSection" type="button"><span aria-hidden="true">◉</span>User management</button>
           <button class="nav-item" data-target="fileManagementSection" type="button"><span aria-hidden="true">▤</span>File management</button>
+          <button class="nav-item" data-target="knowledgeSection" type="button"><span aria-hidden="true">◇</span>Knowledge</button>
           <button class="nav-item" data-target="logsSection" type="button"><span aria-hidden="true">≡</span>Logs</button>
           <button class="nav-item" data-target="filesManagementSection" type="button"><span aria-hidden="true">▦</span>Files management</button>
         </nav>
@@ -467,7 +472,7 @@
             <span class="status-dot online" aria-hidden="true"></span>
             <span>Admin review area</span>
           </div>
-          <p id="filesLoaded">Recent chats load into Chat Review</p>
+          <p id="filesLoaded">Recent chats and project knowledge are available</p>
           <p id="storageStatus">Protected admin data stays backend-only</p>
         </div>
       </aside>
@@ -538,19 +543,20 @@
                 <div class="section-head">
                   <div>
                     <h2>Knowledge</h2>
-                    <p class="section-subtitle">Approve, return to pending, or archive review-created knowledge.</p>
+                    <p class="section-subtitle">Project notes plus review-created knowledge when admin data is available.</p>
                   </div>
                   <div class="section-tools">
                     <input id="knowledgeSearch" type="search" placeholder="Search knowledge" autocomplete="off" aria-label="Search knowledge" />
                     <select id="knowledgeStatus" aria-label="Knowledge status filter">
                       <option value="all">All</option>
+                      <option value="project">Project</option>
                       <option value="pending_review">Pending</option>
                       <option value="approved">Approved</option>
                       <option value="archived">Archived</option>
                     </select>
                   </div>
                 </div>
-                <div class="list" id="knowledge">Protected knowledge controls require an admin session.</div>
+                <div class="list" id="knowledge">Loading project knowledge...</div>
               </section>
 
               <section class="admin-card" id="logsSection">
@@ -605,9 +611,39 @@
       };
       const themeStorageKey = "switchboard-theme";
       const adminTokenStorageKey = "switchboard-admin-token";
+      const projectKnowledgeEntries = [
+        {
+          id: "project-admin-token-ui",
+          title: "Admin login panel cleanup",
+          status: "project",
+          createdAt: "2026-06-06T00:00:00.000Z",
+          content: "The admin dashboard should not show visible token-entry, Login, or Run Review controls. Protected backend admin routes still require ADMIN_TOKEN, but that requirement stays backend-only rather than being presented as an on-screen token form."
+        },
+        {
+          id: "project-chat-review-loading",
+          title: "Chat Review section behavior",
+          status: "project",
+          createdAt: "2026-06-06T00:00:00.000Z",
+          content: "The Chat Review section should post recent chats into the highlighted review list by loading /api/chats?includeArchived=true. Selecting Inspect loads the chat details and message attachments into the adjacent detail and file-management sections."
+        },
+        {
+          id: "project-knowledge-base-section",
+          title: "Knowledge section purpose",
+          status: "project",
+          createdAt: "2026-06-06T00:00:00.000Z",
+          content: "The Knowledge section should show project-level working notes from the current build conversation plus review-created backend knowledge when an admin session is available. Static project notes are informational cards, not database records requiring approval actions."
+        },
+        {
+          id: "project-deployment-rule",
+          title: "GitHub and Render deployment rule",
+          status: "project",
+          createdAt: "2026-06-06T00:00:00.000Z",
+          content: "Repository changes should be committed through GitHub and deployed by Render auto-deploy from main. Do not request, store, or expose Render credentials, deploy hooks, API keys, passwords, session cookies, or other secrets. If Render fails, diagnose from build logs and fix repository code."
+        }
+      ];
       let token = sessionStorage.getItem(adminTokenStorageKey) || "";
       let chatsCache = [];
-      let knowledgeCache = [];
+      let knowledgeCache = [...projectKnowledgeEntries];
       let selectedChatId = "";
 
       const html = (value) => String(value ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
@@ -659,7 +695,7 @@
         els.summary.innerHTML = metrics.map(([label, value]) => `<div class="metric"><span>${html(label)}</span><strong>${html(value ?? 0)}</strong></div>`).join("");
       }
       function renderUsers(summary = {}, runtime = {}) {
-        els.users.innerHTML = `<article class="item"><div class="row"><span>Admin account records</span><small>${token ? "Admin session" : "Protected"}</small></div><p>${token ? "Admin dashboard data is loaded through protected backend routes." : "Chat Review is visible, but user account records require protected backend admin access."}</p><p>Storage mode: ${html(runtime.storageMode || "unknown")}. Total chats shown: ${html(summary.chats ?? chatsCache.length)}.</p></article>`;
+        els.users.innerHTML = `<article class="item"><div class="row"><span>Admin account records</span><small>${token ? "Admin session" : "Protected"}</small></div><p>${token ? "Admin dashboard data is loaded through protected backend routes." : "Chat Review and project knowledge are visible, but user account records require protected backend admin access."}</p><p>Storage mode: ${html(runtime.storageMode || "unknown")}. Total chats shown: ${html(summary.chats ?? chatsCache.length)}.</p></article>`;
       }
       function renderFileManagementFromMessages(messages = []) {
         const attachments = [];
@@ -678,13 +714,16 @@
         els.chats.querySelectorAll("[data-chat]").forEach((button) => button.addEventListener("click", () => loadChat(button.dataset.chat)));
       }
       function renderKnowledge() {
-        if (!token) {
-          els.knowledge.innerHTML = `<div class="empty">Protected knowledge controls require an admin session.</div>`;
-          return;
-        }
         const query = els.knowledgeSearch.value;
-        const entries = knowledgeCache.filter((entry) => textMatch(entry.title, query) || textMatch(entry.content, query) || textMatch(entry.status, query));
-        els.knowledge.innerHTML = entries.length ? entries.map((entry) => `<article class="item"><div class="row"><span>${html(entry.title)}</span><small class="tag ${html(entry.status)}">${html(entry.status)}</small></div><p>${html(entry.content.slice(0, 700))}</p><p>Created ${html(time(entry.createdAt))}</p><div class="actions"><button data-id="${html(entry.id)}" data-status="approved">Approve</button><button data-id="${html(entry.id)}" data-status="pending_review">Pending</button><button data-id="${html(entry.id)}" data-status="archived">Archive</button></div></article>`).join("") : `<div class="empty">No knowledge entries match this filter.</div>`;
+        const status = els.knowledgeStatus.value;
+        const entries = knowledgeCache.filter((entry) => {
+          const matchesStatus = status === "all" || entry.status === status;
+          return matchesStatus && (textMatch(entry.title, query) || textMatch(entry.content, query) || textMatch(entry.status, query));
+        });
+        els.knowledge.innerHTML = entries.length ? entries.map((entry) => {
+          const actions = entry.status === "project" ? "" : `<div class="actions"><button data-id="${html(entry.id)}" data-status="approved">Approve</button><button data-id="${html(entry.id)}" data-status="pending_review">Pending</button><button data-id="${html(entry.id)}" data-status="archived">Archive</button></div>`;
+          return `<article class="item"><div class="row"><span>${html(entry.title)}</span><small class="tag ${html(entry.status)}">${html(entry.status)}</small></div><p>${html(entry.content.slice(0, 900))}</p><p>Created ${html(time(entry.createdAt))}</p>${actions}</article>`;
+        }).join("") : `<div class="empty">No knowledge entries match this filter.</div>`;
         els.knowledge.querySelectorAll("[data-id]").forEach((button) => button.addEventListener("click", () => updateKnowledge(button.dataset.id, button.dataset.status)));
       }
       function renderRuns(runs = []) {
@@ -697,23 +736,23 @@
       async function loadPublicChatReview() {
         const chats = await fetchJson("/api/chats?includeArchived=true");
         chatsCache = chats.chats || [];
-        knowledgeCache = [];
-        renderSummary({ chats: chatsCache.length, messages: "-", unreviewedMessages: "-", pendingKnowledge: "-", approvedKnowledge: "-" }, { storageMode: "public" });
+        knowledgeCache = [...projectKnowledgeEntries];
+        renderSummary({ chats: chatsCache.length, messages: "-", unreviewedMessages: "-", pendingKnowledge: projectKnowledgeEntries.length, approvedKnowledge: "-" }, { storageMode: "public" });
         renderUsers({ chats: chatsCache.length }, { storageMode: "public" });
         renderChats();
         renderKnowledge();
         renderRuns();
-        setStatus(`Recent chats loaded. ${chatsCache.length} chats available in Chat Review.`);
+        setStatus(`Recent chats and project knowledge loaded. ${chatsCache.length} chats available in Chat Review.`);
       }
       async function loadProtectedDashboard() {
         const [summary, chats, knowledge, runs] = await Promise.all([
           fetchJson("/api/admin/summary", {}, true),
           fetchJson("/api/admin/chats", {}, true),
-          fetchJson(`/api/admin/knowledge?status=${encodeURIComponent(els.knowledgeStatus.value)}`, {}, true),
+          fetchJson(`/api/admin/knowledge?status=${encodeURIComponent(els.knowledgeStatus.value === "project" ? "all" : els.knowledgeStatus.value)}`, {}, true),
           fetchJson("/api/admin/review-runs", {}, true)
         ]);
         chatsCache = chats.chats || [];
-        knowledgeCache = knowledge.entries || [];
+        knowledgeCache = [...projectKnowledgeEntries, ...(knowledge.entries || [])];
         renderSummary(summary.summary, summary.status);
         renderUsers(summary.summary, summary.status);
         renderChats();
@@ -723,12 +762,14 @@
       }
       async function loadDashboard() {
         refreshTokenFromSession();
-        setStatus(token ? "Loading admin data..." : "Loading recent chats...");
+        setStatus(token ? "Loading admin data..." : "Loading recent chats and project knowledge...");
         setBusy(true);
         try {
           if (token) await loadProtectedDashboard();
           else await loadPublicChatReview();
         } catch (error) {
+          knowledgeCache = [...projectKnowledgeEntries];
+          renderKnowledge();
           setStatus(error.message, true);
           els.chats.innerHTML = `<div class="empty">${html(error.message)}</div>`;
         } finally {
@@ -761,6 +802,7 @@
         }
       }
       updateThemeToggle(getCurrentTheme());
+      renderKnowledge();
       els.themeToggle.addEventListener("click", () => applyTheme(getCurrentTheme() === "dark" ? "light" : "dark"));
       els.logoutButton.addEventListener("click", logout);
       document.querySelectorAll("[data-target]").forEach((button) => {
@@ -768,7 +810,7 @@
       });
       els.chatSearch.addEventListener("input", renderChats);
       els.knowledgeSearch.addEventListener("input", renderKnowledge);
-      els.knowledgeStatus.addEventListener("change", loadDashboard);
+      els.knowledgeStatus.addEventListener("change", renderKnowledge);
       loadDashboard().catch(() => {});
       setInterval(() => loadDashboard().catch(() => {}), 40000);
     </script>
