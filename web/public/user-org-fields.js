@@ -97,6 +97,30 @@
     try { editingUserId = value || ""; } catch (error) {}
   }
 
+  function prepareNewUserForm() {
+    setEditingId("");
+    setOrgFields();
+    const status = document.getElementById("userStatus");
+    if (status) status.value = "invited";
+    const password = document.getElementById("userPassword");
+    if (password) {
+      password.value = "";
+      password.placeholder = "Set by user after email verification";
+    }
+  }
+
+  function inviteMessage(invite) {
+    const details = invite?.invite || {};
+    const link = details.verificationLink || "";
+    if (!link) return "User created, but the verification link could not be created.";
+    if (details.emailSent) return `User created. Verification email sent. Login setup link: ${link}`;
+    return `User created. Copy and send this verification link: ${link}`;
+  }
+
+  async function createInvite(userId) {
+    return fetchJson(`/api/admin/users/${encodeURIComponent(userId)}/invite`, { method: "POST", body: "{}" }, true);
+  }
+
   function renderOrgUserTable() {
     const usersContainer = document.getElementById("users");
     if (!usersContainer || !currentUsers().length) return;
@@ -132,26 +156,36 @@
     event.stopImmediatePropagation();
     if (typeof hasAdminAccess === "function" && !hasAdminAccess()) return setStatus?.("User management requires an admin session.", true);
     const editingId = currentEditingId();
+    const isCreate = !editingId;
     const payload = {
       name: document.getElementById("userName")?.value || "",
       email: document.getElementById("userEmail")?.value || "",
       photoUrl: document.getElementById("userPhotoUrl")?.value || "",
       ...orgPayload(),
       role: document.getElementById("userRole")?.value || "viewer",
-      status: document.getElementById("userStatus")?.value || "active"
+      status: isCreate ? "invited" : document.getElementById("userStatus")?.value || "active"
     };
     const password = document.getElementById("userPassword")?.value || "";
-    if (password) payload.password = password;
+    if (password && !isCreate) payload.password = password;
     const url = editingId ? `/api/admin/users/${encodeURIComponent(editingId)}` : "/api/admin/users";
     const method = editingId ? "PATCH" : "POST";
-    setStatus?.(editingId ? "Saving user changes..." : "Creating user...");
+    setStatus?.(editingId ? "Saving user changes..." : "Creating invited user...");
     try {
-      await fetchJson(url, { method, body: JSON.stringify(payload) }, true);
+      const result = await fetchJson(url, { method, body: JSON.stringify(payload) }, true);
+      let createdInvite = null;
+      if (isCreate && result.user?.id) {
+        setStatus?.("Creating verification link...");
+        createdInvite = await createInvite(result.user.id).catch((error) => ({ error: error.message }));
+      }
       setOrgFields();
       if (typeof resetUserForm === "function") resetUserForm();
       await loadUserPage();
       renderOrgUserTable();
-      setStatus?.(method === "POST" ? "User created." : "User updated.");
+      if (isCreate) {
+        setStatus?.(createdInvite?.error ? `User created, but verification link failed: ${createdInvite.error}` : inviteMessage(createdInvite), Boolean(createdInvite?.error));
+      } else {
+        setStatus?.("User updated.");
+      }
       document.getElementById("userDialog")?.close?.();
     } catch (error) {
       setStatus?.(error.message, true);
@@ -176,7 +210,7 @@
       if (reactivate && typeof updateUserStatus === "function") updateUserStatus(reactivate.dataset.userReactivate, "reactivate").then(() => window.setTimeout(renderOrgUserTable, 0));
     });
 
-    document.getElementById("manageUsersButton")?.addEventListener("click", () => window.setTimeout(() => setOrgFields(), 0));
+    document.getElementById("manageUsersButton")?.addEventListener("click", () => window.setTimeout(prepareNewUserForm, 0));
     document.getElementById("cancelUserEditButton")?.addEventListener("click", () => window.setTimeout(() => { setOrgFields(); renderOrgUserTable(); }, 0));
     document.getElementById("userSearch")?.addEventListener("input", (event) => {
       event.stopImmediatePropagation();
