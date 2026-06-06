@@ -2,6 +2,7 @@
 
 ## [Unreleased]
 
+- Added a Light / Dark / System theme preference control to admin Settings, including reload-safe persistence, System-mode handling, styling, README notes, and frontend contract coverage.
 - Added the Phase 3 `/user.html` management UI for searching, creating, editing, disabling, and reactivating users, plus recent user audit-event visibility and frontend contract tests.
 - Cleaned up the Settings page structure into Preferences, Access and security, Review runs, System health, and Diagnostics sections with standardized status badges and a less cramped health layout.
 - Removed the redundant Logout action from the admin left sidebar so logout is only exposed through the top-header profile dropdown.
