@@ -3,14 +3,14 @@ const { Pool } = require("pg");
 const taskStatuses = new Set(["backlog", "todo", "in_progress", "review", "done"]);
 const priorities = new Set(["low", "medium", "high"]);
 const projectStatuses = new Set(["planning", "active", "in_progress", "review", "completed", "archived"]);
-const customFieldTypes = new Set(["person", "date", "status", "dropdown", "text", "file"]);
+const customFieldTypes = new Set(["person", "date", "status", "dropdown", "text", "file", "number", "long_text", "checkbox", "link", "tags"]);
 
 const seedTasks = [
   { id: "00000000-0000-4000-9000-000000000101", projectId: "00000000-0000-4000-9000-000000000204", title: "Update project notes", description: "Collect ideas and organize next sprint planning notes.", status: "backlog", category: "Planning", priority: "low", dueLabel: "No due date", dueDate: null, assigneeIds: [], customFields: [] },
-  { id: "00000000-0000-4000-9000-000000000102", projectId: "00000000-0000-4000-9000-000000000201", title: "Create task filtering UI", description: "Add filters for priority, project, and completion status.", status: "todo", category: "Tasks", priority: "medium", dueLabel: "Jun 14", dueDate: "2026-06-14", assigneeIds: [], customFields: [{ name: "Module", value: "Tasks" }] },
-  { id: "00000000-0000-4000-9000-000000000103", projectId: "00000000-0000-4000-9000-000000000202", title: "Build project detail view", description: "Create a focused view for project milestones, tasks, and activity.", status: "todo", category: "Projects", priority: "high", dueLabel: "Jun 18", dueDate: "2026-06-18", assigneeIds: [], customFields: [{ name: "View", value: "Detail" }] },
+  { id: "00000000-0000-4000-9000-000000000102", projectId: "00000000-0000-4000-9000-000000000201", title: "Create task filtering UI", description: "Add filters for priority, project, and completion status.", status: "todo", category: "Tasks", priority: "medium", dueLabel: "Jun 14", dueDate: "2026-06-14", assigneeIds: [], customFields: [{ id: "field-1", type: "text", name: "Module", value: "Tasks" }] },
+  { id: "00000000-0000-4000-9000-000000000103", projectId: "00000000-0000-4000-9000-000000000202", title: "Build project detail view", description: "Create a focused view for project milestones, tasks, and activity.", status: "todo", category: "Projects", priority: "high", dueLabel: "Jun 18", dueDate: "2026-06-18", assigneeIds: [], customFields: [{ id: "field-1", type: "text", name: "View", value: "Detail" }] },
   { id: "00000000-0000-4000-9000-000000000104", projectId: "00000000-0000-4000-9000-000000000201", title: "Design dashboard layout", description: "Refine the workspace layout and responsive card structure.", status: "in_progress", category: "UI", priority: "high", dueLabel: "Jun 10", dueDate: "2026-06-10", assigneeIds: [], customFields: [] },
-  { id: "00000000-0000-4000-9000-000000000105", projectId: "00000000-0000-4000-9000-000000000203", title: "Review kanban interactions", description: "Check drag states, empty states, keyboard navigation, and mobile layout.", status: "review", category: "QA", priority: "medium", dueLabel: "Jun 16", dueDate: "2026-06-16", assigneeIds: [], customFields: [{ name: "Check", value: "Keyboard" }] },
+  { id: "00000000-0000-4000-9000-000000000105", projectId: "00000000-0000-4000-9000-000000000203", title: "Review kanban interactions", description: "Check drag states, empty states, keyboard navigation, and mobile layout.", status: "review", category: "QA", priority: "medium", dueLabel: "Jun 16", dueDate: "2026-06-16", assigneeIds: [], customFields: [{ id: "field-1", type: "text", name: "Check", value: "Keyboard" }] },
   { id: "00000000-0000-4000-9000-000000000106", projectId: "00000000-0000-4000-9000-000000000203", title: "Prepare release checklist", description: "Document final tasks needed before the workspace release.", status: "done", category: "Release", priority: "low", dueLabel: "Completed", dueDate: null, assigneeIds: [], customFields: [] }
 ];
 
@@ -34,6 +34,7 @@ function appError(status, message) {
 }
 
 function cleanString(value, maxLength = 160) {
+  if (typeof value === "number" || typeof value === "boolean") return String(value).trim().slice(0, maxLength);
   return typeof value === "string" ? value.trim().slice(0, maxLength) : "";
 }
 
@@ -60,6 +61,33 @@ function cleanInt(value, fallback = 0, min = 0, max = 100) {
   return Math.min(max, Math.max(min, Math.round(number)));
 }
 
+function cleanNumber(value) {
+  if (value === "" || value === null || value === undefined) return "";
+  const number = Number(value);
+  return Number.isFinite(number) ? number : "";
+}
+
+function cleanBoolean(value) {
+  if (value === true || value === "true" || value === "1" || value === 1 || value === "on") return true;
+  return false;
+}
+
+function cleanUrl(value) {
+  const url = cleanString(value, 500);
+  if (!url) return "";
+  try {
+    const parsed = new URL(url);
+    return ["http:", "https:", "mailto:"].includes(parsed.protocol) ? parsed.toString().slice(0, 500) : "";
+  } catch {
+    return "";
+  }
+}
+
+function cleanList(value, maxItems = 20, maxLength = 80) {
+  const list = Array.isArray(value) ? value : String(value || "").split(/\n|,/);
+  return [...new Set(list.map((item) => cleanString(item, maxLength)).filter(Boolean))].slice(0, maxItems);
+}
+
 function cleanAssigneeIds(value) {
   if (!Array.isArray(value)) return [];
   return [...new Set(value.map((item) => cleanString(item, 80)).filter(Boolean))].slice(0, 20);
@@ -67,29 +95,69 @@ function cleanAssigneeIds(value) {
 
 function cleanCustomFieldType(value) {
   const type = cleanString(value, 40).toLowerCase();
-  return customFieldTypes.has(type) ? type : "";
+  return customFieldTypes.has(type) ? type : "text";
+}
+
+function cleanFieldId(value, fallback, usedIds) {
+  const base = cleanString(value, 80) || fallback;
+  let id = base;
+  let counter = 2;
+  while (usedIds.has(id)) {
+    id = `${base}-${counter}`;
+    counter += 1;
+  }
+  usedIds.add(id);
+  return id;
+}
+
+function hasCustomFieldValue(field) {
+  if (field.name || field.fileName) return true;
+  if (Array.isArray(field.value)) return field.value.length > 0;
+  if (typeof field.value === "boolean") return field.value;
+  return field.value !== "" && field.value !== null && field.value !== undefined;
+}
+
+function cleanCustomField(field = {}, index = 0, usedIds = new Set()) {
+  const type = cleanCustomFieldType(field.type);
+  const cleaned = {
+    id: cleanFieldId(field.id, `field-${index + 1}`, usedIds),
+    type,
+    name: cleanString(field.name, 60),
+    value: cleanString(field.value, 240)
+  };
+
+  if (type === "number") cleaned.value = cleanNumber(field.value);
+  if (type === "long_text") cleaned.value = cleanString(field.value, 2000);
+  if (type === "checkbox") cleaned.value = cleanBoolean(field.value);
+  if (type === "link") cleaned.value = cleanUrl(field.value);
+  if (type === "tags") cleaned.value = cleanList(field.value, 20, 60);
+
+  if (type === "status" || type === "dropdown") {
+    cleaned.options = cleanList(field.options, 30, 80);
+    cleaned.value = cleanString(field.value, 120);
+  }
+
+  if (type === "person") cleaned.value = cleanString(field.value, 80);
+  if (type === "date") cleaned.value = cleanString(field.value, 20);
+
+  if (type === "file") {
+    cleaned.value = cleanString(field.value, 500);
+    cleaned.fileName = cleanString(field.fileName, 160);
+    cleaned.fileType = cleanString(field.fileType, 120);
+    cleaned.fileSize = cleanInt(field.fileSize, 0, 0, 1024 * 1024);
+    cleaned.fileData = cleanString(field.fileData, 120000);
+    if (!cleaned.value && cleaned.fileName) cleaned.value = cleaned.fileName;
+  }
+
+  return cleaned;
 }
 
 function cleanCustomFields(value) {
   if (!Array.isArray(value)) return [];
+  const usedIds = new Set();
   return value
-    .map((field) => {
-      const type = cleanCustomFieldType(field?.type);
-      const cleaned = {
-        name: cleanString(field?.name, 60),
-        value: cleanString(field?.value, type === "file" ? 500 : 240)
-      };
-      if (type) cleaned.type = type;
-      if (type === "file") {
-        cleaned.fileName = cleanString(field?.fileName, 160);
-        cleaned.fileType = cleanString(field?.fileType, 120);
-        cleaned.fileSize = cleanInt(field?.fileSize, 0, 0, 1024 * 1024);
-        cleaned.fileData = cleanString(field?.fileData, 120000);
-        if (!cleaned.value && cleaned.fileName) cleaned.value = cleaned.fileName;
-      }
-      return cleaned;
-    })
-    .filter((field) => field.name || field.value || field.fileName)
+    .map((field, index) => cleanCustomField(field, index, usedIds))
+    .filter(hasCustomFieldValue)
     .slice(0, 12);
 }
 
@@ -235,8 +303,17 @@ function normalizeFilters(filters = {}) {
   };
 }
 
+function customFieldValueText(value) {
+  if (Array.isArray(value)) return value.join(" ");
+  if (typeof value === "boolean") return value ? "true checked yes" : "false unchecked no";
+  if (value === null || value === undefined) return "";
+  return String(value);
+}
+
 function customFieldText(task) {
-  return (task.customFields || []).map((field) => `${field.type || ""} ${field.name || "Field"} ${field.value || ""} ${field.fileName || ""}`).join(" ");
+  return (task.customFields || [])
+    .map((field) => `${field.type || ""} ${field.name || "Field"} ${customFieldValueText(field.value)} ${field.fileName || ""} ${customFieldValueText(field.options)}`)
+    .join(" ");
 }
 
 function filteredTasks(tasks, filters = {}) {
@@ -422,6 +499,7 @@ function createPostgresStore(options) {
     async getTask(taskId) { return loadTask(taskId); },
     async createTask(payload, actor = "Admin") {
       await ready();
+      payload = taskPayload(payload);
       const result = await pool.query(
         "INSERT INTO playground_tasks (id, title, description, status, category, priority, due_label, due_date, project_id, assignee_ids, custom_fields, completed_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11::jsonb, CASE WHEN $4 = 'done' THEN NOW() ELSE NULL END) RETURNING *",
         [options.makeId(), payload.title, payload.description || null, payload.status, payload.category || null, payload.priority, payload.dueLabel || null, payload.dueDate || null, payload.projectId, payload.assigneeIds, JSON.stringify(payload.customFields || [])]
@@ -432,6 +510,7 @@ function createPostgresStore(options) {
     },
     async updateTask(taskId, payload, actor = "Admin") {
       await ready();
+      payload = taskPayload(payload);
       const before = await loadTask(taskId);
       if (!before) return null;
       const result = await pool.query(
@@ -498,12 +577,14 @@ function createMemoryStore(options) {
       };
     },
     async createTask(payload, actor = "Admin") {
+      payload = taskPayload(payload);
       const task = { id: options.makeId(), ...payload, completedAt: payload.status === "done" ? currentTime() : null, createdAt: currentTime(), updatedAt: currentTime() };
       tasks.push(task);
       addActivity(task.id, "task.created", actor, { title: task.title });
       return taskWithProject(task);
     },
     async updateTask(taskId, payload, actor = "Admin") {
+      payload = taskPayload(payload);
       const task = tasks.find((item) => item.id === taskId);
       if (!task) return null;
       const before = taskWithProject(task);
@@ -592,7 +673,7 @@ function attachPlaygroundRoutes(app, options = {}) {
     try {
       const update = await store.createTaskUpdate(req.params.taskId, updatePayload(req.body || {}), await actorLabel(req));
       update ? res.status(201).json({ update }) : res.status(404).json({ error: "Task not found." });
-    } catch (error) { sendError(res, error, "Could not create Playground task update."); }
+    } catch (error) { sendError(res, error, "Could not create Playground task update." ); }
   });
 
   app.post("/api/admin/playground/projects", requireAdmin, async (req, res) => {
