@@ -57,6 +57,15 @@ const textMatch = (value, query = "") => String(value || "").toLowerCase().inclu
 const publicHeaders = () => ({ "Content-Type": "application/json" });
 const adminHeaders = () => token ? { "Content-Type": "application/json", "x-admin-token": token } : publicHeaders();
 const getCurrentTheme = () => document.documentElement.dataset.theme === "dark" ? "dark" : "light";
+const statusClass = (state = "") => {
+  const normalized = String(state).toLowerCase();
+  if (normalized.includes("error") || normalized.includes("unavailable") || normalized.includes("failed")) return "status-error";
+  if (normalized.includes("public")) return "status-public";
+  if (normalized.includes("storage-only")) return "status-storage";
+  if (normalized.includes("loaded") || normalized.includes("running")) return "status-loaded";
+  return "status-ready";
+};
+const statusBadge = (state) => `<small class="status-badge ${statusClass(state)}">${html(state)}</small>`;
 
 function setStatus(message, error = false) {
   if (!els.status) return;
@@ -104,7 +113,11 @@ function toggleTheme() {
 
 function refreshTokenFromSession() {
   token = sessionStorage.getItem(adminTokenStorageKey) || "";
-  if (els.settingsAdminState) els.settingsAdminState.textContent = token ? "Admin session" : "Public view";
+  if (els.settingsAdminState) {
+    const state = token ? "Ready" : "Public view";
+    els.settingsAdminState.textContent = state;
+    els.settingsAdminState.className = `status-badge ${statusClass(state)}`;
+  }
   return token;
 }
 
@@ -227,10 +240,13 @@ function renderKnowledge() {
 function renderRuns(runs = []) {
   if (!els.runs) return;
   if (!token) {
-    els.runs.innerHTML = `<div class="empty">Protected review logs require an admin session.</div>`;
+    els.runs.innerHTML = `<div class="empty action-empty"><strong>Review logs are protected.</strong><p>Start or restore a valid admin session to inspect run history, counts, and errors. Public view keeps review records hidden.</p></div>`;
     return;
   }
-  els.runs.innerHTML = runs.length ? runs.map((run) => `<article class="item"><div class="row"><span>${html(run.status)}</span><small>${html(time(run.startedAt))}</small></div><p>${html(run.messagesReviewed)} messages reviewed, ${html(run.knowledgeEntriesCreated)} KB entries created.</p>${run.error ? `<p>${html(run.error)}</p>` : ""}</article>`).join("") : `<div class="empty">No review runs yet.</div>`;
+  els.runs.innerHTML = runs.length ? runs.map((run) => {
+    const state = run.status === "failed" ? "Error" : run.status === "running" ? "Loaded" : "Ready";
+    return `<article class="item"><div class="row"><span>${html(run.status)}</span>${statusBadge(state)}</div><p>${html(run.messagesReviewed)} messages reviewed, ${html(run.knowledgeEntriesCreated)} KB entries created.</p><p>Started ${html(time(run.startedAt))}${run.finishedAt ? `; finished ${html(time(run.finishedAt))}` : ""}.</p>${run.error ? `<p>${html(run.error)}</p>` : ""}</article>`;
+  }).join("") : `<div class="empty action-empty"><strong>No review runs yet.</strong><p>Review history will appear here after the backend records a completed run.</p></div>`;
 }
 
 function renderUsers(summary = {}, runtime = {}) {
@@ -241,12 +257,12 @@ function renderUsers(summary = {}, runtime = {}) {
 function renderSystemHealth(status = lastStatus || {}) {
   if (!els.systemHealth) return;
   const rows = [
-    ["Storage", status.storageAvailable === false ? "Unavailable" : "Ready", status.storageMode || "unknown"],
-    ["AI availability", status.aiAvailable ? "Online" : "Storage-only", status.aiAvailable ? "Responses enabled" : "Messages are saved for review"],
-    ["Directory loaded", status.directoryAvailable ? "Loaded" : "Unavailable", Array.isArray(status.filesLoaded) ? `${status.filesLoaded.length} files loaded` : "No file count"],
-    ["Protected route status", token ? "Admin session" : "Protected", token ? "Admin token present in session" : "Public dashboard view"]
+    ["Storage", status.storageAvailable === false ? "Error" : "Ready", status.storageMode || "unknown"],
+    ["AI availability", status.aiAvailable ? "Ready" : "Storage-only", status.aiAvailable ? "Responses enabled" : "Messages are saved for review"],
+    ["Directory loaded", status.directoryAvailable ? "Loaded" : "Error", Array.isArray(status.filesLoaded) ? `${status.filesLoaded.length} files loaded` : "No file count"],
+    ["Protected route status", token ? "Ready" : "Public view", token ? "Admin token present in this browser session" : "Protected management routes remain hidden in public view"]
   ];
-  els.systemHealth.innerHTML = rows.map(([label, state, detail]) => `<article class="item"><div class="row"><span>${html(label)}</span><small>${html(state)}</small></div><p>${html(detail)}</p></article>`).join("");
+  els.systemHealth.innerHTML = rows.map(([label, state, detail]) => `<article class="item health-item"><div class="row"><span>${html(label)}</span>${statusBadge(state)}</div><p>${html(detail)}</p></article>`).join("");
 }
 
 async function loadChat(chatId) {
