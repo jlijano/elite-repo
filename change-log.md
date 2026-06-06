@@ -2,6 +2,7 @@
 
 ## [Unreleased]
 
+- Added Phase 5 admin auth hardening so legacy `/api/admin/*` routes accept active owner/admin user sessions as well as `ADMIN_TOKEN`, with tests for summary, chats, knowledge, review runs, logout revocation, and non-admin session rejection.
 - Added Phase 4 auth/profile hardening with real login sessions, backend-backed profile reads and updates, current-password verification for password changes, session logout, user-session storage, browser login/profile scripts, and auth/profile integration tests.
 - Added a Light / Dark / System theme preference control to admin Settings, including reload-safe persistence, System-mode handling, styling, README notes, and frontend contract coverage.
 - Added the Phase 3 `/user.html` management UI for searching, creating, editing, disabling, and reactivating users, plus recent user audit-event visibility and frontend contract tests.
