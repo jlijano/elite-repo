@@ -2,6 +2,7 @@
 
 ## [Unreleased]
 
+- Changed the admin dashboard so the Chat Review and Chat Detail cards stay hidden until the Chat review navigation item is selected.
 - Fixed the admin dashboard layout so the left sidebar stays fixed on desktop and the right dashboard panel scrolls independently to reveal lower sections.
 - Refined the admin navigation so section links sit in a compact top nav bar and Logout renders as a normal-sized sidebar option.
 - Added source-controlled project knowledge cards to the admin Knowledge section covering the admin-token UI cleanup, Chat Review loading behavior, Knowledge section purpose, and GitHub/Render deployment rule.
