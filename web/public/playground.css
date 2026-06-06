@@ -1,3 +1,5 @@
+@import url("playground-contrast-fix.css");
+
 .playground-header .header-actions { flex-wrap: wrap; }
 .playground-layout { gap: 16px; }
 .playground-metrics { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; }
