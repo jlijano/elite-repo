@@ -4,6 +4,7 @@ const express = require("express");
 const userManagement = require("./user-management");
 const { attachEntraManagementRoutes } = require("./entra-management");
 const { attachAccountVerificationRoutes } = require("./account-verification");
+const { attachPlaygroundRoutes } = require("./playground-management");
 
 const originalListen = express.application.listen;
 const originalAttachUserManagementRoutes = userManagement.attachUserManagementRoutes;
@@ -79,6 +80,15 @@ express.application.listen = function patchedListen(...args) {
         databaseUrl: process.env.DATABASE_URL,
         databaseSsl: process.env.DATABASE_SSL,
         schemaPath,
+        makeId: () => crypto.randomUUID(),
+        now: () => new Date().toISOString()
+      });
+    }
+    if (!this.locals.playgroundAttached) {
+      attachPlaygroundRoutes(this, {
+        requireAdmin,
+        databaseUrl: process.env.DATABASE_URL,
+        databaseSsl: process.env.DATABASE_SSL,
         makeId: () => crypto.randomUUID(),
         now: () => new Date().toISOString()
       });
