@@ -52,6 +52,7 @@ const reportLinks = [
   ["/review-runs.html", "Review runs"],
   ["/system-health.html", "System health"],
   ["/user-audit.html", "User audit"],
+  ["/settings.html", "Settings"],
 ];
 
 test("admin.html redirects to the dedicated chat admin page", () => {
@@ -59,14 +60,13 @@ test("admin.html redirects to the dedicated chat admin page", () => {
   assert.match(adminRedirectHtml, /window\.location\.replace\("\/chat\.html"\)/);
 });
 
-test("top-level admin navigation uses dedicated page links", () => {
+test("primary admin navigation uses dedicated page links", () => {
   const expectedLinks = [
     ["href=\"/\"", "Back to chat"],
     ["href=\"/chat.html\"", "Chat"],
     ["href=\"/knowledge.html\"", "Knowledge base"],
     ["href=\"/user.html\"", "User"],
     ["href=\"/playground.html\"", "Playground"],
-    ["href=\"/settings.html\"", "Settings"],
   ];
 
   for (const pageHtml of allAdminPages) {
@@ -81,14 +81,19 @@ test("top-level admin navigation uses dedicated page links", () => {
   }
 });
 
-test("reports navigation is grouped and contains all report types", () => {
+test("reports navigation is a dropdown and contains reports plus settings", () => {
   for (const pageHtml of allAdminPages) {
-    assert.match(pageHtml, /class="admin-section-list reports-nav"[\s\S]*aria-label="Reports navigation"/);
-    assert.match(pageHtml, /(<h2 class="session-heading">Reports<\/h2>|class="reports-summary-label">Reports<\/span>)/);
+    assert.match(pageHtml, /<details class="admin-section-list reports-nav" open>/);
+    assert.match(pageHtml, /<summary class="reports-summary">[\s\S]*class="reports-summary-label">Reports<\/span>/);
+    assert.match(pageHtml, /<div class="reports-nav-items" aria-label="Reports navigation">/);
     for (const [href, label] of reportLinks) {
       assert.match(pageHtml, new RegExp(`href="${href}"[\\s\\S]*>${label}<`));
     }
   }
+
+  assert.match(adminCss, /\.reports-summary/);
+  assert.match(adminCss, /\.reports-nav-items/);
+  assert.match(adminCss, /\.reports-summary-chevron/);
 });
 
 test("back to chat uses a back-arrow icon", () => {
@@ -183,6 +188,7 @@ test("each report page marks the active report link", () => {
   assert.match(reviewRunsHtml, /class="nav-item active" href="\/review-runs\.html" aria-current="page"/);
   assert.match(systemHealthHtml, /class="nav-item active" href="\/system-health\.html" aria-current="page"/);
   assert.match(userAuditHtml, /class="nav-item active" href="\/user-audit\.html" aria-current="page"/);
+  assert.match(settingsHtml, /class="nav-item active" href="\/settings\.html" aria-current="page"/);
 });
 
 test("reports javascript loads public status and protected report data without token-entry UI", () => {
