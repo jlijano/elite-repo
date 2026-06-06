@@ -32,6 +32,9 @@ CREATE TABLE IF NOT EXISTS users (
   name TEXT NOT NULL,
   email TEXT NOT NULL,
   photo_url TEXT,
+  company TEXT,
+  department TEXT,
+  group_name TEXT,
   role TEXT NOT NULL DEFAULT 'viewer' CHECK (role IN ('owner', 'admin', 'member', 'viewer')),
   status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('invited', 'active', 'disabled')),
   password_hash TEXT,
@@ -41,11 +44,19 @@ CREATE TABLE IF NOT EXISTS users (
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+ALTER TABLE users
+  ADD COLUMN IF NOT EXISTS company TEXT,
+  ADD COLUMN IF NOT EXISTS department TEXT,
+  ADD COLUMN IF NOT EXISTS group_name TEXT;
+
 CREATE UNIQUE INDEX IF NOT EXISTS users_email_lower_idx
   ON users(LOWER(email));
 
 CREATE INDEX IF NOT EXISTS users_status_role_idx
   ON users(status, role);
+
+CREATE INDEX IF NOT EXISTS users_org_access_idx
+  ON users(company, department, group_name);
 
 INSERT INTO users (id, name, email, role, status, password_hash, password_updated_at)
 SELECT seed.id, seed.name, seed.email, seed.role, 'active', seed.password_hash, NOW()
