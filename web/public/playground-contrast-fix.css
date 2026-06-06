@@ -1,0 +1,96 @@
+.playground-board-card,
+.projects-view-card,
+.playground-task-list-card,
+.notes-card {
+  background: var(--panel);
+  color: var(--text);
+}
+
+.playground-task-table-wrap {
+  background: var(--panel);
+  color: var(--text);
+}
+
+.playground-task-table {
+  background: var(--panel);
+  color: var(--text);
+}
+
+.playground-task-table thead,
+.playground-task-table th {
+  background: var(--panel-soft) !important;
+  color: var(--muted) !important;
+}
+
+.playground-task-table tbody,
+.playground-task-table tr,
+.playground-task-table td {
+  background: var(--panel) !important;
+  color: var(--text) !important;
+}
+
+.playground-task-table tbody tr:nth-child(even) td {
+  background: var(--panel-soft) !important;
+}
+
+.playground-task-table td strong,
+.playground-task-table td span:not(.status-badge):not(.priority) {
+  color: var(--text) !important;
+}
+
+.playground-task-table td small,
+.playground-task-table .muted-cell {
+  color: var(--muted) !important;
+}
+
+.playground-task-table a {
+  color: var(--primary);
+}
+
+.playground-task-table .actions,
+.playground-task-table .task-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.playground-task-table button,
+.playground-task-table .actions button,
+.playground-task-table .task-actions button {
+  border-color: var(--line) !important;
+  background: var(--panel-soft) !important;
+  color: var(--text) !important;
+  box-shadow: none !important;
+}
+
+.playground-task-table button:hover:not(:disabled),
+.playground-task-table button:focus-visible:not(:disabled),
+.playground-task-table .actions button:hover:not(:disabled),
+.playground-task-table .actions button:focus-visible:not(:disabled) {
+  border-color: var(--primary) !important;
+  background: var(--sidebar-card) !important;
+  color: var(--text) !important;
+}
+
+.playground-task-table button:disabled,
+.playground-task-table .actions button:disabled {
+  opacity: 0.48;
+}
+
+[data-theme="dark"] .playground-task-table-wrap,
+[data-theme="dark"] .playground-task-table,
+[data-theme="dark"] .playground-task-table tbody,
+[data-theme="dark"] .playground-task-table tr,
+[data-theme="dark"] .playground-task-table td {
+  background: #000000 !important;
+  color: var(--text) !important;
+}
+
+[data-theme="dark"] .playground-task-table tbody tr:nth-child(even) td {
+  background: #121212 !important;
+}
+
+[data-theme="dark"] .playground-task-table thead,
+[data-theme="dark"] .playground-task-table th {
+  background: #121212 !important;
+}
