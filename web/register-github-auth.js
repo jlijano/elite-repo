@@ -173,6 +173,10 @@ function attachGithubAuthRoutes(app) {
   if (app.locals.githubAuthAttached) return;
   app.locals.githubAuthAttached = true;
 
+  app.get("/api/auth/github/status", (req, res) => {
+    res.json({ enabled: githubConfigured() });
+  });
+
   app.get("/api/auth/github", (req, res) => {
     if (!githubConfigured()) return res.redirect(loginRedirect("github-unavailable"));
     const url = new URL("https://github.com/login/oauth/authorize");
