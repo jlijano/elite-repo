@@ -3,6 +3,7 @@ const crypto = require("crypto");
 const express = require("express");
 const userManagement = require("./user-management");
 const { attachEntraManagementRoutes } = require("./entra-management");
+const { attachAccountVerificationRoutes } = require("./account-verification");
 
 const originalListen = express.application.listen;
 const originalAttachUserManagementRoutes = userManagement.attachUserManagementRoutes;
@@ -41,10 +42,14 @@ const fallbackUserStore = userManagement.createUserManagementStore({
   schemaPath
 });
 
+function currentUserStore(req) {
+  return attachedUserStore || req?.app?.locals?.userManagementStore || fallbackUserStore;
+}
+
 async function requireAdmin(req, res, next) {
   try {
     const sessionToken = req.get("x-session-token");
-    const store = attachedUserStore || req.app?.locals?.userManagementStore || fallbackUserStore;
+    const store = currentUserStore(req);
     const session = sessionToken ? await store.getSessionUser(sessionToken) : null;
     if (["owner", "admin"].includes(session?.user?.role)) return next();
     if (adminTokenOk(req, res)) return next();
@@ -55,15 +60,29 @@ async function requireAdmin(req, res, next) {
 }
 
 express.application.listen = function patchedListen(...args) {
-  if (!attachedApps.has(this) && !this.locals.entraManagementAttached) {
-    attachEntraManagementRoutes(this, {
-      requireAdmin,
-      databaseUrl: process.env.DATABASE_URL,
-      databaseSsl: process.env.DATABASE_SSL,
-      schemaPath,
-      makeId: () => crypto.randomUUID(),
-      now: () => new Date().toISOString()
-    });
+  if (!attachedApps.has(this)) {
+    if (!this.locals.accountVerificationAttached) {
+      attachAccountVerificationRoutes(this, {
+        requireAdmin,
+        userStore: this.locals.userManagementStore || attachedUserStore || fallbackUserStore,
+        databaseUrl: process.env.DATABASE_URL,
+        databaseSsl: process.env.DATABASE_SSL,
+        schemaPath,
+        publicAppUrl: process.env.PUBLIC_APP_URL,
+        emailWebhookUrl: process.env.INVITE_EMAIL_WEBHOOK_URL,
+        makeId: () => crypto.randomUUID()
+      });
+    }
+    if (!this.locals.entraManagementAttached) {
+      attachEntraManagementRoutes(this, {
+        requireAdmin,
+        databaseUrl: process.env.DATABASE_URL,
+        databaseSsl: process.env.DATABASE_SSL,
+        schemaPath,
+        makeId: () => crypto.randomUUID(),
+        now: () => new Date().toISOString()
+      });
+    }
     attachedApps.add(this);
   }
   return originalListen.apply(this, args);
