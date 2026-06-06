@@ -3,12 +3,11 @@ const taskListAdminTokenKey = "switchboard-admin-token";
 const taskListStatusLabels = { backlog: "Backlog", todo: "To Do", in_progress: "In Progress", review: "Review", done: "Done" };
 const taskListPriorityLabels = { low: "Low", medium: "Medium", high: "High" };
 const taskListCommonFieldTypes = [
-  ["person", "Person"],
-  ["date", "Date"],
-  ["status", "Status"],
-  ["dropdown", "Dropdown"],
-  ["text", "Text"],
-  ["file", "File Attachment"]
+  ["person", "Person", "@", "Assign a same-company user, owner, reviewer, approver, or requester."],
+  ["date", "Date", "📅", "Use for due dates, start dates, actual dates, review dates, or follow-up dates."],
+  ["dropdown", "Dropdown", "▾", "Create your own choices, such as Status, Phase, Client, Risk, or Department."],
+  ["text", "Text", "T", "Add a short custom value, note, code, label, or reference."],
+  ["file", "File Attachment", "📎", "Attach a screenshot, brief, contract, invoice, or support document."]
 ];
 const taskListDropdownDefaults = ["Option 1", "Option 2", "Option 3"];
 const taskListFileLimitBytes = 1024 * 1024;
@@ -69,12 +68,23 @@ function taskListOptions(items, selected, label) {
   return [`<option value="">${taskListHtml(label)}</option>`, ...items.map((item) => `<option value="${taskListHtml(item.id)}"${item.id === selected ? " selected" : ""}>${taskListHtml(item.title || item.name || item.email)}</option>`)].join("");
 }
 
-function commonFieldTypeOptions() {
-  return taskListCommonFieldTypes.map(([value, label]) => `<option value="${taskListHtml(value)}">${taskListHtml(label)}</option>`).join("");
-}
-
 function commonFieldLabel(value) {
   return taskListCommonFieldTypes.find(([key]) => key === value)?.[1] || "Text";
+}
+
+function commonFieldTypeMeta(value) {
+  const [type = "text", label = "Text", icon = "T", description = "Add a custom value."] = taskListCommonFieldTypes.find(([key]) => key === value) || taskListCommonFieldTypes.find(([key]) => key === "text") || [];
+  return { type, label, icon, description };
+}
+
+function commonFieldCards() {
+  return taskListCommonFieldTypes.map(([value, label, icon, description]) => `
+    <button type="button" class="common-field-card" data-common-field-card="${taskListHtml(value)}" aria-label="Add ${taskListHtml(label)} custom field">
+      <span class="field-card-icon" aria-hidden="true">${taskListHtml(icon)}</span>
+      <strong>${taskListHtml(label)}</strong>
+      <small>${taskListHtml(description)}</small>
+    </button>
+  `).join("");
 }
 
 function renderTaskListFilters() {
@@ -165,27 +175,42 @@ function changeTaskListPage(direction) {
   loadTaskList().catch((error) => taskListSetStatus(error.message, true));
 }
 
+function dropdownOptionsFromText(text = "") {
+  return String(text || "")
+    .split(/\n|,/)
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
+function dropdownOptionsText(options = []) {
+  const list = Array.isArray(options) && options.length ? options : taskListDropdownDefaults;
+  return list.join("\n");
+}
+
+function renderDropdownValueOptions(select, options = [], selectedValue = "") {
+  if (!select) return;
+  const choices = options.length ? options : taskListDropdownDefaults;
+  select.innerHTML = [`<option value="">Select option</option>`, ...choices.map((label) => `<option value="${taskListHtml(label)}"${label === selectedValue ? " selected" : ""}>${taskListHtml(label)}</option>`)].join("");
+}
+
 function taskListFieldValueControl(type = "text", value = "", meta = {}) {
   if (type === "person") {
     const options = taskListState.users.map((user) => `<option value="${taskListHtml(user.id)}"${user.id === value ? " selected" : ""}>${taskListHtml(user.name || user.email)}</option>`).join("");
-    return `<label><span>Value</span><select data-custom-field-value><option value="">Select person</option>${options}</select></label>`;
+    return `<div class="custom-field-value-cell"><label><span>Value</span><select data-custom-field-value><option value="">Select person</option>${options}</select></label></div>`;
   }
   if (type === "date") {
-    return `<label><span>Value</span><input data-custom-field-value type="date" value="${taskListHtml(value)}" /></label>`;
-  }
-  if (type === "status") {
-    const options = Object.entries(taskListStatusLabels).map(([key, label]) => `<option value="${taskListHtml(key)}"${key === value ? " selected" : ""}>${taskListHtml(label)}</option>`).join("");
-    return `<label><span>Value</span><select data-custom-field-value><option value="">Select status</option>${options}</select></label>`;
+    return `<div class="custom-field-value-cell"><label><span>Value</span><input data-custom-field-value type="date" value="${taskListHtml(value)}" /></label></div>`;
   }
   if (type === "dropdown") {
-    const options = taskListDropdownDefaults.map((label) => `<option value="${taskListHtml(label)}"${label === value ? " selected" : ""}>${taskListHtml(label)}</option>`).join("");
-    return `<label><span>Value</span><select data-custom-field-value><option value="">Select option</option>${options}</select></label>`;
+    const optionsText = dropdownOptionsText(meta.options);
+    const options = dropdownOptionsFromText(optionsText);
+    return `<div class="custom-field-value-cell custom-field-dropdown-cell"><label><span>Options</span><textarea data-custom-field-options rows="3" placeholder="One option per line">${taskListHtml(optionsText)}</textarea></label><label><span>Value</span><select data-custom-field-value>${[`<option value="">Select option</option>`, ...options.map((label) => `<option value="${taskListHtml(label)}"${label === value ? " selected" : ""}>${taskListHtml(label)}</option>`)].join("")}</select></label></div>`;
   }
   if (type === "file") {
     const fileName = meta.fileName || value || "No file selected";
-    return `<label><span>Value</span><input data-custom-field-file type="file" /><input data-custom-field-value type="hidden" value="${taskListHtml(value)}" /><small class="file-field-preview" data-file-preview>${taskListHtml(fileName)}</small></label>`;
+    return `<div class="custom-field-value-cell"><label><span>Value</span><input data-custom-field-file type="file" /><input data-custom-field-value type="hidden" value="${taskListHtml(value)}" /><small class="file-field-preview" data-file-preview>${taskListHtml(fileName)}</small></label></div>`;
   }
-  return `<label><span>Value</span><input data-custom-field-value maxlength="240" value="${taskListHtml(value)}" placeholder="Type text" /></label>`;
+  return `<div class="custom-field-value-cell"><label><span>Value</span><input data-custom-field-value maxlength="240" value="${taskListHtml(value)}" placeholder="Type text" /></label></div>`;
 }
 
 function injectTaskListModal() {
@@ -200,12 +225,11 @@ function injectTaskListModal() {
         </div>
         <details class="task-custom-field-panel" id="taskListCustomFieldPanel">
           <summary>Add custom fields</summary>
-          <div class="common-field-picker">
-            <label><span>Custom field data type</span><select id="taskListCommonFieldType">${commonFieldTypeOptions()}</select></label>
-            <button type="button" class="secondary-action" id="taskListAddCommonField">Add Selected</button>
+          <div class="common-field-card-grid" aria-label="Custom field data types">
+            ${commonFieldCards()}
           </div>
+          <p class="custom-field-help">Choose a data type, then name it for this task. For example, add a Dropdown and name it Status, Phase, Risk, or anything this task needs.</p>
           <div class="custom-field-builder" id="taskListCustomFields" aria-label="Custom fields"></div>
-          <button type="button" class="secondary-action" id="taskListAddCustomField">Add Text Field</button>
         </details>
         <div class="playground-modal-actions"><button type="button" id="taskListTaskCancel">Cancel</button><button class="primary-action" id="taskListTaskSave" type="button">Create Task</button></div>
       </form>
@@ -214,8 +238,7 @@ function injectTaskListModal() {
   document.getElementById("taskListTaskModalClose")?.addEventListener("click", closeTaskListModal);
   document.getElementById("taskListTaskCancel")?.addEventListener("click", closeTaskListModal);
   document.getElementById("taskListTaskSave")?.addEventListener("click", () => document.getElementById("taskListTaskForm")?.requestSubmit());
-  document.getElementById("taskListAddCommonField")?.addEventListener("click", addTaskListCommonField);
-  document.getElementById("taskListAddCustomField")?.addEventListener("click", () => addTaskListCustomField("", "", "text"));
+  document.querySelectorAll("[data-common-field-card]").forEach((button) => button.addEventListener("click", () => addTaskListCustomField("", "", button.dataset.commonFieldCard || "text")));
   document.getElementById("taskListTaskModal")?.addEventListener("click", (event) => {
     if (event.target.id === "taskListTaskModal") closeTaskListModal();
   });
@@ -224,11 +247,6 @@ function injectTaskListModal() {
     setTaskListModalMessage(error.message, true);
     taskListSetStatus(error.message, true);
   }));
-}
-
-function addTaskListCommonField() {
-  const selected = document.getElementById("taskListCommonFieldType")?.value || "text";
-  addTaskListCustomField(commonFieldLabel(selected), "", selected);
 }
 
 function handleTaskListFileField(event, row) {
@@ -255,11 +273,20 @@ function handleTaskListFileField(event, row) {
   reader.readAsDataURL(file);
 }
 
+function attachDropdownOptionsHandler(row, selectedValue = "") {
+  const optionsInput = row.querySelector("[data-custom-field-options]");
+  const valueSelect = row.querySelector("select[data-custom-field-value]");
+  if (!optionsInput || !valueSelect) return;
+  optionsInput.addEventListener("input", () => renderDropdownValueOptions(valueSelect, dropdownOptionsFromText(optionsInput.value), valueSelect.value));
+  renderDropdownValueOptions(valueSelect, dropdownOptionsFromText(optionsInput.value), selectedValue);
+}
+
 function addTaskListCustomField(name = "", value = "", type = "text", meta = {}) {
   const container = document.getElementById("taskListCustomFields");
   if (!container) return;
   const row = document.createElement("div");
   const safeType = taskListCommonFieldTypes.some(([key]) => key === type) ? type : "text";
+  const typeMeta = commonFieldTypeMeta(safeType);
   row.className = "custom-field-row";
   row.dataset.customFieldType = safeType;
   row.setAttribute("data-custom-field-type", safeType);
@@ -267,11 +294,12 @@ function addTaskListCustomField(name = "", value = "", type = "text", meta = {})
   if (meta.fileType) row.dataset.fileType = meta.fileType;
   if (meta.fileSize) row.dataset.fileSize = String(meta.fileSize);
   if (meta.fileData) row.dataset.fileData = meta.fileData;
-  row.innerHTML = `<div class="field-type-pill"><span>Type</span><strong>${taskListHtml(taskListFieldTypeLabel(safeType))}</strong></div><label><span>Field</span><input data-custom-field-name maxlength="60" value="${taskListHtml(name)}" placeholder="${taskListHtml(taskListFieldTypeLabel(safeType))}" /></label>${taskListFieldValueControl(safeType, value, meta)}<button type="button" class="icon-button" aria-label="Remove custom field">x</button>`;
+  row.innerHTML = `<div class="field-type-pill"><span class="field-card-icon" aria-hidden="true">${taskListHtml(typeMeta.icon)}</span><div><span>Data type</span><strong>${taskListHtml(typeMeta.label)}</strong></div></div><label class="custom-field-name-cell"><span>Field name</span><input data-custom-field-name maxlength="60" value="${taskListHtml(name)}" placeholder="Name this field" /></label>${taskListFieldValueControl(safeType, value, meta)}<button type="button" class="icon-button" aria-label="Remove custom field">x</button>`;
   row.querySelector("button")?.addEventListener("click", () => row.remove());
   row.querySelector("[data-custom-field-file]")?.addEventListener("change", (event) => handleTaskListFileField(event, row));
+  attachDropdownOptionsHandler(row, value);
   container.appendChild(row);
-  row.querySelector("[data-custom-field-value], [data-custom-field-file]")?.focus();
+  row.querySelector("[data-custom-field-name]")?.focus();
 }
 
 function setTaskListModalMessage(message = "", error = false) {
@@ -285,7 +313,7 @@ function setTaskListModalMessage(message = "", error = false) {
 function setTaskListModalBusy(busy) {
   const form = document.getElementById("taskListTaskForm");
   const saveButton = document.getElementById("taskListTaskSave");
-  form?.querySelectorAll("input, select, button").forEach((field) => {
+  form?.querySelectorAll("input, select, textarea, button").forEach((field) => {
     if (["taskListTaskModalClose", "taskListTaskCancel"].includes(field.id)) return;
     field.disabled = busy;
   });
@@ -320,6 +348,9 @@ function taskListFormPayload() {
         name: row.querySelector("[data-custom-field-name]")?.value || "",
         value: row.querySelector("[data-custom-field-value]")?.value || ""
       };
+      if (field.type === "dropdown") {
+        field.options = dropdownOptionsFromText(row.querySelector("[data-custom-field-options]")?.value || "");
+      }
       if (field.type === "file") {
         field.fileName = row.dataset.fileName || field.value;
         field.fileType = row.dataset.fileType || "";
@@ -328,7 +359,7 @@ function taskListFormPayload() {
       }
       return field;
     })
-    .filter((field) => field.name.trim() || field.value.trim() || field.fileName);
+    .filter((field) => field.name.trim() || field.value.trim() || field.fileName || (Array.isArray(field.options) && field.options.length));
   return {
     title: document.getElementById("taskListTaskTitle")?.value || "",
     status: "todo",
