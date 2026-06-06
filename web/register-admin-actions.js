@@ -316,7 +316,7 @@ express.static = function patchedStatic(root, options = {}) {
     try {
       const pathname = decodeURIComponent(req.path || req.url || "");
       if (pathname === "/entra-management.js" && fs.existsSync(path.join(root, "entra-management.js"))) {
-        return sendEnhancedJavaScript(res, root, "entra-management.js", "entra-admin-enhancements.js", "action-icon-polish.js");
+        return sendEnhancedJavaScript(res, root, "entra-management.js", "entra-admin-enhancements.js", ["entra-company-save-error-polish.js", "action-icon-polish.js"]);
       }
       if (pathname === "/admin.js" && fs.existsSync(path.join(root, "admin.js"))) {
         return sendEnhancedJavaScript(res, root, "admin.js", null, ["chat-purge-enhancements.js", "user-purge-enhancements.js", "user-management-polish.js", "action-icon-polish.js"]);
