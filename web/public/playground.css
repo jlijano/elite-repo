@@ -39,7 +39,7 @@
 .playground-modal-backdrop { position: fixed; inset: 0; z-index: 80; display: grid; place-items: center; padding: 20px; background: rgba(0, 0, 0, 0.58); }
 .playground-modal-backdrop[hidden], .playground-task-drawer[hidden] { display: none; }
 .playground-modal { width: min(760px, 100%); max-height: min(88vh, 760px); overflow: auto; display: grid; gap: 14px; padding: 16px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel); color: var(--text); box-shadow: 0 28px 80px rgba(0, 0, 0, 0.42); }
-.task-list-modal { width: min(680px, 100%); }
+.task-list-modal { width: min(760px, 100%); }
 .playground-modal-head, .playground-drawer-head { display: flex; align-items: start; justify-content: space-between; gap: 12px; }
 .playground-modal h2, .playground-drawer-head h2, .drawer-section h3 { margin: 0; color: var(--text); }
 .icon-button { width: 38px; padding: 0; font-size: 1.2rem; line-height: 1; }
@@ -51,14 +51,23 @@
 .playground-modal textarea { resize: vertical; min-height: 96px; }
 .playground-modal select[multiple] { min-height: 110px; }
 .playground-modal-actions { display: flex; justify-content: flex-end; gap: 10px; }
-.task-custom-field-panel { display: grid; gap: 10px; padding: 10px 0 0; border-top: 1px solid var(--line); }
+.task-custom-field-panel { display: grid; gap: 12px; padding: 12px 0 0; border-top: 1px solid var(--line); }
 .task-custom-field-panel summary { width: fit-content; cursor: pointer; color: var(--text); font-weight: 900; }
-.common-field-picker { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px; align-items: end; margin-top: 10px; padding: 10px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel-soft); }
-.common-field-picker label { min-width: 0; display: grid; gap: 5px; color: var(--muted); font-size: 0.72rem; font-weight: 900; text-transform: uppercase; }
-.custom-field-builder { display: grid; gap: 10px; margin-top: 10px; }
-.custom-field-row { display: grid; grid-template-columns: minmax(96px, 0.7fr) minmax(0, 0.9fr) minmax(0, 1.25fr) auto; gap: 10px; align-items: end; }
+.common-field-card-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px; margin-top: 10px; }
+.common-field-card { min-width: 0; min-height: 116px; display: grid; align-content: start; gap: 8px; padding: 12px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel-soft); color: var(--text); text-align: left; cursor: pointer; }
+.common-field-card:hover, .common-field-card:focus { border-color: var(--primary); outline: 3px solid var(--focus-ring); outline-offset: 1px; }
+.field-card-icon { width: 28px; height: 28px; display: inline-flex; align-items: center; justify-content: center; border: 1px solid var(--line); border-radius: 10px; background: var(--panel); color: var(--primary); font-size: 0.9rem; font-weight: 950; }
+.common-field-card strong { font-size: 0.86rem; line-height: 1.2; }
+.common-field-card small, .custom-field-help { color: var(--muted); font-size: 0.74rem; font-weight: 750; line-height: 1.35; }
+.custom-field-help { margin: 0; }
+.custom-field-builder { display: grid; gap: 12px; margin-top: 2px; }
+.custom-field-row { display: grid; grid-template-columns: minmax(130px, 0.85fr) minmax(150px, 1fr) minmax(220px, 1.35fr) auto; gap: 10px; align-items: start; padding: 12px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel-soft); }
 .custom-field-row label, .field-type-pill { min-width: 0; display: grid; gap: 5px; color: var(--muted); font-size: 0.72rem; font-weight: 900; text-transform: uppercase; }
-.field-type-pill strong { display: flex; align-items: center; min-height: 38px; padding: 8px 10px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel-soft); color: var(--text); font-size: 0.82rem; overflow-wrap: anywhere; text-transform: none; }
+.field-type-pill { display: flex; align-items: center; gap: 8px; min-height: 38px; }
+.field-type-pill strong { display: block; color: var(--text); font-size: 0.82rem; overflow-wrap: anywhere; text-transform: none; }
+.custom-field-value-cell { min-width: 0; display: grid; gap: 8px; }
+.custom-field-dropdown-cell { grid-template-columns: minmax(0, 1fr); }
+.custom-field-dropdown-cell textarea { min-height: 74px; resize: vertical; }
 .file-field-preview { display: block; min-height: 18px; color: var(--muted); font-size: 0.74rem; font-weight: 800; overflow-wrap: anywhere; text-transform: none; }
 .task-custom-fields { display: flex; flex-wrap: wrap; gap: 6px; min-width: 0; }
 .task-custom-fields span { display: inline-flex; align-items: center; gap: 5px; max-width: 260px; min-height: 26px; padding: 0 8px; border: 1px solid var(--line); border-radius: 999px; background: var(--panel-soft); color: var(--muted); font-size: 0.75rem; font-weight: 800; }
@@ -89,5 +98,5 @@
 .playground-task-table td strong, .playground-task-table td small { display: block; min-width: 0; overflow-wrap: anywhere; }
 .playground-task-table td small { margin-top: 4px; color: var(--muted); }
 .playground-task-list-footer { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 14px; color: var(--muted); font-size: 0.82rem; font-weight: 850; }
-@media (max-width: 1180px) { .playground-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); } .playground-task-controls { grid-template-columns: repeat(3, minmax(0, 1fr)); } .kanban-board { grid-template-columns: repeat(5, minmax(220px, 1fr)); } .playground-lower-grid { grid-template-columns: 1fr; } }
-@media (max-width: 760px) { .playground-header .header-actions { width: 100%; justify-content: flex-start; } .playground-metrics, .playground-task-controls, .playground-form-grid, .custom-field-row, .common-field-picker { grid-template-columns: 1fr; } .kanban-board { grid-template-columns: 1fr; overflow-x: visible; } .todo-item { grid-template-columns: auto minmax(0, 1fr); } .todo-item small, .todo-item .priority { justify-self: start; grid-column: 2; } .playground-task-drawer { width: 100vw; } .task-detail-grid { grid-template-columns: 1fr; } .playground-task-list-footer { align-items: stretch; flex-direction: column; } }
+@media (max-width: 1180px) { .playground-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); } .playground-task-controls { grid-template-columns: repeat(3, minmax(0, 1fr)); } .kanban-board { grid-template-columns: repeat(5, minmax(220px, 1fr)); } .playground-lower-grid { grid-template-columns: 1fr; } .common-field-card-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (max-width: 760px) { .playground-header .header-actions { width: 100%; justify-content: flex-start; } .playground-metrics, .playground-task-controls, .playground-form-grid, .custom-field-row, .common-field-card-grid { grid-template-columns: 1fr; } .kanban-board { grid-template-columns: 1fr; overflow-x: visible; } .todo-item { grid-template-columns: auto minmax(0, 1fr); } .todo-item small, .todo-item .priority { justify-self: start; grid-column: 2; } .playground-task-drawer { width: 100vw; } .task-detail-grid { grid-template-columns: 1fr; } .playground-task-list-footer { align-items: stretch; flex-direction: column; } }
