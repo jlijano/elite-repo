@@ -5,7 +5,7 @@
 - Split the admin dashboard into dedicated static pages for Chat, Knowledge base, User, and Settings, with `/admin.html` redirecting to `/chat.html`.
 - Moved Attachments into the Chat page and moved Review runs plus System health into Settings.
 - Renamed Knowledge Queue to Knowledge base, Admin access to User, and added a Manage users action for user management.
-- Added a top-header user profile settings send icon and a Mac-style current day/time display to admin pages.
+- Added a top-header user profile settings person icon and a Mac-style current day/time display to admin pages.
 - Updated admin frontend contract tests and the web validation script for the new shared admin JavaScript file.
 - Added Chat Review to the admin Settings visible-widget controls as a default-off option, preserving the cleaned Knowledge Queue default view while letting admins show Chat Review when needed.
 - Removed the generic admin Dashboard/Overview landing block so the admin side starts directly with actionable sections, and updated frontend contract tests to protect the cleanup.
