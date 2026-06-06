@@ -26,8 +26,13 @@
           <a class="nav-item" href="/chat.html"><span aria-hidden="true">□</span>Chat</a>
           <a class="nav-item" href="/knowledge.html"><span aria-hidden="true">◇</span>Knowledge base</a>
           <a class="nav-item" href="/user.html"><span aria-hidden="true">◉</span>User</a>
-          <a class="nav-item" href="/playground.html"><span aria-hidden="true">▦</span>Playground</a>
-          <a class="nav-item active" href="/playground-tasks.html" aria-current="page"><span aria-hidden="true">☑</span>Tasks</a>
+          <details class="admin-section-list reports-nav playground-nav" open>
+            <summary class="reports-summary active"><span class="reports-summary-label">Playground</span><span class="reports-summary-chevron" aria-hidden="true">⌄</span></summary>
+            <div class="reports-nav-items playground-nav-items" aria-label="Playground navigation">
+              <a class="nav-item" href="/playground.html"><span aria-hidden="true">▦</span>Board</a>
+              <a class="nav-item active" href="/playground-tasks.html" aria-current="page"><span aria-hidden="true">☑</span>Tasks</a>
+            </div>
+          </details>
           <details class="admin-section-list reports-nav" open>
             <summary class="reports-summary"><span class="reports-summary-label">Reports</span><span class="reports-summary-chevron" aria-hidden="true">⌄</span></summary>
             <div class="reports-nav-items" aria-label="Reports navigation">
