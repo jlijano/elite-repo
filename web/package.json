@@ -6,7 +6,7 @@
   "scripts": {
     "start": "node server.js",
     "test": "node --test test/*.test.js",
-    "check": "node --check server.js && node --check public/app.js && npm test"
+    "check": "node --check server.js && node --check public/app.js && node --check public/admin.js && npm test"
   },
   "dependencies": {
     "cors": "^2.8.5",
