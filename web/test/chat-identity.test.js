@@ -11,9 +11,28 @@ test("chat identity is collected before creating a chat", () => {
 
   const wrapper = createChatWrapper[0];
   assert.ok(
+    wrapper.indexOf("resetIdentityForNewChat();") < wrapper.indexOf("await ensureIdentity();"),
+    "starting a new chat should clear the previous nickname before prompting"
+  );
+  assert.ok(
     wrapper.indexOf("await ensureIdentity();") < wrapper.indexOf("await originalCreateChat.apply"),
     "nickname and bubble color should be required before the backend chat is created"
   );
+});
+
+test("starting a new chat clears stale stored identity", () => {
+  const resetIdentity = bubbleColorScript.match(/function resetIdentityForNewChat\(\) \{[\s\S]+?\n  }/);
+  assert.ok(resetIdentity, "new chat identity reset helper should exist");
+  assert.match(resetIdentity[0], /selectedNickname = ""/);
+  assert.match(resetIdentity[0], /selectedColor = ""/);
+  assert.match(resetIdentity[0], /removeStored\(nicknameKey\)/);
+  assert.match(resetIdentity[0], /removeStored\(colorKey\)/);
+});
+
+test("empty-chat sends delegate identity prompting to createChat", () => {
+  const sendWrapper = bubbleColorScript.match(/sendMessage = async function identitySendMessage[\s\S]+?\n    };\n/);
+  assert.ok(sendWrapper, "identity sendMessage wrapper should be installed");
+  assert.match(sendWrapper[0], /if \(currentChatId\) await ensureIdentity\(\);/);
 });
 
 test("chat quick reply suggestions are opt-in", () => {
