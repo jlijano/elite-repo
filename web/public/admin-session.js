@@ -124,61 +124,6 @@
     });
   }
 
-  function positionSessionChip(chip, actions) {
-    const header = actions.closest(".admin-header");
-    if (!header) return;
-    const mediaQuery = window.matchMedia("(max-width: 760px)");
-    const applyLayout = () => {
-      header.style.position = "relative";
-      if (mediaQuery.matches) {
-        header.style.minHeight = "";
-        header.style.alignItems = "";
-        header.style.paddingBottom = "";
-        chip.style.position = "static";
-        chip.style.right = "";
-        chip.style.bottom = "";
-        chip.style.maxWidth = "100%";
-        return;
-      }
-      header.style.minHeight = "72px";
-      header.style.alignItems = "flex-start";
-      header.style.paddingBottom = "10px";
-      chip.style.position = "absolute";
-      chip.style.right = "64px";
-      chip.style.bottom = "8px";
-      chip.style.maxWidth = "calc(100% - 104px)";
-    };
-
-    applyLayout();
-    if (mediaQuery.addEventListener) mediaQuery.addEventListener("change", applyLayout);
-    else mediaQuery.addListener(applyLayout);
-  }
-
-  function renderLoggedInAs(user) {
-    const actions = document.querySelector(".header-actions");
-    if (!actions || actions.querySelector(".session-user-chip")) return;
-    const chip = document.createElement("span");
-    chip.className = "session-user-chip";
-    chip.style.display = "inline-flex";
-    chip.style.alignItems = "baseline";
-    chip.style.gap = "4px";
-    chip.style.whiteSpace = "nowrap";
-    chip.style.minWidth = "0";
-    chip.style.overflow = "hidden";
-    chip.style.textOverflow = "ellipsis";
-    const name = document.createElement("strong");
-    name.textContent = user?.name || user?.email || "Signed in";
-    name.style.minWidth = "0";
-    name.style.overflow = "hidden";
-    name.style.textOverflow = "ellipsis";
-    const role = document.createElement("small");
-    role.textContent = user?.role ? `Logged in as ${user.role}` : "Logged in";
-    role.style.flexShrink = "0";
-    chip.append(name, document.createTextNode(" "), role);
-    actions.prepend(chip);
-    positionSessionChip(chip, actions);
-  }
-
   function persistUser(user) {
     if (!user) return;
     sessionStorage.setItem(sessionUserStorageKey, JSON.stringify({ id: user.id, name: user.name, email: user.email, role: user.role }));
@@ -198,7 +143,6 @@
     if (!response.ok) return redirectToLogin("expired");
     persistUser(data.user);
     updateRoleAwareMenu(data.user);
-    renderLoggedInAs(data.user);
     if (!isAdminRole(data.user?.role)) redirectNonAdmin();
   }
 
