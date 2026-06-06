@@ -1,5 +1,6 @@
 (() => {
-  const storageKey = "switchboard-bubble-color";
+  const colorStorageKey = "switchboard-bubble-color";
+  const nicknameStorageKey = "switchboard-chat-nickname";
   const participantStorageKey = "switchboard-participant-id";
   const colorChoices = [
     "#2563eb",
@@ -11,10 +12,15 @@
     "#be123c",
     "#4f46e5"
   ];
-  let selectedColor = normalizeColor(getStored(storageKey) || "");
+  const queryParams = new URLSearchParams(window.location.search);
+  const sharedChatId = queryParams.get("chat") || "";
+  const sharedLinkNumber = Math.max(1, Number(queryParams.get("share") || 1));
+  let selectedColor = normalizeColor(getStored(colorStorageKey) || "");
+  let selectedNickname = cleanNickname(getStored(nicknameStorageKey) || "");
   let knownParticipants = [];
   let modal = null;
   let grid = null;
+  let nicknameInput = null;
   let modalStatus = null;
   let confirmButton = null;
   let pendingResolve = null;
@@ -26,6 +32,10 @@
     return /^#[0-9a-f]{6}$/.test(color) ? color : "";
   }
 
+  function cleanNickname(value) {
+    return String(value || "").trim().replace(/\s+/g, " ").slice(0, 40);
+  }
+
   function currentParticipantId() {
     let value = getStored(participantStorageKey);
     if (!value) {
@@ -33,6 +43,45 @@
       setStored(participantStorageKey, value);
     }
     return value;
+  }
+
+  function deviceType() {
+    const ua = navigator.userAgent.toLowerCase();
+    if (/ipad|tablet/.test(ua) || (navigator.maxTouchPoints > 1 && /macintosh/.test(ua))) return "tablet";
+    if (/mobi|android|iphone|ipod/.test(ua)) return "mobile";
+    return "desktop";
+  }
+
+  function participantType() {
+    if (!sharedChatId) return "original";
+    const originKey = `switchboard-origin-chat-${sharedChatId}`;
+    return getStored(originKey) === "true" ? "original" : "shared";
+  }
+
+  function currentShareCount() {
+    const chatId = currentChatId || sharedChatId;
+    if (!chatId) return 0;
+    const stored = Number(getStored(`switchboard-share-count-${chatId}`) || 0);
+    return Math.max(stored, sharedChatId === chatId ? sharedLinkNumber : 0);
+  }
+
+  function participantLabel() {
+    if (selectedNickname) return selectedNickname;
+    if (participantType() === "original") return "Original";
+    return `Shared link #${Math.max(1, currentShareCount() || sharedLinkNumber)}`;
+  }
+
+  function participantContext(extra = {}) {
+    return {
+      participantId: currentParticipantId(),
+      participantType: participantType(),
+      participantNickname: selectedNickname,
+      participantLabel: participantLabel(),
+      deviceType: deviceType(),
+      shareCount: currentShareCount(),
+      bubbleColor: selectedColor,
+      ...extra
+    };
   }
 
   function setMenuStatus(message) {
@@ -50,10 +99,15 @@
     knownParticipants = participants;
     const own = participants.find((participant) => participant.participantId === currentParticipantId());
     const ownColor = normalizeColor(own?.bubbleColor);
-    if (ownColor) {
+    if (ownColor && ownColor !== "#2f2f2f") {
       selectedColor = ownColor;
       pendingColor = ownColor;
-      setStored(storageKey, ownColor);
+      setStored(colorStorageKey, ownColor);
+    }
+    const ownNickname = cleanNickname(own?.participantNickname || "");
+    if (ownNickname) {
+      selectedNickname = ownNickname;
+      setStored(nicknameStorageKey, ownNickname);
     }
   }
 
@@ -62,7 +116,7 @@
       knownParticipants
         .filter((participant) => participant.participantId !== currentParticipantId())
         .map((participant) => normalizeColor(participant.bubbleColor))
-        .filter(Boolean)
+        .filter((color) => color && color !== "#2f2f2f")
     );
   }
 
@@ -85,12 +139,10 @@
         background: rgba(15, 23, 42, 0.48);
       }
 
-      .bubble-color-modal[hidden] {
-        display: none;
-      }
+      .bubble-color-modal[hidden] { display: none; }
 
       .bubble-color-card {
-        width: min(420px, calc(100vw - 32px));
+        width: min(440px, calc(100vw - 32px));
         padding: 18px;
         border: 1px solid var(--line);
         border-radius: 18px;
@@ -110,6 +162,26 @@
         color: var(--muted);
         font-size: 0.9rem;
         line-height: 1.4;
+      }
+
+      .bubble-nickname-label {
+        display: grid;
+        gap: 6px;
+        margin: 0 0 14px;
+        color: var(--text);
+        font-size: 0.82rem;
+        font-weight: 800;
+      }
+
+      .bubble-nickname-input {
+        width: 100%;
+        min-height: 42px;
+        padding: 0 12px;
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        background: var(--panel-soft);
+        color: var(--text);
+        font: inherit;
       }
 
       .bubble-color-grid {
@@ -144,11 +216,20 @@
         margin-top: 14px;
       }
 
-      .bubble-color-actions button {
-        min-height: 40px;
-        padding: 0 14px;
+      .bubble-color-confirm {
+        width: auto;
+        min-width: 108px;
+        min-height: 42px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0 16px;
         border-radius: 999px;
-        font-weight: 760;
+        background: var(--primary);
+        color: #fff;
+        font-weight: 800;
+        line-height: 1;
+        white-space: nowrap;
       }
 
       .message.user .bubble.participant-bubble {
@@ -163,19 +244,24 @@
         color: rgba(255, 255, 255, 0.86);
       }
 
+      .seen-status {
+        display: block;
+        margin-top: 6px;
+        color: var(--muted);
+        font-size: 0.7rem;
+        font-weight: 800;
+        line-height: 1.2;
+        text-align: right;
+      }
+
+      .message.user .bubble.participant-bubble .seen-status {
+        color: rgba(255, 255, 255, 0.78);
+      }
+
       @media (max-width: 420px) {
-        .bubble-color-card {
-          padding: 16px;
-          border-radius: 16px;
-        }
-
-        .bubble-color-grid {
-          gap: 8px;
-        }
-
-        .bubble-color-option {
-          min-height: 42px;
-        }
+        .bubble-color-card { padding: 16px; border-radius: 16px; }
+        .bubble-color-grid { gap: 8px; }
+        .bubble-color-option { min-height: 42px; }
       }
     `;
     document.head.appendChild(style);
@@ -189,21 +275,32 @@
     modal.hidden = true;
     modal.innerHTML = `
       <section class="bubble-color-card" role="dialog" aria-modal="true" aria-labelledby="bubbleColorTitle">
-        <h2 id="bubbleColorTitle">Pick your chat color</h2>
-        <p>Choose a message bubble color. Colors already used in this chat are locked.</p>
+        <h2 id="bubbleColorTitle">Set up your chat identity</h2>
+        <p>Choose a nickname and message bubble color. Colors already used in this chat are locked.</p>
+        <label class="bubble-nickname-label" for="bubbleNicknameInput">
+          Nickname
+          <input class="bubble-nickname-input" id="bubbleNicknameInput" type="text" maxlength="40" autocomplete="nickname" placeholder="Example: Alex" />
+        </label>
         <div class="bubble-color-grid" id="bubbleColorGrid" role="group" aria-label="Bubble color choices"></div>
         <div class="plus-menu-status" id="bubbleColorStatus" aria-live="polite"></div>
         <div class="bubble-color-actions">
-          <button class="send-button" id="bubbleColorConfirm" type="button">Use color</button>
+          <button class="bubble-color-confirm" id="bubbleColorConfirm" type="button">Use color</button>
         </div>
       </section>
     `;
     document.body.appendChild(modal);
     grid = modal.querySelector("#bubbleColorGrid");
+    nicknameInput = modal.querySelector("#bubbleNicknameInput");
     modalStatus = modal.querySelector("#bubbleColorStatus");
     confirmButton = modal.querySelector("#bubbleColorConfirm");
     confirmButton.addEventListener("click", () => {
       const normalized = normalizeColor(pendingColor);
+      const nickname = cleanNickname(nicknameInput.value);
+      if (!nickname) {
+        modalStatus.textContent = "Add a nickname to continue.";
+        nicknameInput.focus();
+        return;
+      }
       if (!normalized) {
         modalStatus.textContent = "Pick a color to continue.";
         return;
@@ -213,13 +310,15 @@
         renderColorChoices();
         return;
       }
+      selectedNickname = nickname;
       selectedColor = normalized;
-      setStored(storageKey, selectedColor);
+      setStored(nicknameStorageKey, selectedNickname);
+      setStored(colorStorageKey, selectedColor);
       modal.hidden = true;
       setMenuStatus("");
       const resolve = pendingResolve;
       pendingResolve = null;
-      resolve?.(selectedColor);
+      resolve?.(participantContext());
     });
   }
 
@@ -245,56 +344,92 @@
     if (taken.size >= colorChoices.length) modalStatus.textContent = "All colors are taken in this chat.";
   }
 
-  function openColorPicker() {
+  function openIdentityPicker() {
     ensureModal();
     pendingColor = colorIsTaken(selectedColor) ? "" : selectedColor;
+    nicknameInput.value = selectedNickname;
     renderColorChoices();
     modal.hidden = false;
     modalStatus.textContent = "";
-    grid.querySelector("button:not(:disabled)")?.focus();
+    nicknameInput.focus();
     return new Promise((resolve) => {
       pendingResolve = resolve;
     });
   }
 
-  async function ensureBubbleColor() {
-    if (selectedColor && !colorIsTaken(selectedColor)) return selectedColor;
+  async function ensureChatIdentity() {
+    if (selectedNickname && selectedColor && !colorIsTaken(selectedColor)) return participantContext();
     if (selectedColor && colorIsTaken(selectedColor)) {
       selectedColor = "";
-      removeStored(storageKey);
+      removeStored(colorStorageKey);
     }
-    return openColorPicker();
+    return openIdentityPicker();
   }
 
-  function withBubbleColorBody(url, options = {}) {
-    if (!selectedColor || !options.body || typeof options.body !== "string") return options;
+  function withParticipantContextBody(url, options = {}) {
+    if (!selectedColor || !selectedNickname || !options.body || typeof options.body !== "string") return options;
     const target = String(url || "");
-    const shouldAttach = target === "/api/chat" || /\/api\/chats\/[^/]+\/(participants|typing|messages)$/.test(target);
+    const shouldAttach = target === "/api/chat" || /\/api\/chats\/[^/]+\/(participants|typing|messages|read)$/.test(target);
     if (!shouldAttach) return options;
     try {
       const body = JSON.parse(options.body);
-      if (body.context && typeof body.context === "object" && !Array.isArray(body.context)) {
-        body.context.bubbleColor = selectedColor;
-      } else if (target === "/api/chat") {
-        body.context = { bubbleColor: selectedColor };
-      }
+      body.context = { ...(body.context && typeof body.context === "object" && !Array.isArray(body.context) ? body.context : {}), ...participantContext(body.context || {}) };
       return { ...options, body: JSON.stringify(body) };
     } catch (error) {
       return options;
     }
   }
 
+  function seenLabelsForMessage(message = {}) {
+    const createdAt = new Date(message.createdAt || 0).getTime();
+    const messageId = message.id;
+    if (!messageId && !createdAt) return [];
+    return knownParticipants
+      .filter((participant) => participant.participantId !== (message.context || {}).participantId)
+      .filter((participant) => {
+        if (participant.lastReadMessageId && messageId) return participant.lastReadMessageId === messageId;
+        return participant.lastReadAt && new Date(participant.lastReadAt).getTime() >= createdAt;
+      })
+      .map((participant) => participant.participantNickname || participant.participantLabel)
+      .filter(Boolean);
+  }
+
+  function appendSeenStatus(article, message = {}) {
+    if (message.role !== "user") return;
+    const labels = seenLabelsForMessage(message);
+    if (!labels.length) return;
+    const bubble = article.querySelector(".bubble");
+    if (!bubble || bubble.querySelector(".seen-status")) return;
+    const status = document.createElement("span");
+    status.className = "seen-status";
+    status.textContent = labels.length === 1 ? `Seen by ${labels[0]}` : `Seen by ${labels.length}`;
+    bubble.appendChild(status);
+  }
+
+  async function markChatRead(data = {}) {
+    const chat = data.chat;
+    if (!chat?.id || !Array.isArray(chat.messages) || !chat.messages.length || !selectedColor || !selectedNickname) return;
+    const lastMessage = chat.messages[chat.messages.length - 1];
+    if (!lastMessage?.id) return;
+    await fetch(`/api/chats/${encodeURIComponent(chat.id)}/read`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ messageId: lastMessage.id, context: participantContext() })
+    }).then((response) => response.json()).then(absorbParticipants).catch(() => {});
+  }
+
   if (typeof requestJson === "function") {
     const originalRequestJson = requestJson;
-    requestJson = async function bubbleColorRequestJson(url, options = {}) {
+    requestJson = async function identityRequestJson(url, options = {}) {
       try {
-        const data = await originalRequestJson(url, withBubbleColorBody(url, options));
+        const data = await originalRequestJson(url, withParticipantContextBody(url, options));
         absorbParticipants(data);
+        if (/\/api\/chats\/[^/?]+(?:\?|$)/.test(String(url || "")) && (!options.method || options.method === "GET")) markChatRead(data);
         return data;
       } catch (error) {
         if (/bubble color|color is already/i.test(error.message || "")) {
           selectedColor = "";
-          removeStored(storageKey);
+          removeStored(colorStorageKey);
           setMenuStatus("That color is already in use. Pick another color.");
         }
         throw error;
@@ -304,7 +439,7 @@
 
   if (typeof createMessageElement === "function") {
     const originalCreateMessageElement = createMessageElement;
-    createMessageElement = function bubbleColorCreateMessageElement(role, content, options = {}) {
+    createMessageElement = function identityCreateMessageElement(role, content, options = {}) {
       const article = originalCreateMessageElement(role, content, options);
       const color = normalizeColor(options.bubbleColor || options.context?.bubbleColor || "");
       if (role === "user" && color) {
@@ -317,7 +452,7 @@
   }
 
   if (typeof renderMessages === "function") {
-    renderMessages = function bubbleColorRenderMessages(messages = []) {
+    renderMessages = function identityRenderMessages(messages = []) {
       messagesEl.innerHTML = "";
       chatHistory = [];
       const visibleMessages = messages.filter((message) => !isAutomaticAssistantMessage(message));
@@ -328,13 +463,15 @@
       for (const message of visibleMessages) {
         const context = message.context || {};
         const attachments = Array.isArray(context.attachments) ? context.attachments : [];
-        messagesEl.appendChild(createMessageElement(message.role, message.content, {
+        const article = createMessageElement(message.role, message.content, {
           createdAt: message.createdAt,
           attachments,
           participantType: context.participantType || "original",
-          participantLabel: context.participantLabel || "",
+          participantLabel: context.participantNickname || context.participantLabel || "",
           bubbleColor: context.bubbleColor
-        }));
+        });
+        appendSeenStatus(article, message);
+        messagesEl.appendChild(article);
         if (message.role === "user" || message.role === "assistant") chatHistory.push({ role: message.role, content: message.content });
       }
       scrollToBottom();
@@ -343,9 +480,9 @@
 
   if (typeof addMessage === "function") {
     const originalAddMessage = addMessage;
-    addMessage = function bubbleColorAddMessage(role, content, options = {}) {
-      const nextOptions = role === "user" && selectedColor && !options.bubbleColor
-        ? { ...options, bubbleColor: selectedColor }
+    addMessage = function identityAddMessage(role, content, options = {}) {
+      const nextOptions = role === "user"
+        ? { ...options, bubbleColor: options.bubbleColor || selectedColor, participantLabel: options.participantLabel || participantLabel() }
         : options;
       return originalAddMessage(role, content, nextOptions);
     };
@@ -353,12 +490,27 @@
 
   if (typeof sendMessage === "function") {
     const originalSendMessage = sendMessage;
-    sendMessage = async function bubbleColorSendMessage(...args) {
+    sendMessage = async function identitySendMessage(...args) {
       const message = inputEl.value.trim();
       const attachments = selectedAttachments.slice();
       if ((!message && !attachments.length) || isSending) return;
-      await ensureBubbleColor();
+      await ensureChatIdentity();
       return originalSendMessage.apply(this, args);
+    };
+  }
+
+  if (typeof createChat === "function") {
+    const originalCreateChat = createChat;
+    createChat = async function identityCreateChat(...args) {
+      await originalCreateChat.apply(this, args);
+      await ensureChatIdentity();
+      if (currentChatId) {
+        await requestJson(`/api/chats/${encodeURIComponent(currentChatId)}/participants`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ context: participantContext() })
+        }).catch(() => {});
+      }
     };
   }
 
