@@ -190,7 +190,12 @@
     addOrgFields();
     bindActions();
     const usersContainer = document.getElementById("users");
-    if (usersContainer) new MutationObserver(() => window.setTimeout(renderOrgUserTable, 0)).observe(usersContainer, { childList: true });
+    if (usersContainer) {
+      new MutationObserver(() => {
+        if (usersContainer.querySelector(".users-table")) return;
+        window.setTimeout(renderOrgUserTable, 0);
+      }).observe(usersContainer, { childList: true });
+    }
     window.setTimeout(renderOrgUserTable, 0);
   }
 
