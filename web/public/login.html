@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Switchboard Login</title>
+    <script>
+      (() => {
+        const storageKey = "switchboard-theme";
+        const systemPrefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+        let storedTheme = null;
+        try { storedTheme = localStorage.getItem(storageKey); } catch (error) { storedTheme = null; }
+        document.documentElement.dataset.theme = storedTheme || (systemPrefersDark ? "dark" : "light");
+      })();
+    </script>
+    <link rel="stylesheet" href="style.css" />
+    <link rel="stylesheet" href="admin.css" />
+  </head>
+  <body>
+    <main class="login-shell" aria-label="Switchboard login page">
+      <section class="login-panel">
+        <a class="brand-lockup" href="/" aria-label="Switchboard Agent home">
+          <span class="brand-mark" aria-hidden="true">★</span>
+          <span>Switchboard</span>
+        </a>
+        <h1>Login</h1>
+        <p>You have been logged out. Start a new chat or return to an admin page when your session is ready.</p>
+        <div class="form-actions">
+          <a class="secondary-action" href="/">Back to chat</a>
+          <a class="primary-action" href="/chat.html">Admin chat</a>
+        </div>
+      </section>
+    </main>
+  </body>
+</html>
