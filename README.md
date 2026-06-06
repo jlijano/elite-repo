@@ -16,6 +16,8 @@ The `web/` directory contains a Render-ready Express app that serves a plain HTM
 - ChatGPT-inspired full-height chat UI with a dark sidebar, centered conversation stream, rounded bottom composer, and responsive mobile layout.
 - Focused navigation for New Chat, saved chat sessions, chat archiving, agent status, theme switching, text file uploads, and message sending.
 - Separate chat sessions with New Chat behavior so conversations do not overlap.
+- Chat access requires a logged-in account for normal chat creation, listing, reading, sending, and archiving. Logged-out visitors see a login gate instead of chat history.
+- Logged-in users can create a share link for the current chat. Anyone with the exact shared URL can view that one chat read-only without seeing the chat list or composer.
 - Logged-in chat users see a sidebar Users section populated by active users who share the current user's company, department, or group.
 - Non-destructive chat archiving with active chat lists hiding archived chats while admin chat review can still load all chats.
 - Text file attachments in the composer, stored in sanitized message context and included in AI context for the current message.
@@ -107,6 +109,7 @@ Without `DATABASE_URL`, the app starts in in-memory storage mode for local testi
 - `OPENAI_MODEL`: optional. Defaults to `gpt-4.1-mini`.
 - `REVIEW_RUN_TOKEN`: optional. When set, `/api/reviews/run` requires the token through `x-review-token` or `Authorization: Bearer ...`.
 - `ADMIN_TOKEN`: recommended for bootstrapping user records before an owner/admin account can log in; also remains supported as a compatibility path for `/api/admin/*` routes.
+- `CHAT_SHARE_SECRET`: optional but recommended. Overrides the secret used to generate deterministic read-only chat share links. Keep it in deployment environment variables and rotate links if this value changes.
 - `REVIEW_RUN_INTERVAL_MS`: optional. Enables the backend scheduled review runner when set to at least `60000`.
 
 Do not commit secrets, API keys, deploy hooks, database URLs, passwords, session cookies, or Render credentials. Configure secrets only in Render environment variables or another approved secret store.
@@ -115,13 +118,14 @@ Do not commit secrets, API keys, deploy hooks, database URLs, passwords, session
 
 - `GET /health`: Render-compatible health check.
 - `GET /api/status`: returns directory, AI, and storage availability.
-- `POST /api/chats`: creates a chat session.
-- `GET /api/chats`: lists recent unarchived chat sessions.
-- `GET /api/chats?includeArchived=true`: lists recent chat sessions including archived chats.
-- `GET /api/chats/:chatId`: loads a chat and its message history.
-- `POST /api/chats/:chatId/archive`: archives or unarchives a chat with `{ "archived": true }` or `{ "archived": false }`.
-- `POST /api/chats/:chatId/messages`: stores a message for a chat.
-- `POST /api/chat`: stores a user message and optional text attachments, attempts an AI response when available, stores the assistant response when possible, and returns a storage failure status if the user message could not be saved.
+- `POST /api/chats`: creates a chat session. Requires `x-session-token`.
+- `GET /api/chats`: lists recent unarchived chat sessions. Requires `x-session-token`.
+- `GET /api/chats?includeArchived=true`: lists recent chat sessions including archived chats. Requires `x-session-token`.
+- `GET /api/chats/:chatId`: loads a chat and its message history. Requires `x-session-token`, unless the request includes a valid `share` query token for that chat.
+- `POST /api/chats/:chatId/share`: creates a read-only share URL for one chat. Requires `x-session-token`.
+- `POST /api/chats/:chatId/archive`: archives or unarchives a chat with `{ "archived": true }` or `{ "archived": false }`. Requires `x-session-token`.
+- `POST /api/chats/:chatId/messages`: stores a message for a chat. Requires `x-session-token`.
+- `POST /api/chat`: stores a user message and optional text attachments, attempts an AI response when available, stores the assistant response when possible, and returns a storage failure status if the user message could not be saved. Requires `x-session-token`.
 - `GET /api/knowledge?status=approved`: reads durable knowledge entries.
 - `POST /api/reviews/run`: records a review run, reads unreviewed messages, creates pending-review knowledge entries, and marks messages reviewed.
 - `POST /api/auth/login`: logs in an active user with email and password, returning a session token and public user record. Repeated failed attempts are rate-limited and successful logins are audited.
@@ -161,6 +165,7 @@ The review workflow is implemented as an idempotent backend route and optional b
 
 - `/health` and `/api/status`.
 - Chat creation, message storage, sanitized context, and chat history loading.
+- Login-required chat API protection and read-only shared chat links for visitors with the exact shared URL.
 - `/api/chat` storage-only fallback when `OPENAI_API_KEY` is missing.
 - Chat archiving, hidden archived chats, and archived-chat write protection.
 - Available chat-user filtering by logged-in session, active user status, and shared company, department, or group.
@@ -172,6 +177,7 @@ The review workflow is implemented as an idempotent backend route and optional b
 - Protected user-management routes, user creation/listing/loading/updating, duplicate email handling, disable/reactivate actions, uploaded profile photo Data URL validation, and audit-event creation.
 - Real auth/profile behavior: failed and successful login, login rate limiting, session profile reads, backend-backed profile updates, current-password verification for password changes, stricter password rejection, password-change session rotation and old-token revocation, session-backed owner/admin access to all `/api/admin/*` routes, logout revocation, non-admin rejection from admin APIs, audit entries for login/profile activity, and new-password login.
 - User page controls for searchable table listing, Add user modal creation, drag-and-drop profile photo upload, photo preview, create/edit fields, role/status selection, password entry, and backend API wiring.
+- Chat page login gate, share button, shared link parameters, and locked/shared layout styling.
 - Entra Company, Department, and Group pages for table-based management layout, search, Add buttons, modal create/edit forms, status actions, and responsive rows.
 - User Audit report controls for User, Update, Timestamp rows, protected audit data, actor/target identity display, and CSV export.
 - Admin navigation routes, page ownership for Chat, Knowledge base, User, Playground, Settings, Reports, Logs, Review runs, System health, and User audit, plus nested Attachments, Settings section structure, standardized Settings status badges, Settings Access and security session/protected-route summaries, safe action links, secret-display guardrails, Settings Review runs summary cards, System health hints, live Diagnostics rendering, Settings Light / Dark / System theme preference markup, theme persistence keys, reload restore behavior, System-mode handling, Settings refresh cadence markup, refresh persistence key, manual refresh timer cancellation, Refresh now wiring, Playground required workspace sections, the profile dropdown, Update Profile form, Logout redirect, profile-menu-only admin logout, and the Mac-style clock wiring.
