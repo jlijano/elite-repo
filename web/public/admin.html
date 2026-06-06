@@ -21,8 +21,7 @@
       .admin-shell button.nav-item { width: 100%; }
       .admin-shell .nav-item.active { background: var(--sidebar-card); box-shadow: inset 3px 0 0 var(--primary); color: var(--sidebar-text); }
       .admin-shell .nav-item.active span { color: var(--primary); }
-      .admin-nav-stack { min-height: 0; display: grid; grid-template-rows: auto minmax(0, 1fr) auto; gap: var(--space-5); }
-      .admin-section-list { min-height: 0; display: grid; align-content: start; gap: 2px; overflow-y: auto; }
+      .admin-section-list { display: grid; align-content: start; gap: 2px; }
       .workspace-card { display: grid; gap: 8px; padding: 10px; border-radius: var(--radius); background: var(--sidebar-card); color: var(--sidebar-text); }
       .workspace-card strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
       .workspace-card small { color: var(--sidebar-subtle); line-height: 1.35; }
@@ -58,7 +57,7 @@
       .section-tools input { flex: 1 1 170px; }
       .section-tools select { flex: 0 0 150px; }
       .widget-body, .list, .detail { max-height: 460px; overflow: auto; padding: 12px; color: var(--muted); }
-      .widget-body.short, .compact-list { max-height: 280px; }
+      .compact-list { max-height: 280px; }
       .metrics-grid { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 10px; padding: 12px; }
       .metric { min-width: 0; padding: 12px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel-soft); }
       .metric span { display: block; overflow: hidden; color: var(--muted); font-size: 0.72rem; font-weight: 800; text-overflow: ellipsis; text-transform: uppercase; white-space: nowrap; }
@@ -112,17 +111,14 @@
           <button class="nav-item" data-target="attachmentsSection" type="button"><span aria-hidden="true">▤</span>Attachments</button>
           <button class="nav-item" data-target="adminAccessSection" type="button"><span aria-hidden="true">◉</span>Admin access</button>
           <button class="nav-item" data-target="systemHealthSection" type="button"><span aria-hidden="true">●</span>System health</button>
-          <button class="nav-item" data-target="userSection" type="button"><span aria-hidden="true">◉</span>User</button>
           <button class="nav-item" data-target="settingsSection" type="button"><span aria-hidden="true">⚙</span>Settings</button>
         </nav>
 
-        <section class="admin-nav-stack" aria-label="Admin workspace">
-          <div class="admin-section-list">
-            <h2 class="session-heading">Workspace</h2>
-            <div class="workspace-card">
-              <strong>Switchboard Admin</strong>
-              <small>Dashboard controls and protected management context.</small>
-            </div>
+        <section class="admin-section-list" aria-label="Admin workspace">
+          <h2 class="session-heading">Workspace</h2>
+          <div class="workspace-card">
+            <strong>Switchboard Admin</strong>
+            <small>Dashboard controls and protected management context.</small>
           </div>
           <button class="nav-item logout-action" id="logoutButton" type="button"><span aria-hidden="true">↩</span>Logout</button>
         </section>
@@ -176,7 +172,7 @@
               <section class="dashboard-widget wide chat-review-card" id="chatReviewSection" data-widget="chat-review" hidden>
                 <div class="widget-head">
                   <div>
-                    <h2>Chat Review</h2>
+                    <h2>Chat review</h2>
                     <p class="widget-subtitle">Recent chats and selected chat detail.</p>
                   </div>
                   <div class="section-tools">
@@ -192,7 +188,7 @@
               <section class="dashboard-widget" id="knowledgeQueueSection" data-widget="knowledge-queue">
                 <div class="widget-head">
                   <div>
-                    <h2>Knowledge Queue</h2>
+                    <h2>Knowledge queue</h2>
                     <p class="widget-subtitle">Pending, approved, archived, and project knowledge.</p>
                   </div>
                   <div class="section-tools">
@@ -212,7 +208,7 @@
               <section class="dashboard-widget" id="reviewRunsSection" data-widget="review-runs">
                 <div class="widget-head">
                   <div>
-                    <h2>Review Runs</h2>
+                    <h2>Review runs</h2>
                     <p class="widget-subtitle">Review history, run counts, and errors.</p>
                   </div>
                 </div>
@@ -235,7 +231,7 @@
               <section class="dashboard-widget" id="adminAccessSection" data-widget="admin-access">
                 <div class="widget-head">
                   <div>
-                    <h2>Admin Access</h2>
+                    <h2>Admin access</h2>
                     <p class="widget-subtitle">Admin session and protected route status.</p>
                   </div>
                 </div>
@@ -245,26 +241,11 @@
               <section class="dashboard-widget" id="systemHealthSection" data-widget="system-health">
                 <div class="widget-head">
                   <div>
-                    <h2>System Health</h2>
+                    <h2>System health</h2>
                     <p class="widget-subtitle">Storage, AI, directory, and protected route status.</p>
                   </div>
                 </div>
                 <div class="list compact-list" id="systemHealth">Loading system health...</div>
-              </section>
-
-              <section class="dashboard-widget" id="userSection" data-widget="user" hidden>
-                <div class="widget-head">
-                  <div>
-                    <h2>User</h2>
-                    <p class="widget-subtitle">User-account status and management context.</p>
-                  </div>
-                </div>
-                <div class="list compact-list" id="userManagement">
-                  <article class="item">
-                    <div class="row"><span>User management API</span><small>Not configured</small></div>
-                    <p>No separate user-management API is configured yet. Admin access and protected route status remain available in the Admin Access widget.</p>
-                  </article>
-                </div>
               </section>
 
               <section class="dashboard-widget wide" id="settingsSection" data-widget="settings">
@@ -331,8 +312,6 @@
         knowledge: document.getElementById("knowledge"),
         runs: document.getElementById("runs"),
         users: document.getElementById("users"),
-        userSection: document.getElementById("userSection"),
-        userManagement: document.getElementById("userManagement"),
         fileManagement: document.getElementById("fileManagement"),
         systemHealth: document.getElementById("systemHealth"),
         logoutButton: document.getElementById("logoutButton"),
@@ -351,16 +330,16 @@
       const widgetStorageKey = "switchboard-admin-widgets";
       const refreshIntervalMs = 40000;
       const configurableWidgets = [
-        ["knowledge-queue", "Knowledge Queue"],
-        ["review-runs", "Review Runs"],
+        ["knowledge-queue", "Knowledge queue"],
+        ["review-runs", "Review runs"],
         ["attachments", "Attachments"],
-        ["admin-access", "Admin Access"],
-        ["system-health", "System Health"]
+        ["admin-access", "Admin access"],
+        ["system-health", "System health"]
       ];
       const projectKnowledgeEntries = [
         { id: "project-admin-token-ui", title: "Admin login panel cleanup", status: "project", createdAt: "2026-06-06T00:00:00.000Z", content: "The admin dashboard should not show visible token-entry, Login, or Run Review controls. Protected backend admin routes still require ADMIN_TOKEN, but that requirement stays backend-only rather than being presented as an on-screen token form." },
-        { id: "project-chat-review-loading", title: "Chat Review section behavior", status: "project", createdAt: "2026-06-06T00:00:00.000Z", content: "The Chat Review section should post recent chats into the highlighted review list by loading /api/chats?includeArchived=true. Selecting Inspect loads the chat details and message attachments into the adjacent detail and file-management sections." },
-        { id: "project-knowledge-base-section", title: "Knowledge section purpose", status: "project", createdAt: "2026-06-06T00:00:00.000Z", content: "The Knowledge section should show project-level working notes from the current build conversation plus review-created backend knowledge when an admin session is available. Static project notes are informational cards, not database records requiring approval actions." },
+        { id: "project-chat-review-loading", title: "Chat review section behavior", status: "project", createdAt: "2026-06-06T00:00:00.000Z", content: "The Chat review section should post recent chats into the highlighted review list by loading /api/chats?includeArchived=true. Selecting Inspect loads the chat details and message attachments into the adjacent detail and file-management sections." },
+        { id: "project-knowledge-base-section", title: "Knowledge queue purpose", status: "project", createdAt: "2026-06-06T00:00:00.000Z", content: "The Knowledge queue should show project-level working notes from the current build conversation plus review-created backend knowledge when an admin session is available. Static project notes are informational cards, not database records requiring approval actions." },
         { id: "project-deployment-rule", title: "GitHub and Render deployment rule", status: "project", createdAt: "2026-06-06T00:00:00.000Z", content: "Repository changes should be committed through GitHub and deployed by Render auto-deploy from main. Do not request, store, or expose Render credentials, deploy hooks, API keys, passwords, session cookies, or other secrets. If Render fails, diagnose from build logs and fix repository code." }
       ];
       let token = sessionStorage.getItem(adminTokenStorageKey) || "";
@@ -426,8 +405,9 @@
 
       function setActiveNav(targetId) {
         document.querySelectorAll(".primary-nav .nav-item[data-target]").forEach((item) => {
-          item.classList.toggle("active", item.dataset.target === targetId);
-          if (item.dataset.target === targetId) item.setAttribute("aria-current", "page");
+          const isActive = item.dataset.target === targetId;
+          item.classList.toggle("active", isActive);
+          if (isActive) item.setAttribute("aria-current", "page");
           else item.removeAttribute("aria-current");
         });
       }
@@ -436,12 +416,6 @@
         els.chatReviewSection.hidden = false;
         setActiveNav("chatReviewSection");
         els.chatReviewSection.scrollIntoView({ behavior: "smooth", block: "start" });
-      }
-
-      function revealUserSection() {
-        els.userSection.hidden = false;
-        setActiveNav("userSection");
-        els.userSection.scrollIntoView({ behavior: "smooth", block: "start" });
       }
 
       async function fetchJson(url, options = {}, useAdminHeaders = false) {
@@ -469,7 +443,7 @@
         const metrics = [
           ["Chats", summary.chats],
           ["Messages", summary.messages],
-          ["Pending Review", summary.unreviewedMessages],
+          ["Pending review", summary.unreviewedMessages],
           ["Pending KB", summary.pendingKnowledge],
           ["Approved KB", summary.approvedKnowledge],
           ["Storage", runtime.storageMode || "unknown"]
@@ -478,15 +452,15 @@
       }
 
       function renderUsers(summary = {}, runtime = {}) {
-        els.users.innerHTML = `<article class="item"><div class="row"><span>Protected admin routes</span><small>${token ? "Admin session" : "Public view"}</small></div><p>${token ? "Protected admin data is loaded through backend management routes." : "Chat Review and project knowledge are visible, but account records require protected backend admin access."}</p><p>Storage mode: ${html(runtime.storageMode || "unknown")}. Total chats shown: ${html(summary.chats ?? chatsCache.length)}.</p></article>`;
+        els.users.innerHTML = `<article class="item"><div class="row"><span>Protected admin routes</span><small>${token ? "Admin session" : "Public view"}</small></div><p>${token ? "Protected admin data is loaded through backend management routes." : "Chat review and project knowledge are visible, but account records require protected backend admin access."}</p><p>Storage mode: ${html(runtime.storageMode || "unknown")}. Total chats shown: ${html(summary.chats ?? chatsCache.length)}.</p></article>`;
       }
 
       function renderSystemHealth(status = lastStatus || {}) {
         const rows = [
           ["Storage", status.storageAvailable === false ? "Unavailable" : "Ready", status.storageMode || "unknown"],
-          ["AI responder", status.aiAvailable ? "Online" : "Storage-only", status.aiAvailable ? "Responses enabled" : "Messages are saved for review"],
-          ["Agent Directory", status.directoryAvailable ? "Loaded" : "Unavailable", Array.isArray(status.filesLoaded) ? `${status.filesLoaded.length} files loaded` : "No file count"],
-          ["Protected routes", token ? "Admin session" : "Protected", token ? "Admin token present in session" : "Public dashboard view"]
+          ["AI availability", status.aiAvailable ? "Online" : "Storage-only", status.aiAvailable ? "Responses enabled" : "Messages are saved for review"],
+          ["Directory loaded", status.directoryAvailable ? "Loaded" : "Unavailable", Array.isArray(status.filesLoaded) ? `${status.filesLoaded.length} files loaded` : "No file count"],
+          ["Protected route status", token ? "Admin session" : "Protected", token ? "Admin token present in session" : "Public dashboard view"]
         ];
         els.systemHealth.innerHTML = rows.map(([label, state, detail]) => `<article class="item"><div class="row"><span>${html(label)}</span><small>${html(state)}</small></div><p>${html(detail)}</p></article>`).join("");
       }
@@ -498,14 +472,14 @@
           for (const attachment of items) attachments.push({ ...attachment, role: message.role, createdAt: message.createdAt });
         }
         els.fileManagement.innerHTML = attachments.length
-          ? attachments.map((attachment) => `<article class="item"><div class="row"><span>${html(attachment.name || "Attachment")}</span><small>${html(attachment.role || "message")}</small></div><p>${html(attachment.type || "text attachment")} ${attachment.size ? `· ${html(attachment.size)} bytes` : ""}</p><p>Stored in sanitized chat message context ${attachment.createdAt ? `on ${html(time(attachment.createdAt))}` : ""}.</p></article>`).join("")
-          : `<article class="item"><div class="row"><span>No attachments in selected chat</span><small>Setup</small></div><p>Select a chat from Chat Review to inspect files attached to its messages.</p></article>`;
+          ? attachments.map((attachment) => `<article class="item"><div class="row"><span>${html(attachment.name || "Attachment")}</span><small>${html(attachment.role || "message")}</small></div><p>${html(attachment.type || "text attachment")} ${attachment.size ? `- ${html(attachment.size)} bytes` : ""}</p><p>Stored in sanitized chat message context ${attachment.createdAt ? `on ${html(time(attachment.createdAt))}` : ""}.</p></article>`).join("")
+          : `<article class="item"><div class="row"><span>No attachments in selected chat</span><small>Setup</small></div><p>Select a chat from Chat review to inspect files attached to its messages.</p></article>`;
       }
 
       function renderChats() {
         const query = els.chatSearch.value;
         const filteredChats = chatsCache.filter((chat) => textMatch(chat.title, query) || textMatch(chat.id, query));
-        els.chats.innerHTML = filteredChats.length ? filteredChats.map((chat) => `<article class="item${chat.id === selectedChatId ? " active" : ""}"><div class="row"><span>${html(chat.title || "New chat")}</span><small>${html(chat.messageCount)} msg</small></div><p>Updated ${html(time(chat.updatedAt))}${chat.archivedAt ? ` · Archived ${html(time(chat.archivedAt))}` : ""}</p><div class="actions"><button data-chat="${html(chat.id)}">Inspect</button></div></article>`).join("") : `<div class="empty">No chats match this search.</div>`;
+        els.chats.innerHTML = filteredChats.length ? filteredChats.map((chat) => `<article class="item${chat.id === selectedChatId ? " active" : ""}"><div class="row"><span>${html(chat.title || "New chat")}</span><small>${html(chat.messageCount)} msg</small></div><p>Updated ${html(time(chat.updatedAt))}${chat.archivedAt ? ` - Archived ${html(time(chat.archivedAt))}` : ""}</p><div class="actions"><button data-chat="${html(chat.id)}">Inspect</button></div></article>`).join("") : `<div class="empty">No chats match this search.</div>`;
         els.chats.querySelectorAll("[data-chat]").forEach((button) => button.addEventListener("click", () => loadChat(button.dataset.chat)));
       }
 
@@ -542,7 +516,7 @@
         renderChats();
         renderKnowledge();
         renderRuns();
-        setStatus(`Recent chats and project knowledge loaded. ${chatsCache.length} chats available in Chat Review.`);
+        setStatus(`Recent chats and project knowledge loaded. ${chatsCache.length} chats available in Chat review.`);
       }
 
       async function loadProtectedDashboard() {
@@ -630,10 +604,6 @@
           const targetId = button.dataset.target;
           if (targetId === "chatReviewSection") {
             revealChatReviewSection();
-            return;
-          }
-          if (targetId === "userSection") {
-            revealUserSection();
             return;
           }
           setActiveNav(targetId);
