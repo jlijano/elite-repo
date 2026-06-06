@@ -52,6 +52,6 @@ test("playground store persists created tasks and projects in memory mode", asyn
 test("playground page loads the storage-backed script", () => {
   const html = fs.readFileSync(path.join(__dirname, "..", "public", "playground.html"), "utf8");
 
-  assert.match(html, /<script src="admin\.js"><\/script>/);
-  assert.match(html, /<script src="playground\.js"><\/script>/);
+  assert.ok(html.includes('<script src="admin.js"></script>'));
+  assert.ok(html.includes('<script src="playground.js"></script>'));
 });
