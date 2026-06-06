@@ -54,7 +54,7 @@ const sessionHeaders = (token) => ({ "x-session-token": token });
 before(async () => {
   const port = await getFreePort();
   baseUrl = `http://127.0.0.1:${port}`;
-  serverProcess = spawn(process.execPath, ["--require", "./register-user-management.js", "server.js"], {
+  serverProcess = spawn(process.execPath, ["server.js"], {
     cwd: webDir,
     env: {
       ...process.env,
@@ -87,6 +87,19 @@ test("logs in with a real user session and protects profile updates", async () =
     })
   });
   assert.equal(created.response.status, 201);
+
+  const weakPassword = await jsonFetch("/api/admin/users", {
+    method: "POST",
+    headers: adminHeaders(),
+    body: JSON.stringify({
+      name: "Weak Password User",
+      email: "weak-password@example.com",
+      role: "viewer",
+      status: "active",
+      password: "short"
+    })
+  });
+  assert.equal(weakPassword.response.status, 400);
 
   const badLogin = await jsonFetch("/api/auth/login", {
     method: "POST",
@@ -131,45 +144,57 @@ test("logs in with a real user session and protects profile updates", async () =
   });
   assert.equal(passwordChanged.response.status, 200);
   assert.ok(passwordChanged.data.user.passwordUpdatedAt);
+  assert.ok(passwordChanged.data.sessionToken);
+  assert.notEqual(passwordChanged.data.sessionToken, token);
+  const rotatedToken = passwordChanged.data.sessionToken;
 
-  const adminList = await jsonFetch("/api/admin/users", { headers: sessionHeaders(token) });
+  const revokedOldProfile = await jsonFetch("/api/profile", { headers: sessionHeaders(token) });
+  assert.equal(revokedOldProfile.response.status, 401);
+
+  const adminList = await jsonFetch("/api/admin/users", { headers: sessionHeaders(rotatedToken) });
   assert.equal(adminList.response.status, 200);
   assert.equal(adminList.data.users.some((user) => user.email === "phase4@example.com"), true);
 
   const chat = await jsonFetch("/api/chats", { method: "POST", body: JSON.stringify({ title: "Admin session chat" }) });
   assert.equal(chat.response.status, 201);
 
-  const adminSummary = await jsonFetch("/api/admin/summary", { headers: sessionHeaders(token) });
+  const adminSummary = await jsonFetch("/api/admin/summary", { headers: sessionHeaders(rotatedToken) });
   assert.equal(adminSummary.response.status, 200);
   assert.equal(Number.isInteger(adminSummary.data.summary.chats), true);
 
-  const adminChats = await jsonFetch("/api/admin/chats", { headers: sessionHeaders(token) });
+  const adminChats = await jsonFetch("/api/admin/chats", { headers: sessionHeaders(rotatedToken) });
   assert.equal(adminChats.response.status, 200);
   assert.equal(adminChats.data.chats.some((item) => item.id === chat.data.chat.id), true);
 
-  const adminChatDetail = await jsonFetch(`/api/admin/chats/${chat.data.chat.id}`, { headers: sessionHeaders(token) });
+  const adminChatDetail = await jsonFetch(`/api/admin/chats/${chat.data.chat.id}`, { headers: sessionHeaders(rotatedToken) });
   assert.equal(adminChatDetail.response.status, 200);
   assert.equal(adminChatDetail.data.chat.id, chat.data.chat.id);
 
-  const adminKnowledge = await jsonFetch("/api/admin/knowledge", { headers: sessionHeaders(token) });
+  const adminKnowledge = await jsonFetch("/api/admin/knowledge", { headers: sessionHeaders(rotatedToken) });
   assert.equal(adminKnowledge.response.status, 200);
   assert.equal(Array.isArray(adminKnowledge.data.entries), true);
 
-  const adminReviewRuns = await jsonFetch("/api/admin/review-runs", { headers: sessionHeaders(token) });
+  const adminReviewRuns = await jsonFetch("/api/admin/review-runs", { headers: sessionHeaders(rotatedToken) });
   assert.equal(adminReviewRuns.response.status, 200);
   assert.equal(Array.isArray(adminReviewRuns.data.runs), true);
 
-  const adminReviewRun = await jsonFetch("/api/admin/reviews/run", { method: "POST", headers: sessionHeaders(token), body: "{}" });
+  const adminReviewRun = await jsonFetch("/api/admin/reviews/run", { method: "POST", headers: sessionHeaders(rotatedToken), body: "{}" });
   assert.equal(adminReviewRun.response.status, 201);
   assert.equal(adminReviewRun.data.run.status, "completed");
 
-  const logout = await jsonFetch("/api/auth/logout", { method: "POST", headers: sessionHeaders(token), body: "{}" });
+  const audit = await jsonFetch("/api/admin/user-audit-events", { headers: sessionHeaders(rotatedToken) });
+  assert.equal(audit.response.status, 200);
+  const actions = audit.data.events.map((event) => event.action);
+  assert.equal(actions.includes("user.login"), true);
+  assert.equal(actions.includes("profile.updated"), true);
+
+  const logout = await jsonFetch("/api/auth/logout", { method: "POST", headers: sessionHeaders(rotatedToken), body: "{}" });
   assert.equal(logout.response.status, 200);
 
-  const revokedProfile = await jsonFetch("/api/profile", { headers: sessionHeaders(token) });
+  const revokedProfile = await jsonFetch("/api/profile", { headers: sessionHeaders(rotatedToken) });
   assert.equal(revokedProfile.response.status, 401);
 
-  const revokedAdminSummary = await jsonFetch("/api/admin/summary", { headers: sessionHeaders(token) });
+  const revokedAdminSummary = await jsonFetch("/api/admin/summary", { headers: sessionHeaders(rotatedToken) });
   assert.equal(revokedAdminSummary.response.status, 401);
 
   const oldPasswordLogin = await jsonFetch("/api/auth/login", {
@@ -207,4 +232,34 @@ test("blocks non-admin sessions from legacy admin APIs", async () => {
 
   const blocked = await jsonFetch("/api/admin/summary", { headers: sessionHeaders(login.data.sessionToken) });
   assert.equal(blocked.response.status, 401);
+});
+
+test("rate limits repeated login failures", async () => {
+  const created = await jsonFetch("/api/admin/users", {
+    method: "POST",
+    headers: adminHeaders(),
+    body: JSON.stringify({
+      name: "Rate Limited Admin",
+      email: "rate-limit@example.com",
+      role: "admin",
+      status: "active",
+      password: "rate limit password"
+    })
+  });
+  assert.equal(created.response.status, 201);
+
+  for (let attempt = 0; attempt < 5; attempt += 1) {
+    const failed = await jsonFetch("/api/auth/login", {
+      method: "POST",
+      body: JSON.stringify({ email: "rate-limit@example.com", password: "wrong password" })
+    });
+    assert.equal(failed.response.status, 401);
+  }
+
+  const limited = await jsonFetch("/api/auth/login", {
+    method: "POST",
+    body: JSON.stringify({ email: "rate-limit@example.com", password: "wrong password" })
+  });
+  assert.equal(limited.response.status, 429);
+  assert.ok(limited.response.headers.get("retry-after"));
 });
