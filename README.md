@@ -26,7 +26,7 @@ The `web/` directory contains a Render-ready Express app that serves a plain HTM
 - Backend management dashboard at `/admin.html` for inspecting chats, reviewing knowledge entries, and checking review history.
 - Admin dashboard styling shares the chat UI shell, theme tokens, and persistent light/dark mode behavior for a consistent management experience.
 - Admin dashboard navigation includes Chat Review, User Management, File Management, Logs, Files Management, and Logout sections.
-- Admin dashboard no longer exposes visible token-entry, Login, or Run Review controls; protected backend admin routes still require `ADMIN_TOKEN`.
+- Admin dashboard no longer exposes visible token-entry, Login, or Run Review controls; Chat Review loads recent chats into the highlighted review section, while protected backend admin routes still require `ADMIN_TOKEN` for management-only data.
 - Admin dashboard chat and knowledge search controls filter cached management data, keep selected chats highlighted, and show clear loading and error states during admin actions.
 - User and broader file management sections currently show honest status placeholders until dedicated backend endpoints are added.
 - Chat failure responses distinguish between saved messages awaiting review and storage failures that could not save the message.
@@ -65,7 +65,7 @@ Without `DATABASE_URL`, the app starts in in-memory storage mode for local testi
 - `OPENAI_API_KEY`: optional. Enables AI responses when present.
 - `OPENAI_MODEL`: optional. Defaults to `gpt-4.1-mini`.
 - `REVIEW_RUN_TOKEN`: optional. When set, `/api/reviews/run` requires the token through `x-review-token` or `Authorization: Bearer ...`.
-- `ADMIN_TOKEN`: required for the backend management dashboard and `/api/admin/*` routes.
+- `ADMIN_TOKEN`: required for protected backend management data and `/api/admin/*` routes.
 - `REVIEW_RUN_INTERVAL_MS`: optional. Enables the backend scheduled review runner when set to at least `60000`.
 
 Do not commit secrets, API keys, deploy hooks, database URLs, passwords, session cookies, or Render credentials. Configure secrets only in Render environment variables or another approved secret store.
