@@ -28,17 +28,19 @@ The `web/` directory contains a Render-ready Express app that serves a plain HTM
   - `/knowledge.html` for the Knowledge base.
   - `/user.html` for User management, profile settings, and the Manage users action.
   - `/settings.html` for Settings, Review runs, and System health.
-  - `/update-profile.html` for the current user's profile photo, name, email, and password form.
-  - `/login.html` as the post-logout redirect target.
+  - `/update-profile.html` for the current user's backend-backed profile photo, name, email, and password form.
+  - `/login.html` for email/password login and post-logout redirects.
   - `/admin.html` redirects to `/chat.html` for backward compatibility.
+- Real user login sessions are backed by `/api/auth/login`, `/api/auth/logout`, and `user_sessions` storage. Owner/admin sessions can access the User management API; non-admin sessions can update their own profile.
+- Profile updates are saved through `/api/profile` instead of browser-local profile storage. Password changes require the current password before the backend updates the password hash.
 - Admin navigation uses Back to chat, Chat, Knowledge base, User, and Settings. Admin logout is available from the top-header profile menu.
 - Admin pages share the chat UI shell, theme tokens, fixed desktop sidebar, independently scrolling right panel, and reload-safe theme behavior.
 - Admin Settings is organized into Preferences, Access and security, Review runs, System health, and Diagnostics sections with standardized `Ready`, `Loaded`, `Public view`, `Storage-only`, and `Error` status badges.
 - Admin Settings includes a Light / Dark / System theme preference control. Explicit Light and Dark choices are restored after reload, while System follows the visitor's device preference.
 - Admin top headers include a Mac-style current day/time display and a user profile menu with Update Profile and Logout actions.
-- Logout clears the browser-held admin session token and redirects to `/login.html`.
-- Admin pages no longer expose visible token-entry, Login, or Run Review controls; protected backend admin routes still require `ADMIN_TOKEN` for management-only data.
-- Protected user-management APIs and the `/user.html` admin UI support listing, searching, creating, editing, disabling, and reactivating users, plus recent user audit-event visibility when an admin session is available.
+- Logout clears browser-held auth tokens, calls backend session logout when a user session is present, and redirects to `/login.html`.
+- Admin pages no longer expose visible token-entry, Login, or Run Review controls; legacy protected backend admin routes still require `ADMIN_TOKEN` for management-only data unless a route explicitly supports user sessions.
+- Protected user-management APIs and the `/user.html` admin UI support listing, searching, creating, editing, disabling, and reactivating users, plus recent user audit-event visibility when `ADMIN_TOKEN` or an active owner/admin user session is available.
 - Knowledge base includes source-controlled project knowledge cards plus review-created backend knowledge when an admin session is available.
 - Chat and knowledge search controls filter cached management data, keep selected chats highlighted, and show clear loading and error states during admin actions.
 - Chat failure responses distinguish between saved messages awaiting review and storage failures that could not save the message.
@@ -64,13 +66,14 @@ For persistent PostgreSQL storage, set `DATABASE_URL`. The server creates these 
 - `chats`
 - `chat_messages`
 - `users`
+- `user_sessions`
 - `user_audit_events`
 - `knowledge_entries`
 - `review_runs`
 
-The `users` and `user_audit_events` tables back protected user-management CRUD APIs and the `/user.html` admin UI. They provide account identity fields, role and status constraints, case-insensitive email uniqueness, password hash storage, login/profile timestamps, and audit-event relationships.
+The `users`, `user_sessions`, and `user_audit_events` tables back login, profile updates, protected user-management CRUD APIs, and the `/user.html` admin UI. They provide account identity fields, role and status constraints, case-insensitive email uniqueness, password hash storage, session token hashes, login/profile timestamps, and audit-event relationships.
 
-Existing PostgreSQL databases are updated additively with `chats.archived_at` and user-management foundation tables so archived chats can be hidden without deleting chat history and account records can be stored without replacing existing chat data.
+Existing PostgreSQL databases are updated additively with `chats.archived_at` and user-management/auth foundation tables so archived chats can be hidden without deleting chat history and account records can be stored without replacing existing chat data.
 
 Without `DATABASE_URL`, the app starts in in-memory storage mode for local testing and storage-only operation.
 
@@ -81,7 +84,7 @@ Without `DATABASE_URL`, the app starts in in-memory storage mode for local testi
 - `OPENAI_API_KEY`: optional. Enables AI responses when present.
 - `OPENAI_MODEL`: optional. Defaults to `gpt-4.1-mini`.
 - `REVIEW_RUN_TOKEN`: optional. When set, `/api/reviews/run` requires the token through `x-review-token` or `Authorization: Bearer ...`.
-- `ADMIN_TOKEN`: required for protected backend management data and `/api/admin/*` routes.
+- `ADMIN_TOKEN`: required for legacy protected backend management data and for bootstrapping user records before an owner/admin account can log in.
 - `REVIEW_RUN_INTERVAL_MS`: optional. Enables the backend scheduled review runner when set to at least `60000`.
 
 Do not commit secrets, API keys, deploy hooks, database URLs, passwords, session cookies, or Render credentials. Configure secrets only in Render environment variables or another approved secret store.
@@ -99,6 +102,10 @@ Do not commit secrets, API keys, deploy hooks, database URLs, passwords, session
 - `POST /api/chat`: stores a user message and optional text attachments, attempts an AI response when available, stores the assistant response when possible, and returns a storage failure status if the user message could not be saved.
 - `GET /api/knowledge?status=approved`: reads durable knowledge entries.
 - `POST /api/reviews/run`: records a review run, reads unreviewed messages, creates pending-review knowledge entries, and marks messages reviewed.
+- `POST /api/auth/login`: logs in an active user with email and password, returning a session token and public user record.
+- `POST /api/auth/logout`: revokes the current user session when called with `x-session-token`.
+- `GET /api/profile`: returns the current logged-in user's public profile. Requires `x-session-token`.
+- `PATCH /api/profile`: updates the current user's name, email, photo URL, or password. Password changes require `currentPassword` and `newPassword`. Requires `x-session-token`.
 - `GET /api/admin/summary`: returns backend management counts and runtime status. Requires `ADMIN_TOKEN`.
 - `GET /api/admin/chats`: lists chats for management review. Requires `ADMIN_TOKEN`.
 - `GET /api/admin/chats/:chatId`: loads a chat and messages for management review. Requires `ADMIN_TOKEN`.
@@ -106,13 +113,13 @@ Do not commit secrets, API keys, deploy hooks, database URLs, passwords, session
 - `PATCH /api/admin/knowledge/:entryId`: updates knowledge entry status, title, or content. Requires `ADMIN_TOKEN`.
 - `GET /api/admin/review-runs`: lists review run history. Requires `ADMIN_TOKEN`.
 - `POST /api/admin/reviews/run`: manually triggers a review run. Requires `ADMIN_TOKEN`.
-- `GET /api/admin/users`: lists user records. Requires `ADMIN_TOKEN`.
-- `POST /api/admin/users`: creates a user record. Requires `ADMIN_TOKEN`.
-- `GET /api/admin/users/:userId`: loads one user record. Requires `ADMIN_TOKEN`.
-- `PATCH /api/admin/users/:userId`: updates profile fields, role, status, email, photo URL, or password. Requires `ADMIN_TOKEN`.
-- `POST /api/admin/users/:userId/disable`: disables a user. Requires `ADMIN_TOKEN`.
-- `POST /api/admin/users/:userId/reactivate`: reactivates a disabled user. Requires `ADMIN_TOKEN`.
-- `GET /api/admin/user-audit-events`: lists recent user-management audit events. Supports `targetUserId`. Requires `ADMIN_TOKEN`.
+- `GET /api/admin/users`: lists user records. Requires `ADMIN_TOKEN` or an active owner/admin user session.
+- `POST /api/admin/users`: creates a user record. Requires `ADMIN_TOKEN` or an active owner/admin user session.
+- `GET /api/admin/users/:userId`: loads one user record. Requires `ADMIN_TOKEN` or an active owner/admin user session.
+- `PATCH /api/admin/users/:userId`: updates profile fields, role, status, email, photo URL, or password. Requires `ADMIN_TOKEN` or an active owner/admin user session.
+- `POST /api/admin/users/:userId/disable`: disables a user. Requires `ADMIN_TOKEN` or an active owner/admin user session.
+- `POST /api/admin/users/:userId/reactivate`: reactivates a disabled user. Requires `ADMIN_TOKEN` or an active owner/admin user session.
+- `GET /api/admin/user-audit-events`: lists recent user-management audit events. Supports `targetUserId`. Requires `ADMIN_TOKEN` or an active owner/admin user session.
 
 ### Scheduled review workflow
 
@@ -139,6 +146,7 @@ The review workflow is implemented as an idempotent backend route and optional b
 - Review-run creation of pending knowledge entries.
 - Admin approval of knowledge entries and approved knowledge retrieval.
 - Protected user-management routes, user creation/listing/loading/updating, duplicate email handling, disable/reactivate actions, and audit-event creation.
+- Real auth/profile behavior: failed and successful login, session profile reads, backend-backed profile updates, current-password verification for password changes, session-backed owner/admin access to user management, logout revocation, and new-password login.
 - User page controls for search, create/edit fields, role/status selection, password entry, audit events, and backend API wiring.
 - Admin navigation routes, page ownership for Chat, Knowledge base, User, Settings, nested Attachments, nested Review runs, nested System health, Settings section structure, standardized Settings status badges, Settings Light / Dark / System theme preference markup, persistence keys, reload restore behavior, System-mode handling, the profile dropdown, Update Profile form, Logout redirect, profile-menu-only admin logout, and the Mac-style clock wiring.
 
