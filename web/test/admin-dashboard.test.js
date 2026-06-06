@@ -3,91 +3,97 @@ const { readFileSync } = require("node:fs");
 const path = require("node:path");
 const test = require("node:test");
 
-const adminHtmlPath = path.join(__dirname, "..", "public", "admin.html");
-const adminHtml = readFileSync(adminHtmlPath, "utf8");
+const publicDir = path.join(__dirname, "..", "public");
+const readPublic = (file) => readFileSync(path.join(publicDir, file), "utf8");
 
-const sectionLabels = [
-  ["chatReviewSection", "Chat review"],
-  ["knowledgeQueueSection", "Knowledge queue"],
-  ["reviewRunsSection", "Review runs"],
-  ["attachmentsSection", "Attachments"],
-  ["adminAccessSection", "Admin access"],
-  ["systemHealthSection", "System health"],
-  ["settingsSection", "Settings"],
-];
+const adminRedirectHtml = readPublic("admin.html");
+const chatHtml = readPublic("chat.html");
+const knowledgeHtml = readPublic("knowledge.html");
+const userHtml = readPublic("user.html");
+const settingsHtml = readPublic("settings.html");
+const adminJs = readPublic("admin.js");
+const allAdminPages = [chatHtml, knowledgeHtml, userHtml, settingsHtml];
 
-test("admin nav labels are clear and match visible dashboard sections", () => {
-  for (const [sectionId, label] of sectionLabels) {
-    assert.match(adminHtml, new RegExp(`data-target="${sectionId}"`));
-    assert.match(adminHtml, new RegExp(`<h2>${label}</h2>`));
-  }
-
-  assert.doesNotMatch(adminHtml, />User management</);
-  assert.doesNotMatch(adminHtml, />File management</);
-  assert.doesNotMatch(adminHtml, />Files management</);
-  assert.doesNotMatch(adminHtml, /Switchboard_Admin/);
+test("admin.html redirects to the dedicated chat admin page", () => {
+  assert.match(adminRedirectHtml, /url=\/chat\.html/);
+  assert.match(adminRedirectHtml, /window\.location\.replace\("\/chat\.html"\)/);
 });
 
-test("dashboard overview landing block is removed", () => {
-  assert.doesNotMatch(adminHtml, /id="overviewSection"/);
-  assert.doesNotMatch(adminHtml, /data-widget="overview"/);
-  assert.doesNotMatch(adminHtml, /id="summary"/);
-  assert.doesNotMatch(adminHtml, /id="customizeDashboardButton"/);
-  assert.doesNotMatch(adminHtml, /<h2>Dashboard<\/h2>/);
-  assert.doesNotMatch(adminHtml, /Configurable widgets for review operations and application health/);
-});
-
-test("each dashboard nav item points to an existing section", () => {
-  const targets = [...adminHtml.matchAll(/data-target="([^"]+)"/g)].map((match) => match[1]);
-
-  assert.deepEqual(targets, sectionLabels.map(([sectionId]) => sectionId));
-
-  for (const target of targets) {
-    assert.match(adminHtml, new RegExp(`id="${target}"`));
-  }
-});
-
-test("active nav state updates when sections change", () => {
-  assert.match(adminHtml, /function setActiveNav\(targetId\)/);
-  assert.match(adminHtml, /classList\.toggle\("active", isActive\)/);
-  assert.match(adminHtml, /setAttribute\("aria-current", "page"\)/);
-  assert.match(adminHtml, /removeAttribute\("aria-current"\)/);
-});
-
-test("chat review section stays hidden until the user opens it", () => {
-  assert.match(adminHtml, /<section[^>]+id="chatReviewSection"[^>]+hidden>/);
-  assert.match(adminHtml, /\["chat-review", "Chat review", false\]/);
-  assert.match(adminHtml, /function revealChatReviewSection\(\)/);
-  assert.match(adminHtml, /showWidget\("chat-review"\)/);
-  assert.match(adminHtml, /els\.chatReviewSection\.hidden = false/);
-  assert.match(adminHtml, /targetId === "chatReviewSection"/);
-});
-
-test("settings theme toggle is present and wired to theme switching", () => {
-  assert.match(adminHtml, /id="settingsThemeButton"/);
-  assert.match(adminHtml, /settingsThemeButton: document\.getElementById\("settingsThemeButton"\)/);
-  assert.match(adminHtml, /els\.settingsThemeButton\.addEventListener\("click", toggleTheme\)/);
-});
-
-test("admin sections remain configurable after dashboard cleanup", () => {
-  const widgetIds = [
-    "chat-review",
-    "knowledge-queue",
-    "review-runs",
-    "attachments",
-    "admin-access",
-    "system-health",
-    "settings",
+test("top-level admin navigation uses dedicated page links", () => {
+  const expectedLinks = [
+    ["href=\"/\"", "Back to chat"],
+    ["href=\"/chat.html\"", "Chat"],
+    ["href=\"/knowledge.html\"", "Knowledge base"],
+    ["href=\"/user.html\"", "User"],
+    ["href=\"/settings.html\"", "Settings"],
   ];
 
-  for (const widgetId of widgetIds) {
-    assert.match(adminHtml, new RegExp(`data-widget="${widgetId}"`));
+  for (const pageHtml of allAdminPages) {
+    for (const [href, label] of expectedLinks) {
+      assert.match(pageHtml, new RegExp(`${href}[\\s\\S]*>${label}<`));
+    }
+
+    assert.doesNotMatch(pageHtml, /Knowledge queue/);
+    assert.doesNotMatch(pageHtml, /Admin access/);
+  }
+});
+
+test("back to chat uses a back-arrow icon", () => {
+  for (const pageHtml of allAdminPages) {
+    assert.match(pageHtml, /aria-label="Back to chat"[\s\S]*<span aria-hidden="true">←<\/span>Back to chat/);
+  }
+});
+
+test("chat page owns chat review and attachments", () => {
+  assert.match(chatHtml, /<body data-admin-page="chat">/);
+  assert.match(chatHtml, /<h1>Chat<\/h1>/);
+  assert.match(chatHtml, /id="chatPage"/);
+  assert.match(chatHtml, /id="attachmentsPanel"/);
+  assert.match(chatHtml, /id="fileManagement"/);
+});
+
+test("knowledge base is its own page", () => {
+  assert.match(knowledgeHtml, /<body data-admin-page="knowledge">/);
+  assert.match(knowledgeHtml, /<h1>Knowledge base<\/h1>/);
+  assert.match(knowledgeHtml, /id="knowledgeBasePage"/);
+  assert.match(knowledgeHtml, /id="knowledgeStatus"/);
+});
+
+test("user page includes user management and manage users action", () => {
+  assert.match(userHtml, /<body data-admin-page="user">/);
+  assert.match(userHtml, /<h1>User<\/h1>/);
+  assert.match(userHtml, /id="userManagementPage"/);
+  assert.match(userHtml, /id="manageUsersButton"/);
+  assert.match(userHtml, />Manage users<\/button>/);
+});
+
+test("settings page owns review runs and system health", () => {
+  assert.match(settingsHtml, /<body data-admin-page="settings">/);
+  assert.match(settingsHtml, /<h1>Settings<\/h1>/);
+  assert.match(settingsHtml, /id="settingsPage"/);
+  assert.match(settingsHtml, /id="reviewRunsPage"/);
+  assert.match(settingsHtml, /id="systemHealthPage"/);
+  assert.match(settingsHtml, /<h2>Review runs<\/h2>/);
+  assert.match(settingsHtml, /<h2>System health<\/h2>/);
+});
+
+test("top nav includes current time and profile settings send icon", () => {
+  for (const pageHtml of allAdminPages) {
+    assert.match(pageHtml, /id="menuClock"/);
+    assert.match(pageHtml, /class="profile-settings" href="\/user\.html#profile" aria-label="User profile settings">↗<\/a>/);
   }
 
-  assert.match(adminHtml, /const widgetStorageKey = "switchboard-admin-widgets"/);
-  assert.match(adminHtml, /function renderWidgetToggles\(\)/);
-  assert.match(adminHtml, /function applyWidgetPrefs\(\)/);
-  assert.match(adminHtml, /function showWidget\(widgetId\)/);
-  assert.match(adminHtml, /loading/i);
-  assert.match(adminHtml, /empty/i);
+  assert.match(adminJs, /function updateClock\(\)/);
+  assert.match(adminJs, /weekday: "short"/);
+  assert.match(adminJs, /month: "short"/);
+  assert.match(adminJs, /hour: "numeric"/);
+  assert.match(adminJs, /minute: "2-digit"/);
+});
+
+test("admin javascript switches behavior by page", () => {
+  assert.match(adminJs, /const page = document\.body\.dataset\.adminPage/);
+  assert.match(adminJs, /async function loadChatPage\(\)/);
+  assert.match(adminJs, /async function loadKnowledgePage\(\)/);
+  assert.match(adminJs, /async function loadUserPage\(\)/);
+  assert.match(adminJs, /async function loadSettingsPage\(\)/);
 });
