@@ -54,9 +54,14 @@
               <section class="admin-card wide settings-section-card" id="settingsPage">
                 <div class="card-head"><div><p class="section-kicker">Preferences</p><h2>Settings</h2><p class="card-subtitle">Application-wide preferences that are safe to manage from this browser.</p></div></div>
                 <div class="settings-list relaxed">
-                  <div class="settings-row">
-                    <div><strong>Theme preference</strong><p>Switch between light and dark mode. This is saved locally for the browser.</p></div>
-                    <button id="settingsThemeButton" type="button">Toggle theme</button>
+                  <div class="settings-row theme-settings-row">
+                    <div><strong>Theme preference</strong><p>Choose light, dark, or system mode. Explicit choices are restored on reload; System follows the device setting.</p></div>
+                    <div class="theme-mode-control" role="group" aria-label="Theme preference">
+                      <button class="theme-mode-option" type="button" data-theme-choice="light" aria-pressed="false">Light</button>
+                      <button class="theme-mode-option" type="button" data-theme-choice="dark" aria-pressed="false">Dark</button>
+                      <button class="theme-mode-option" type="button" data-theme-choice="system" aria-pressed="false">System</button>
+                      <span class="theme-mode-summary" id="settingsThemeSummary" aria-live="polite">Using system preference</span>
+                    </div>
                   </div>
                   <div class="settings-row">
                     <div><strong>Refresh cadence</strong><p>Admin status data refreshes automatically in the background.</p></div>
