@@ -25,6 +25,10 @@
     { href: "/group.html", label: "Group", icon: "▦" },
     { href: "/user.html", label: "User", icon: "◉" }
   ];
+  const playgroundPages = [
+    { href: "/playground.html", label: "Board", icon: "▦" },
+    { href: "/playground-tasks.html", label: "Tasks", icon: "☑" }
+  ];
 
   function storedSessionToken() {
     return sessionStorage.getItem(sessionTokenStorageKey) || "";
@@ -76,26 +80,22 @@
     return { ...options, headers };
   }
 
-  function initEntraNav() {
-    const nav = document.querySelector(".primary-nav");
-    const userLink = nav?.querySelector('a.nav-item[href="/user.html"]');
-    if (!nav || !userLink || nav.querySelector(".entra-nav")) return;
-
+  function nestedAdminNav({ className, summaryLabel, summaryIcon, itemLabel, pages }) {
     const path = currentPath();
-    const isEntraPage = entraPages.some((page) => page.href === path);
+    const active = pages.some((page) => page.href === path);
     const details = document.createElement("details");
-    details.className = "admin-section-list reports-nav entra-nav";
+    details.className = `admin-section-list reports-nav ${className}`;
     details.open = true;
 
     const summary = document.createElement("summary");
-    summary.className = `reports-summary${isEntraPage ? " active" : ""}`;
-    summary.innerHTML = '<span class="reports-summary-label"><span aria-hidden="true">◉</span>Entra</span><span class="reports-summary-chevron" aria-hidden="true">⌄</span>';
+    summary.className = `reports-summary${active ? " active" : ""}`;
+    summary.innerHTML = `<span class="reports-summary-label"><span aria-hidden="true">${summaryIcon}</span>${summaryLabel}</span><span class="reports-summary-chevron" aria-hidden="true">⌄</span>`;
 
     const items = document.createElement("div");
-    items.className = "reports-nav-items entra-nav-items";
-    items.setAttribute("aria-label", "Entra navigation");
+    items.className = `reports-nav-items ${className}-items`;
+    items.setAttribute("aria-label", itemLabel);
 
-    for (const page of entraPages) {
+    for (const page of pages) {
       const link = document.createElement("a");
       link.className = `nav-item${page.href === path ? " active" : ""}`;
       link.href = page.href;
@@ -108,7 +108,22 @@
     }
 
     details.append(summary, items);
-    userLink.replaceWith(details);
+    return details;
+  }
+
+  function initEntraNav() {
+    const nav = document.querySelector(".primary-nav");
+    const userLink = nav?.querySelector('a.nav-item[href="/user.html"]');
+    if (!nav || !userLink || nav.querySelector(".entra-nav")) return;
+    userLink.replaceWith(nestedAdminNav({ className: "entra-nav", summaryLabel: "Entra", summaryIcon: "◉", itemLabel: "Entra navigation", pages: entraPages }));
+  }
+
+  function initPlaygroundNav() {
+    const nav = document.querySelector(".primary-nav");
+    const playgroundLink = nav?.querySelector('a.nav-item[href="/playground.html"]');
+    if (!nav || !playgroundLink || nav.querySelector(".playground-nav")) return;
+    nav.querySelector('a.nav-item[href="/playground-tasks.html"]')?.remove();
+    playgroundLink.replaceWith(nestedAdminNav({ className: "playground-nav", summaryLabel: "Playground", summaryIcon: "▦", itemLabel: "Playground navigation", pages: playgroundPages }));
   }
 
   function updateRoleAwareMenu(user) {
@@ -162,6 +177,7 @@
   }
 
   const nativeFetch = window.fetch.bind(window);
+  initPlaygroundNav();
   initEntraNav();
 
   window.fetch = async (input, options = {}) => {
@@ -190,6 +206,7 @@
 
   if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", bootstrapSession, { once: true });
+    document.addEventListener("DOMContentLoaded", initPlaygroundNav, { once: true });
     document.addEventListener("DOMContentLoaded", initEntraNav, { once: true });
     document.addEventListener("DOMContentLoaded", loadUserOrgFields, { once: true });
   } else {
