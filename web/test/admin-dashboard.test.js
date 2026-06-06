@@ -7,7 +7,6 @@ const adminHtmlPath = path.join(__dirname, "..", "public", "admin.html");
 const adminHtml = readFileSync(adminHtmlPath, "utf8");
 
 const sectionLabels = [
-  ["overviewSection", "Overview"],
   ["chatReviewSection", "Chat review"],
   ["knowledgeQueueSection", "Knowledge queue"],
   ["reviewRunsSection", "Review runs"],
@@ -27,6 +26,15 @@ test("admin nav labels are clear and match visible dashboard sections", () => {
   assert.doesNotMatch(adminHtml, />File management</);
   assert.doesNotMatch(adminHtml, />Files management</);
   assert.doesNotMatch(adminHtml, /Switchboard_Admin/);
+});
+
+test("dashboard overview landing block is removed", () => {
+  assert.doesNotMatch(adminHtml, /id="overviewSection"/);
+  assert.doesNotMatch(adminHtml, /data-widget="overview"/);
+  assert.doesNotMatch(adminHtml, /id="summary"/);
+  assert.doesNotMatch(adminHtml, /id="customizeDashboardButton"/);
+  assert.doesNotMatch(adminHtml, /<h2>Dashboard<\/h2>/);
+  assert.doesNotMatch(adminHtml, /Configurable widgets for review operations and application health/);
 });
 
 test("each dashboard nav item points to an existing section", () => {
@@ -59,9 +67,8 @@ test("settings theme toggle is present and wired to theme switching", () => {
   assert.match(adminHtml, /els\.settingsThemeButton\.addEventListener\("click", toggleTheme\)/);
 });
 
-test("dashboard renders configurable professional widgets", () => {
+test("admin sections remain configurable after dashboard cleanup", () => {
   const widgetIds = [
-    "overview",
     "chat-review",
     "knowledge-queue",
     "review-runs",
