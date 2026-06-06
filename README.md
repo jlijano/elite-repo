@@ -63,6 +63,7 @@ The `web/` directory contains a Render-ready Express app that serves a plain HTM
 - Admin pages no longer expose visible token-entry, Login, or Run Review controls; protected backend admin routes accept either `ADMIN_TOKEN` or an active owner/admin user session.
 - Protected user-management APIs and the `/user.html` admin UI support table-based user listing and searching, Add user modal creation, drag-and-drop or click-to-select profile photo upload with preview, hosted profile photo URLs, user editing, disabling, and reactivating when `ADMIN_TOKEN` or an active owner/admin user session is available.
 - Company, Department, and Group admin pages now match the User management UI pattern with table-based records, search plus Add actions in the card header, status/action columns, responsive mobile rows, and modal create/edit forms.
+- Company, Department, Group, and User management action columns use compact icon-only buttons with accessible labels and hover titles for actions such as archive, disable, reactivate, and delete.
 - The `/user-audit.html` report page reads protected audit events, shows the acting user, a plain-language update summary, and timestamp, and exports the same audit data as CSV.
 - Knowledge base includes source-controlled project knowledge cards plus review-created backend knowledge when an admin session is available.
 - Chat and knowledge search controls filter cached management data, keep selected chats highlighted, and show clear loading and error states during admin actions.
@@ -131,7 +132,7 @@ Do not commit secrets, API keys, deploy hooks, database URLs, passwords, session
 - `POST /api/auth/login`: logs in an active user with email and password, returning a session token and public user record. Repeated failed attempts are rate-limited and successful logins are audited.
 - `POST /api/auth/logout`: revokes the current user session when called with `x-session-token` and audits logout when a valid session is present.
 - `GET /api/profile`: returns the current logged-in user's public profile. Requires `x-session-token`.
-- `PATCH /api/profile`: updates the current user's name, email, photo URL, or password. Password changes require `currentPassword` and `newPassword`, enforce the password policy, rotate the session token, revoke the old token, and audit the profile update. Requires `x-session-token`.
+- `PATCH /api/profile`: updates the current user's name, email, photo URL, or password. Password changes require `currentPassword` and `newPassword`, enforce the password policy, rotate the current session token, revoke the old token, and audit the profile update. Requires `x-session-token`.
 - `GET /api/users/available-chat-users`: lists active users available to the current logged-in user because they share the same company, department, or group. Requires `x-session-token`.
 - `GET /api/admin/summary`: returns backend management counts and runtime status. Requires `ADMIN_TOKEN` or an active owner/admin user session.
 - `GET /api/admin/chats`: lists chats for management review. Requires `ADMIN_TOKEN` or an active owner/admin user session.
