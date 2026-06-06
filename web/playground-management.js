@@ -5,12 +5,12 @@ const priorities = new Set(["low", "medium", "high"]);
 const projectStatuses = new Set(["planning", "active", "in_progress", "review", "completed", "archived"]);
 
 const seedTasks = [
-  { id: "00000000-0000-4000-9000-000000000101", projectId: "00000000-0000-4000-9000-000000000204", title: "Update project notes", description: "Collect ideas and organize next sprint planning notes.", status: "backlog", category: "Planning", priority: "low", dueLabel: "No due date", dueDate: null, assigneeIds: [] },
-  { id: "00000000-0000-4000-9000-000000000102", projectId: "00000000-0000-4000-9000-000000000201", title: "Create task filtering UI", description: "Add filters for priority, project, and completion status.", status: "todo", category: "Tasks", priority: "medium", dueLabel: "Jun 14", dueDate: "2026-06-14", assigneeIds: [] },
-  { id: "00000000-0000-4000-9000-000000000103", projectId: "00000000-0000-4000-9000-000000000202", title: "Build project detail view", description: "Create a focused view for project milestones, tasks, and activity.", status: "todo", category: "Projects", priority: "high", dueLabel: "Jun 18", dueDate: "2026-06-18", assigneeIds: [] },
-  { id: "00000000-0000-4000-9000-000000000104", projectId: "00000000-0000-4000-9000-000000000201", title: "Design dashboard layout", description: "Refine the workspace layout and responsive card structure.", status: "in_progress", category: "UI", priority: "high", dueLabel: "Jun 10", dueDate: "2026-06-10", assigneeIds: [] },
-  { id: "00000000-0000-4000-9000-000000000105", projectId: "00000000-0000-4000-9000-000000000203", title: "Review kanban interactions", description: "Check drag states, empty states, keyboard navigation, and mobile layout.", status: "review", category: "QA", priority: "medium", dueLabel: "Jun 16", dueDate: "2026-06-16", assigneeIds: [] },
-  { id: "00000000-0000-4000-9000-000000000106", projectId: "00000000-0000-4000-9000-000000000203", title: "Prepare release checklist", description: "Document final tasks needed before the workspace release.", status: "done", category: "Release", priority: "low", dueLabel: "Completed", dueDate: null, assigneeIds: [] }
+  { id: "00000000-0000-4000-9000-000000000101", projectId: "00000000-0000-4000-9000-000000000204", title: "Update project notes", description: "Collect ideas and organize next sprint planning notes.", status: "backlog", category: "Planning", priority: "low", dueLabel: "No due date", dueDate: null, assigneeIds: [], customFields: [] },
+  { id: "00000000-0000-4000-9000-000000000102", projectId: "00000000-0000-4000-9000-000000000201", title: "Create task filtering UI", description: "Add filters for priority, project, and completion status.", status: "todo", category: "Tasks", priority: "medium", dueLabel: "Jun 14", dueDate: "2026-06-14", assigneeIds: [], customFields: [{ name: "Module", value: "Tasks" }] },
+  { id: "00000000-0000-4000-9000-000000000103", projectId: "00000000-0000-4000-9000-000000000202", title: "Build project detail view", description: "Create a focused view for project milestones, tasks, and activity.", status: "todo", category: "Projects", priority: "high", dueLabel: "Jun 18", dueDate: "2026-06-18", assigneeIds: [], customFields: [{ name: "View", value: "Detail" }] },
+  { id: "00000000-0000-4000-9000-000000000104", projectId: "00000000-0000-4000-9000-000000000201", title: "Design dashboard layout", description: "Refine the workspace layout and responsive card structure.", status: "in_progress", category: "UI", priority: "high", dueLabel: "Jun 10", dueDate: "2026-06-10", assigneeIds: [], customFields: [] },
+  { id: "00000000-0000-4000-9000-000000000105", projectId: "00000000-0000-4000-9000-000000000203", title: "Review kanban interactions", description: "Check drag states, empty states, keyboard navigation, and mobile layout.", status: "review", category: "QA", priority: "medium", dueLabel: "Jun 16", dueDate: "2026-06-16", assigneeIds: [], customFields: [{ name: "Check", value: "Keyboard" }] },
+  { id: "00000000-0000-4000-9000-000000000106", projectId: "00000000-0000-4000-9000-000000000203", title: "Prepare release checklist", description: "Document final tasks needed before the workspace release.", status: "done", category: "Release", priority: "low", dueLabel: "Completed", dueDate: null, assigneeIds: [], customFields: [] }
 ];
 
 const seedProjects = [
@@ -64,6 +64,14 @@ function cleanAssigneeIds(value) {
   return [...new Set(value.map((item) => cleanString(item, 80)).filter(Boolean))].slice(0, 20);
 }
 
+function cleanCustomFields(value) {
+  if (!Array.isArray(value)) return [];
+  return value
+    .map((field) => ({ name: cleanString(field?.name, 60), value: cleanString(field?.value, 240) }))
+    .filter((field) => field.name || field.value)
+    .slice(0, 12);
+}
+
 function taskPayload(body = {}) {
   const title = cleanString(body.title, 140);
   if (!title) throw appError(400, "Task title is required.");
@@ -77,7 +85,8 @@ function taskPayload(body = {}) {
     dueLabel: cleanString(body.dueLabel || body.due_label, 80) || (dueDate || "No due date"),
     dueDate,
     projectId: cleanNullableId(body.projectId || body.project_id),
-    assigneeIds: cleanAssigneeIds(body.assigneeIds || body.assignee_ids)
+    assigneeIds: cleanAssigneeIds(body.assigneeIds || body.assignee_ids),
+    customFields: cleanCustomFields(body.customFields || body.custom_fields)
   };
 }
 
@@ -129,6 +138,7 @@ function taskRow(row) {
     dueLabel: row.due_label || row.dueLabel || "",
     dueDate: dateOnly(row.due_date || row.dueDate),
     assigneeIds: row.assignee_ids || row.assigneeIds || [],
+    customFields: row.custom_fields || row.customFields || [],
     completedAt: row.completed_at || row.completedAt ? timestamp(row.completed_at || row.completedAt) : null,
     createdAt: timestamp(row.created_at || row.createdAt),
     updatedAt: timestamp(row.updated_at || row.updatedAt)
@@ -204,6 +214,10 @@ function normalizeFilters(filters = {}) {
   };
 }
 
+function customFieldText(task) {
+  return (task.customFields || []).map((field) => `${field.name || "Field"} ${field.value || ""}`).join(" ");
+}
+
 function filteredTasks(tasks, filters = {}) {
   const clean = normalizeFilters(filters);
   return tasks.filter((task) => {
@@ -212,7 +226,7 @@ function filteredTasks(tasks, filters = {}) {
     if (clean.projectId && (task.projectId || "") !== clean.projectId) return false;
     if (clean.assigneeId && !(task.assigneeIds || []).includes(clean.assigneeId)) return false;
     if (clean.search) {
-      const haystack = `${task.title} ${task.description} ${task.category}`.toLowerCase();
+      const haystack = `${task.title} ${task.description} ${task.category} ${customFieldText(task)}`.toLowerCase();
       if (!haystack.includes(clean.search)) return false;
     }
     return true;
@@ -235,6 +249,9 @@ function changedFields(before, after) {
   }
   if ((before.assigneeIds || []).join(",") !== (after.assigneeIds || []).join(",")) {
     changes.push({ field: "assigneeIds", from: before.assigneeIds || [], to: after.assigneeIds || [] });
+  }
+  if (JSON.stringify(before.customFields || []) !== JSON.stringify(after.customFields || [])) {
+    changes.push({ field: "customFields", from: before.customFields || [], to: after.customFields || [] });
   }
   return changes;
 }
@@ -268,12 +285,14 @@ function createPostgresStore(options) {
       due_date DATE,
       project_id UUID REFERENCES playground_projects(id) ON DELETE SET NULL,
       assignee_ids UUID[] NOT NULL DEFAULT '{}',
+      custom_fields JSONB NOT NULL DEFAULT '[]'::jsonb,
       completed_at TIMESTAMPTZ,
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
       updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
     ALTER TABLE playground_tasks ADD COLUMN IF NOT EXISTS project_id UUID REFERENCES playground_projects(id) ON DELETE SET NULL;
     ALTER TABLE playground_tasks ADD COLUMN IF NOT EXISTS assignee_ids UUID[] NOT NULL DEFAULT '{}';
+    ALTER TABLE playground_tasks ADD COLUMN IF NOT EXISTS custom_fields JSONB NOT NULL DEFAULT '[]'::jsonb;
     ALTER TABLE playground_tasks ADD COLUMN IF NOT EXISTS completed_at TIMESTAMPTZ;
     CREATE INDEX IF NOT EXISTS playground_tasks_status_updated_idx ON playground_tasks(status, updated_at DESC);
     CREATE INDEX IF NOT EXISTS playground_tasks_project_idx ON playground_tasks(project_id, updated_at DESC);
@@ -313,8 +332,8 @@ function createPostgresStore(options) {
     }
     for (const task of seedTasks) {
       await pool.query(
-        "INSERT INTO playground_tasks (id, title, description, status, category, priority, due_label, due_date, project_id, assignee_ids, completed_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, CASE WHEN $4 = 'done' THEN NOW() ELSE NULL END) ON CONFLICT (id) DO NOTHING",
-        [task.id, task.title, task.description, task.status, task.category, task.priority, task.dueLabel, task.dueDate, task.projectId, task.assigneeIds]
+        "INSERT INTO playground_tasks (id, title, description, status, category, priority, due_label, due_date, project_id, assignee_ids, custom_fields, completed_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11::jsonb, CASE WHEN $4 = 'done' THEN NOW() ELSE NULL END) ON CONFLICT (id) DO NOTHING",
+        [task.id, task.title, task.description, task.status, task.category, task.priority, task.dueLabel, task.dueDate, task.projectId, task.assigneeIds, JSON.stringify(task.customFields || [])]
       );
     }
     for (const note of seedNotes) {
@@ -341,7 +360,7 @@ function createPostgresStore(options) {
     if (clean.assigneeId) add("? = ANY(t.assignee_ids)", clean.assigneeId);
     if (clean.search) {
       params.push(`%${clean.search}%`);
-      where.push(`(LOWER(t.title) LIKE $${params.length} OR LOWER(COALESCE(t.description, '')) LIKE $${params.length} OR LOWER(COALESCE(t.category, '')) LIKE $${params.length})`);
+      where.push(`(LOWER(t.title) LIKE $${params.length} OR LOWER(COALESCE(t.description, '')) LIKE $${params.length} OR LOWER(COALESCE(t.category, '')) LIKE $${params.length} OR LOWER(t.custom_fields::text) LIKE $${params.length})`);
     }
     const clause = where.length ? `WHERE ${where.join(" AND ")}` : "";
     const count = await pool.query(`SELECT COUNT(*)::int AS total FROM playground_tasks t ${clause}`, params);
@@ -383,8 +402,8 @@ function createPostgresStore(options) {
     async createTask(payload, actor = "Admin") {
       await ready();
       const result = await pool.query(
-        "INSERT INTO playground_tasks (id, title, description, status, category, priority, due_label, due_date, project_id, assignee_ids, completed_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, CASE WHEN $4 = 'done' THEN NOW() ELSE NULL END) RETURNING *",
-        [options.makeId(), payload.title, payload.description || null, payload.status, payload.category || null, payload.priority, payload.dueLabel || null, payload.dueDate || null, payload.projectId, payload.assigneeIds]
+        "INSERT INTO playground_tasks (id, title, description, status, category, priority, due_label, due_date, project_id, assignee_ids, custom_fields, completed_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11::jsonb, CASE WHEN $4 = 'done' THEN NOW() ELSE NULL END) RETURNING *",
+        [options.makeId(), payload.title, payload.description || null, payload.status, payload.category || null, payload.priority, payload.dueLabel || null, payload.dueDate || null, payload.projectId, payload.assigneeIds, JSON.stringify(payload.customFields || [])]
       );
       const task = taskRow(result.rows[0]);
       await addActivity(task.id, "task.created", actor, { title: task.title });
@@ -395,8 +414,8 @@ function createPostgresStore(options) {
       const before = await loadTask(taskId);
       if (!before) return null;
       const result = await pool.query(
-        "UPDATE playground_tasks SET title = $2, description = $3, status = $4, category = $5, priority = $6, due_label = $7, due_date = $8, project_id = $9, assignee_ids = $10, completed_at = CASE WHEN $4 = 'done' THEN COALESCE(completed_at, NOW()) ELSE NULL END, updated_at = NOW() WHERE id = $1 RETURNING *",
-        [taskId, payload.title, payload.description || null, payload.status, payload.category || null, payload.priority, payload.dueLabel || null, payload.dueDate || null, payload.projectId, payload.assigneeIds]
+        "UPDATE playground_tasks SET title = $2, description = $3, status = $4, category = $5, priority = $6, due_label = $7, due_date = $8, project_id = $9, assignee_ids = $10, custom_fields = $11::jsonb, completed_at = CASE WHEN $4 = 'done' THEN COALESCE(completed_at, NOW()) ELSE NULL END, updated_at = NOW() WHERE id = $1 RETURNING *",
+        [taskId, payload.title, payload.description || null, payload.status, payload.category || null, payload.priority, payload.dueLabel || null, payload.dueDate || null, payload.projectId, payload.assigneeIds, JSON.stringify(payload.customFields || [])]
       );
       const after = taskRow(result.rows[0]);
       const changes = changedFields(before.task, after);
