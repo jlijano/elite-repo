@@ -157,7 +157,7 @@
         <label class="bubble-nickname-label" for="bubbleNicknameInput">Nickname<input class="bubble-nickname-input" id="bubbleNicknameInput" type="text" maxlength="40" autocomplete="nickname" placeholder="Example: Alex"></label>
         <div class="bubble-color-grid" id="bubbleColorGrid" role="group" aria-label="Bubble color choices"></div>
         <div class="plus-menu-status" id="bubbleColorStatus" aria-live="polite"></div>
-        <div class="bubble-color-actions"><button class="bubble-color-confirm" id="bubbleColorConfirm" type="button">Use color</button></div>
+        <div class="bubble-color-actions"><button class="bubble-color-confirm" id="bubbleColorConfirm" type="button">Start chat</button></div>
       </section>`;
     document.body.appendChild(modal);
     modal.querySelector("#bubbleColorConfirm").addEventListener("click", () => {
@@ -293,6 +293,10 @@
   }
 
   function installQuickReplies() {
+    if (!getStored("switchboard-enable-chat-suggestions")) {
+      document.getElementById(quickReplyId)?.remove();
+      return;
+    }
     if (document.getElementById(quickReplyId)) return;
     const row = document.createElement("div");
     row.id = quickReplyId;
@@ -403,8 +407,8 @@
   if (typeof createChat === "function") {
     const originalCreateChat = createChat;
     createChat = async function identityCreateChat(...args) {
-      await originalCreateChat.apply(this, args);
       await ensureIdentity();
+      await originalCreateChat.apply(this, args);
       if (currentChatId) {
         await requestJson(`/api/chats/${encodeURIComponent(currentChatId)}/participants`, {
           method: "POST",
@@ -419,6 +423,6 @@
   document.addEventListener("keydown", (event) => {
     if (event.key !== "Escape" || !modal || modal.hidden) return;
     event.preventDefault();
-    modal.hidden = true;
+    modal.querySelector("#bubbleNicknameInput")?.focus();
   });
 })();
