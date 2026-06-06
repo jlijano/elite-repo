@@ -53,6 +53,8 @@
 .playground-modal-actions { display: flex; justify-content: flex-end; gap: 10px; }
 .task-custom-field-panel { display: grid; gap: 10px; padding: 10px 0 0; border-top: 1px solid var(--line); }
 .task-custom-field-panel summary { width: fit-content; cursor: pointer; color: var(--text); font-weight: 900; }
+.common-field-picker { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px; align-items: end; margin-top: 10px; padding: 10px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel-soft); }
+.common-field-picker label { min-width: 0; display: grid; gap: 5px; color: var(--muted); font-size: 0.72rem; font-weight: 900; text-transform: uppercase; }
 .custom-field-builder { display: grid; gap: 10px; margin-top: 10px; }
 .custom-field-row { display: grid; grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr) auto; gap: 10px; align-items: end; }
 .custom-field-row label { min-width: 0; display: grid; gap: 5px; color: var(--muted); font-size: 0.72rem; font-weight: 900; text-transform: uppercase; }
@@ -83,4 +85,4 @@
 .playground-task-table td small { margin-top: 4px; color: var(--muted); }
 .playground-task-list-footer { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 14px; color: var(--muted); font-size: 0.82rem; font-weight: 850; }
 @media (max-width: 1180px) { .playground-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); } .playground-task-controls { grid-template-columns: repeat(3, minmax(0, 1fr)); } .kanban-board { grid-template-columns: repeat(5, minmax(220px, 1fr)); } .playground-lower-grid { grid-template-columns: 1fr; } }
-@media (max-width: 760px) { .playground-header .header-actions { width: 100%; justify-content: flex-start; } .playground-metrics, .playground-task-controls, .playground-form-grid, .custom-field-row { grid-template-columns: 1fr; } .kanban-board { grid-template-columns: 1fr; overflow-x: visible; } .todo-item { grid-template-columns: auto minmax(0, 1fr); } .todo-item small, .todo-item .priority { justify-self: start; grid-column: 2; } .playground-task-drawer { width: 100vw; } .task-detail-grid { grid-template-columns: 1fr; } .playground-task-list-footer { align-items: stretch; flex-direction: column; } }
+@media (max-width: 760px) { .playground-header .header-actions { width: 100%; justify-content: flex-start; } .playground-metrics, .playground-task-controls, .playground-form-grid, .custom-field-row, .common-field-picker { grid-template-columns: 1fr; } .kanban-board { grid-template-columns: 1fr; overflow-x: visible; } .todo-item { grid-template-columns: auto minmax(0, 1fr); } .todo-item small, .todo-item .priority { justify-self: start; grid-column: 2; } .playground-task-drawer { width: 100vw; } .task-detail-grid { grid-template-columns: 1fr; } .playground-task-list-footer { align-items: stretch; flex-direction: column; } }
