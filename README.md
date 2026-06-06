@@ -31,7 +31,7 @@ The `web/` directory contains a Render-ready Express app that serves a plain HTM
   - `/update-profile.html` for the current user's profile photo, name, email, and password form.
   - `/login.html` as the post-logout redirect target.
   - `/admin.html` redirects to `/chat.html` for backward compatibility.
-- Admin navigation uses Back to chat, Chat, Knowledge base, User, Settings, and Logout. Attachments live inside Chat; Review runs and System health live inside Settings.
+- Admin navigation uses Back to chat, Chat, Knowledge base, User, and Settings. Admin logout is available from the top-header profile menu.
 - Admin pages share the chat UI shell, theme tokens, persistent light/dark mode behavior, fixed desktop sidebar, and independently scrolling right panel.
 - Admin top headers include a Mac-style current day/time display and a user profile menu with Update Profile and Logout actions.
 - Logout clears the browser-held admin session token and redirects to `/login.html`.
@@ -137,7 +137,7 @@ The review workflow is implemented as an idempotent backend route and optional b
 - Review-run creation of pending knowledge entries.
 - Admin approval of knowledge entries and approved knowledge retrieval.
 - Protected user-management routes, user creation/listing/loading/updating, duplicate email handling, disable/reactivate actions, and audit-event creation.
-- Admin navigation routes, page ownership for Chat, Knowledge base, User, Settings, nested Attachments, nested Review runs, nested System health, the profile dropdown, Update Profile form, Logout redirect, and the Mac-style clock wiring.
+- Admin navigation routes, page ownership for Chat, Knowledge base, User, Settings, nested Attachments, nested Review runs, nested System health, the profile dropdown, Update Profile form, Logout redirect, profile-menu-only admin logout, and the Mac-style clock wiring.
 
 ## GitHub Actions / auto-deploy
 
