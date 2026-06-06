@@ -107,7 +107,9 @@ function hashPassword(password) {
   const salt = crypto.randomBytes(16).toString("hex");
   const hash = crypto.scryptSync(value, salt, 64).toString("hex");
   return `scrypt:${salt}:${hash}`;
-}\nfunction verifyPassword(password, storedHash) {
+}
+
+function verifyPassword(password, storedHash) {
   const value = typeof password === "string" ? password : "";
   if (!value || !storedHash) return false;
   const [scheme, salt, expectedHash] = String(storedHash).split(":");
