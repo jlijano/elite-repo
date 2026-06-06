@@ -91,7 +91,9 @@ button[type="submit"],
 .primary-action,
 .send-button,
 #manageUsersButton,
-#saveUserButton {
+#saveUserButton,
+#addEntraButton,
+#saveEntraButton {
   border-color: rgba(16, 163, 127, 0.42);
   background: var(--button-primary-bg);
   color: var(--button-primary-text);
@@ -107,11 +109,38 @@ button[type="submit"]:focus-visible:not(:disabled),
 #manageUsersButton:hover:not(:disabled),
 #manageUsersButton:focus-visible:not(:disabled),
 #saveUserButton:hover:not(:disabled),
-#saveUserButton:focus-visible:not(:disabled) {
+#saveUserButton:focus-visible:not(:disabled),
+#addEntraButton:hover:not(:disabled),
+#addEntraButton:focus-visible:not(:disabled),
+#saveEntraButton:hover:not(:disabled),
+#saveEntraButton:focus-visible:not(:disabled) {
   border-color: rgba(16, 163, 127, 0.72);
   background: var(--button-primary-hover);
   color: var(--button-primary-text);
   box-shadow: 0 16px 38px rgba(16, 163, 127, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.28);
+}
+
+.entra-card-head {
+  align-items: center;
+}
+
+.entra-toolbar {
+  flex: 1 1 560px;
+  justify-content: flex-end;
+  min-width: min(560px, 100%);
+}
+
+.entra-toolbar input,
+.entra-toolbar select {
+  flex: 1 1 220px;
+  max-width: 280px;
+}
+
+.entra-toolbar button {
+  flex: 0 0 auto;
+  min-width: max-content;
+  padding-inline: 16px;
+  white-space: nowrap;
 }
 
 .composer-tool,
@@ -119,6 +148,7 @@ button[type="submit"]:focus-visible:not(:disabled),
 .archive-chat-button,
 .profile-settings,
 .modal-close,
+.entra-modal-close,
 .mobile-admin-menu-button {
   display: inline-grid;
   place-items: center;
@@ -164,6 +194,27 @@ button[type="submit"]:focus-visible:not(:disabled),
   border-color: var(--button-glass-border);
   background: var(--button-glass-bg);
   box-shadow: var(--button-glass-shadow);
+}
+
+@media (max-width: 760px) {
+  .entra-card-head {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .entra-toolbar {
+    width: 100%;
+    min-width: 0;
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .entra-toolbar input,
+  .entra-toolbar select,
+  .entra-toolbar button {
+    flex: 0 0 auto;
+    max-width: none;
+  }
 }
 
 @media (max-width: 520px) {
