@@ -1,5 +1,6 @@
 const crypto = require("crypto");
 const express = require("express");
+const { getOrCreateOAuthUser } = require("./oauth-user");
 
 const originalListen = express.application.listen;
 const attachedApps = new WeakSet();
@@ -123,15 +124,23 @@ async function exchangeCodeForToken(req, code) {
   return data.access_token;
 }
 
-async function githubVerifiedEmail(accessToken) {
+async function githubVerifiedProfile(accessToken) {
   const headers = { Authorization: `Bearer ${accessToken}` };
   const profile = await githubFetchJson("https://api.github.com/user", { headers });
-  if (profile.email) return profile.email;
-  const emails = await githubFetchJson("https://api.github.com/user/emails", { headers });
-  const verified = Array.isArray(emails)
-    ? emails.find((email) => email.primary && email.verified) || emails.find((email) => email.verified)
-    : null;
-  return verified?.email || "";
+  let email = cleanString(profile.email, 160).toLowerCase();
+  if (!email) {
+    const emails = await githubFetchJson("https://api.github.com/user/emails", { headers });
+    const verified = Array.isArray(emails)
+      ? emails.find((item) => item.primary && item.verified) || emails.find((item) => item.verified)
+      : null;
+    email = cleanString(verified?.email, 160).toLowerCase();
+  }
+  return {
+    email,
+    name: cleanString(profile.name || profile.login, 120),
+    photoUrl: cleanString(profile.avatar_url, 2000),
+    source: "github"
+  };
 }
 
 function loginRedirect(reason = "github-failed") {
@@ -195,12 +204,12 @@ function attachGithubAuthRoutes(app) {
       const code = cleanString(req.query.code, 500);
       if (!code) return res.redirect(loginRedirect("github-failed"));
       const accessToken = await exchangeCodeForToken(req, code);
-      const email = cleanString(await githubVerifiedEmail(accessToken), 160).toLowerCase();
-      if (!email) return res.redirect(loginRedirect("github-email-missing"));
+      const profile = await githubVerifiedProfile(accessToken);
+      if (!profile.email) return res.redirect(loginRedirect("github-email-missing"));
       const store = app.locals.userManagementStore;
       if (!store) return res.redirect(loginRedirect("github-failed"));
-      const user = await store.getPrivateUserByEmail(email);
-      if (!user || user.status !== "active") return res.redirect(loginRedirect("github-user-missing"));
+      const user = await getOrCreateOAuthUser(store, profile);
+      if (!user) return res.redirect(loginRedirect("github-access-denied"));
       const session = await store.createSession(user.id);
       const updatedUser = await store.updateLastLogin(user.id);
       const publicUser = updatedUser || user;
