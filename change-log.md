@@ -2,6 +2,7 @@
 
 ## [Unreleased]
 
+- Moved the admin header session status chip to the lower-right side of the header while keeping it responsive on small screens.
 - Fixed the admin header session label so the signed-in user name and `Logged in as ...` role text have readable spacing.
 - Added a logged-in chat sidebar Users section backed by `/api/users/available-chat-users`, showing only active users who share the current user's company, department, or group.
 - Updated Company, Department, and Group management pages to match the Users UI/UX with table-based records, search plus Add actions in the card header, and create/edit forms in modals.
@@ -36,7 +37,7 @@
 - Added a top-header user profile settings person icon and a Mac-style current day/time display to admin pages.
 - Updated admin frontend contract tests and the web validation script for the new shared admin JavaScript file.
 - Added Chat Review to the admin Settings visible-widget controls as a default-off option, preserving the cleaned Knowledge Queue default view while letting admins show Chat Review when needed.
-- Removed the generic admin Dashboard/Overview landing block so the admin side starts directly with actionable sections, and updated frontend contract tests to protect the cleanup.
+- Removed the generic admin Dashboard/Overview landing block so the admin side starts directly into actionable sections, and updated frontend contract tests to protect the cleanup.
 - Finalized admin dashboard frontend contract tests for navigation targets, active states, hidden Chat Review behavior, Settings theme toggling, visible labels, and configurable widget markup before drag-and-drop work begins.
 - Added admin dashboard frontend contract tests and replaced the static admin grid with configurable widgets for Overview, Chat Review, Knowledge Queue, Review Runs, Attachments, Admin Access, System Health, and Settings.
 - Cleaned the admin dashboard navigation labels, clarified the file-related sections, relabeled the workspace identity area, added active navigation states, and introduced a Settings section for application-wide preferences.
