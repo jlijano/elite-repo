@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Switchboard Admin - Playground Notes</title>
+    <script>
+      (() => {
+        const storageKey = "switchboard-theme";
+        const systemPrefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+        let storedTheme = null;
+        try { storedTheme = localStorage.getItem(storageKey); } catch (error) { storedTheme = null; }
+        document.documentElement.dataset.theme = storedTheme || (systemPrefersDark ? "dark" : "light");
+      })();
+    </script>
+    <link rel="stylesheet" href="style.css" />
+    <link rel="stylesheet" href="admin.css" />
+    <link rel="stylesheet" href="playground.css" />
+  </head>
+  <body data-admin-page="playground-notes">
+    <main class="app-shell admin-shell" aria-label="Switchboard Admin playground notes page">
+      <aside class="sidebar" aria-label="Admin navigation and status">
+        <div class="sidebar-topbar"><a class="brand-lockup" href="/"><span class="brand-mark" aria-hidden="true">★</span><span>Switchboard</span></a></div>
+        <nav class="primary-nav" aria-label="Admin navigation">
+          <a class="nav-item" href="/" aria-label="Back to chat"><span aria-hidden="true">←</span>Back to chat</a>
+          <a class="nav-item" href="/chat.html"><span aria-hidden="true">□</span>Chat</a>
+          <a class="nav-item" href="/knowledge.html"><span aria-hidden="true">◇</span>Knowledge base</a>
+          <a class="nav-item" href="/user.html"><span aria-hidden="true">◉</span>User</a>
+          <details class="admin-section-list reports-nav playground-nav" open>
+            <summary class="reports-summary active"><span class="reports-summary-label">Playground</span><span class="reports-summary-chevron" aria-hidden="true">⌄</span></summary>
+            <div class="reports-nav-items playground-nav-items" aria-label="Playground navigation">
+              <a class="nav-item" href="/playground.html"><span aria-hidden="true">▦</span>Board</a>
+              <a class="nav-item" href="/playground-tasks.html"><span aria-hidden="true">☑</span>Tasks</a>
+              <a class="nav-item" href="/playground-projects.html"><span aria-hidden="true">▣</span>Projects</a>
+              <a class="nav-item active" href="/playground-notes.html" aria-current="page"><span aria-hidden="true">✎</span>Notes</a>
+              <a class="nav-item" href="/playground-automation.html"><span aria-hidden="true">⚙</span>Automation</a>
+            </div>
+          </details>
+          <details class="admin-section-list reports-nav" open>
+            <summary class="reports-summary"><span class="reports-summary-label">Reports</span><span class="reports-summary-chevron" aria-hidden="true">⌄</span></summary>
+            <div class="reports-nav-items" aria-label="Reports navigation">
+              <a class="nav-item" href="/reports.html"><span aria-hidden="true">▣</span>Overview</a>
+              <a class="nav-item" href="/logs.html"><span aria-hidden="true">≡</span>Logs</a>
+              <a class="nav-item" href="/review-runs.html"><span aria-hidden="true">↻</span>Review runs</a>
+              <a class="nav-item" href="/system-health.html"><span aria-hidden="true">✚</span>System health</a>
+              <a class="nav-item" href="/user-audit.html"><span aria-hidden="true">◎</span>User audit</a>
+              <a class="nav-item" href="/settings.html"><span aria-hidden="true">⚙</span>Settings</a>
+            </div>
+          </details>
+        </nav>
+        <section class="admin-section-list" aria-label="Admin workspace"><h2 class="session-heading">Workspace</h2><div class="workspace-card"><strong>Switchboard Admin</strong><small>Planning notes, activity notes, and working observations.</small></div></section>
+        <div class="directory-card"><div class="status-row"><span class="status-dot online" aria-hidden="true"></span><span>Notes</span></div><p>Collect workspace notes before turning them into tasks or project updates.</p></div>
+      </aside>
+      <section class="admin-panel" aria-label="Playground notes">
+        <header class="chat-header admin-header playground-header"><div class="admin-header-title"><h1>Playground Notes</h1><p>Capture planning notes, observations, and follow-up ideas for the workspace.</p></div><div class="header-actions"><span class="admin-clock" id="menuClock" aria-live="polite"></span><a class="secondary-action" href="/playground.html">Board</a><a class="secondary-action" href="/playground-tasks.html">Tasks</a><a class="secondary-action" href="/playground-projects.html">Projects</a><a class="secondary-action" href="/playground-automation.html">Automation</a><div class="profile-menu"><button class="profile-settings" id="profileMenuButton" type="button" aria-label="Open profile menu" aria-haspopup="true" aria-expanded="false">👤</button><div class="profile-dropdown" id="profileDropdown" role="menu" hidden><a href="/update-profile.html" role="menuitem">Update Profile</a><button class="profile-logout" type="button" role="menuitem">Logout</button></div></div></div></header>
+        <div class="admin-scroll"><div class="admin-layout playground-layout"><p class="admin-status" id="status">Notes workspace ready.</p><section class="playground-metrics" aria-label="Notes summary"><article class="metric-card"><span>Total Notes</span><strong>6</strong><p>Workspace observations and planning notes</p></article><article class="metric-card"><span>Ready</span><strong>2</strong><p>Can become tasks or project updates</p></article><article class="metric-card"><span>Layout</span><strong>1</strong><p>Needs interface review</p></article><article class="metric-card"><span>Future</span><strong>3</strong><p>Ideas for later implementation</p></article></section><section class="admin-card wide" aria-labelledby="notesTitle"><div class="card-head"><div><p class="section-kicker">Activity</p><h2 id="notesTitle">Workspace Notes</h2><p class="card-subtitle">Dedicated notes view before saved note editing is wired in.</p></div></div><div class="notes-list"><article class="item"><div class="row"><span>Sprint planning notes are ready for review.</span><small class="status-badge status-ready">Ready</small></div><p>Use this as a source for follow-up tasks once the next sprint is approved.</p></article><article class="item"><div class="row"><span>Kanban layout needs mobile testing.</span><small class="status-badge status-loaded">Layout</small></div><p>Check column wrapping, card actions, and filter controls on smaller screens.</p></article><article class="item"><div class="row"><span>Project cards should support real data later.</span><small class="status-badge status-public">Future</small></div><p>Connect project summaries to stored projects when backend project detail fields are expanded.</p></article><article class="item"><div class="row"><span>Automation rules should begin as suggestions.</span><small class="status-badge status-storage">Guardrail</small></div><p>Keep high-impact actions manual until audit logging and review states are in place.</p></article></div></section></div></div>
+      </section>
+    </main>
+    <script src="admin-session.js"></script>
+    <script src="admin.js"></script>
+  </body>
+</html>
