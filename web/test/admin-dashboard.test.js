@@ -148,7 +148,9 @@ test("settings page owns preferences access review health diagnostics and refres
 });
 
 test("settings page uses standardized status badges and expanded health layout", () => {
-  assert.match(settingsHtml, /class="status-badge status-public" id="settingsAdminState">Public view<\/span>/);
+  assert.match(settingsHtml, /class="status-badge status-public" id="settingsSessionState">Public view<\/small>/);
+  assert.match(settingsHtml, /class="status-badge status-public" id="settingsProtectedRouteState">Public view<\/small>/);
+  assert.match(settingsHtml, /class="status-badge status-ready">Ready<\/small>/);
   assert.match(settingsHtml, /class="health-grid" id="systemHealth"/);
   assert.doesNotMatch(settingsHtml, /id="systemHealth"[^>]*compact-list/);
   assert.match(adminJs, /const statusClass = \(state = ""\) =>/);
@@ -293,6 +295,34 @@ test("refresh cadence preference persists and controls the admin refresh timer",
   assert.match(adminCss, /\.refresh-cadence-control/);
   assert.match(adminCss, /\.refresh-cadence-option\.active/);
   assert.match(adminCss, /\.refresh-cadence-summary/);
+});
+
+test("settings access security summarizes session and protected route state without exposing secrets", () => {
+  assert.match(settingsHtml, /id="settingsAccessSummary"/);
+  assert.match(settingsHtml, /id="settingsSessionState"/);
+  assert.match(settingsHtml, /id="settingsSessionDetail"/);
+  assert.match(settingsHtml, /id="settingsProtectedRouteState"/);
+  assert.match(settingsHtml, /id="settingsProtectedRouteDetail"/);
+  assert.match(settingsHtml, /href="\/login\.html"[\s\S]*>Open login<\/a>/);
+  assert.match(settingsHtml, /href="\/update-profile\.html"[\s\S]*>Update profile<\/a>/);
+  assert.match(settingsHtml, /href="\/user-audit\.html"[\s\S]*>View user audit<\/a>/);
+  assert.match(settingsHtml, /No passwords, tokens, deploy hooks, API keys, or session values are shown on this page/);
+  assert.doesNotMatch(settingsHtml, /type="password"/);
+  assert.doesNotMatch(settingsHtml, /ADMIN_TOKEN/);
+  assert.doesNotMatch(settingsHtml, /x-session-token/);
+  assert.match(adminJs, /const sessionTokenStorageKey = "switchboard-session-token"/);
+  assert.match(adminJs, /const getStoredSessionToken = \(\) => sessionStorage\.getItem\(sessionTokenStorageKey\) \|\| ""/);
+  assert.match(adminJs, /const hasAdminAccess = \(\) => Boolean\(token \|\| getStoredSessionToken\(\)\)/);
+  assert.match(adminJs, /function updateAccessSecurityState\(\)/);
+  assert.match(adminJs, /setBadgeElement\(els\.settingsSessionState, state\)/);
+  assert.match(adminJs, /setBadgeElement\(els\.settingsProtectedRouteState, state\)/);
+  assert.match(adminJs, /Protected admin access is available for this browser without displaying secrets/);
+  assert.match(adminJs, /Public view is active\. Protected admin data stays hidden and this page will not ask for credentials/);
+  assert.match(adminJs, /if \(!hasAdminAccess\(\)\)/);
+  assert.match(adminJs, /hasAdminAccess\(\) \? fetchJson\("\/api\/admin\/chats", \{\}, true\) : fetchJson\("\/api\/chats\?includeArchived=true"\)/);
+  assert.match(adminCss, /\.access-summary/);
+  assert.match(adminCss, /\.access-security-grid/);
+  assert.match(adminCss, /\.access-actions/);
 });
 
 test("admin javascript switches behavior by page", () => {
