@@ -28,10 +28,13 @@ The `web/` directory contains a Render-ready Express app that serves a plain HTM
   - `/knowledge.html` for the Knowledge base.
   - `/user.html` for User management, profile settings, and the Manage users action.
   - `/settings.html` for Settings, Review runs, and System health.
+  - `/update-profile.html` for the current user's profile photo, name, email, and password form.
+  - `/login.html` as the post-logout redirect target.
   - `/admin.html` redirects to `/chat.html` for backward compatibility.
 - Admin navigation uses Back to chat, Chat, Knowledge base, User, Settings, and Logout. Attachments live inside Chat; Review runs and System health live inside Settings.
 - Admin pages share the chat UI shell, theme tokens, persistent light/dark mode behavior, fixed desktop sidebar, and independently scrolling right panel.
-- Admin top headers include a Mac-style current day/time display and a user profile settings person icon.
+- Admin top headers include a Mac-style current day/time display and a user profile menu with Update Profile and Logout actions.
+- Logout clears the browser-held admin session token and redirects to `/login.html`.
 - Admin pages no longer expose visible token-entry, Login, or Run Review controls; protected backend admin routes still require `ADMIN_TOKEN` for management-only data.
 - Knowledge base includes source-controlled project knowledge cards plus review-created backend knowledge when an admin session is available.
 - Chat and knowledge search controls filter cached management data, keep selected chats highlighted, and show clear loading and error states during admin actions.
@@ -121,7 +124,7 @@ The review workflow is implemented as an idempotent backend route and optional b
 - Protected admin routes and admin token enforcement.
 - Review-run creation of pending knowledge entries.
 - Admin approval of knowledge entries and approved knowledge retrieval.
-- Admin navigation routes, page ownership for Chat, Knowledge base, User, Settings, nested Attachments, nested Review runs, nested System health, the top-header profile settings action, and the Mac-style clock wiring.
+- Admin navigation routes, page ownership for Chat, Knowledge base, User, Settings, nested Attachments, nested Review runs, nested System health, the profile dropdown, Update Profile form, Logout redirect, and the Mac-style clock wiring.
 
 ## GitHub Actions / auto-deploy
 
