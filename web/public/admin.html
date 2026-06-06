@@ -300,11 +300,12 @@
       const widgetStorageKey = "switchboard-admin-widgets";
       const refreshIntervalMs = 40000;
       const configurableWidgets = [
-        ["knowledge-queue", "Knowledge queue"],
-        ["review-runs", "Review runs"],
-        ["attachments", "Attachments"],
-        ["admin-access", "Admin access"],
-        ["system-health", "System health"]
+        ["chat-review", "Chat review", false],
+        ["knowledge-queue", "Knowledge queue", true],
+        ["review-runs", "Review runs", true],
+        ["attachments", "Attachments", true],
+        ["admin-access", "Admin access", true],
+        ["system-health", "System health", true]
       ];
       const projectKnowledgeEntries = [
         { id: "project-admin-token-ui", title: "Admin login panel cleanup", status: "project", createdAt: "2026-06-06T00:00:00.000Z", content: "The admin dashboard should not show visible token-entry, Login, or Run Review controls. Protected backend admin routes still require ADMIN_TOKEN, but that requirement stays backend-only rather than being presented as an on-screen token form." },
@@ -327,7 +328,7 @@
       const getCurrentTheme = () => document.documentElement.dataset.theme === "dark" ? "dark" : "light";
 
       function getWidgetPrefs() {
-        const defaults = Object.fromEntries(configurableWidgets.map(([id]) => [id, true]));
+        const defaults = Object.fromEntries(configurableWidgets.map(([id, _label, defaultVisible]) => [id, defaultVisible !== false]));
         try { return { ...defaults, ...JSON.parse(localStorage.getItem(widgetStorageKey) || "{}") }; } catch (error) { return defaults; }
       }
 
@@ -342,6 +343,13 @@
           if (widget) widget.hidden = prefs[id] === false;
         }
         for (const input of els.widgetToggleList.querySelectorAll("input[data-widget]")) input.checked = prefs[input.dataset.widget] !== false;
+      }
+
+      function showWidget(widgetId) {
+        const prefs = getWidgetPrefs();
+        prefs[widgetId] = true;
+        saveWidgetPrefs(prefs);
+        applyWidgetPrefs();
       }
 
       function renderWidgetToggles() {
@@ -383,6 +391,7 @@
       }
 
       function revealChatReviewSection() {
+        showWidget("chat-review");
         els.chatReviewSection.hidden = false;
         setActiveNav("chatReviewSection");
         els.chatReviewSection.scrollIntoView({ behavior: "smooth", block: "start" });
