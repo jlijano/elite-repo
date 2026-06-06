@@ -37,8 +37,10 @@ The `web/` directory contains a Render-ready Express app that serves a plain HTM
   - `/update-profile.html` for the current user's backend-backed profile photo, name, email, and password form.
   - `/login.html` for email/password login and post-logout redirects.
   - `/admin.html` redirects to `/chat.html` for backward compatibility.
-- Real user login sessions are backed by `/api/auth/login`, `/api/auth/logout`, and `user_sessions` storage. Owner/admin sessions can access all `/api/admin/*` APIs; non-admin sessions can update only their own profile.
-- Profile updates are saved through `/api/profile` instead of browser-local profile storage. Password changes require the current password before the backend updates the password hash.
+- Real user login sessions are backed by `/api/auth/login`, `/api/auth/logout`, and `user_sessions` storage. Owner/admin sessions can access all `/api/admin/*` APIs through shared session-aware middleware in `server.js`; `ADMIN_TOKEN` remains available as a bootstrap compatibility path.
+- Admin sessions are bootstrapped from `/api/profile` in the browser, display the signed-in user in admin headers, clear expired sessions, redirect stale sessions back to login, and redirect non-admin users to their profile page instead of leaving them in admin-only screens.
+- Profile updates are saved through `/api/profile` instead of browser-local profile storage. Password changes require the current password, must satisfy the stricter password policy, rotate the current session token, and revoke the old session token.
+- Login is rate-limited after repeated failures, and login, logout, user creation/update, and profile-change activity is written to user audit events.
 - Admin navigation uses Back to chat, Chat, Knowledge base, User, Playground, a Reports section, and Settings. Admin logout is available from the top-header profile menu.
 - Admin Reports groups Overview, Logs, Review runs, System health, and User audit pages. Reports load public `/api/status` data and use protected admin summary, review-run, and user-audit routes when an owner/admin session or admin token is already available.
 - Admin pages share the chat UI shell, theme tokens, fixed desktop sidebar, independently scrolling right panel, and reload-safe theme behavior.
@@ -68,6 +70,8 @@ From the `web/` directory:
 3. Run backend integration and frontend contract tests with `npm test`.
 4. Run full validation with `npm run check`.
 5. Open the local server URL shown in the terminal.
+
+`npm start` runs `node server.js`; `server.js` owns the shared admin session middleware. `register-user-management.js` remains only as a guarded compatibility fallback for older commands that preload it.
 
 `OPENAI_API_KEY` is optional. When it is missing, messages are still stored and the app returns a pending-review response. `OPENAI_MODEL` is optional and defaults to `gpt-4.1-mini`.
 
@@ -112,10 +116,10 @@ Do not commit secrets, API keys, deploy hooks, database URLs, passwords, session
 - `POST /api/chat`: stores a user message and optional text attachments, attempts an AI response when available, stores the assistant response when possible, and returns a storage failure status if the user message could not be saved.
 - `GET /api/knowledge?status=approved`: reads durable knowledge entries.
 - `POST /api/reviews/run`: records a review run, reads unreviewed messages, creates pending-review knowledge entries, and marks messages reviewed.
-- `POST /api/auth/login`: logs in an active user with email and password, returning a session token and public user record.
-- `POST /api/auth/logout`: revokes the current user session when called with `x-session-token`.
+- `POST /api/auth/login`: logs in an active user with email and password, returning a session token and public user record. Repeated failed attempts are rate-limited and successful logins are audited.
+- `POST /api/auth/logout`: revokes the current user session when called with `x-session-token` and audits logout when a valid session is present.
 - `GET /api/profile`: returns the current logged-in user's public profile. Requires `x-session-token`.
-- `PATCH /api/profile`: updates the current user's name, email, photo URL, or password. Password changes require `currentPassword` and `newPassword`. Requires `x-session-token`.
+- `PATCH /api/profile`: updates the current user's name, email, photo URL, or password. Password changes require `currentPassword` and `newPassword`, enforce the password policy, rotate the session token, revoke the old token, and audit the profile update. Requires `x-session-token`.
 - `GET /api/admin/summary`: returns backend management counts and runtime status. Requires `ADMIN_TOKEN` or an active owner/admin user session.
 - `GET /api/admin/chats`: lists chats for management review. Requires `ADMIN_TOKEN` or an active owner/admin user session.
 - `GET /api/admin/chats/:chatId`: loads a chat and messages for management review. Requires `ADMIN_TOKEN` or an active owner/admin user session.
@@ -156,9 +160,10 @@ The review workflow is implemented as an idempotent backend route and optional b
 - Review-run creation of pending knowledge entries.
 - Admin approval of knowledge entries and approved knowledge retrieval.
 - Protected user-management routes, user creation/listing/loading/updating, duplicate email handling, disable/reactivate actions, and audit-event creation.
-- Real auth/profile behavior: failed and successful login, session profile reads, backend-backed profile updates, current-password verification for password changes, session-backed owner/admin access to all `/api/admin/*` routes, logout revocation, non-admin rejection from admin APIs, and new-password login.
+- Real auth/profile behavior: failed and successful login, login rate limiting, session profile reads, backend-backed profile updates, current-password verification for password changes, stricter password rejection, password-change session rotation and old-token revocation, session-backed owner/admin access to all `/api/admin/*` routes, logout revocation, non-admin rejection from admin APIs, audit entries for login/profile activity, and new-password login.
 - User page controls for search, create/edit fields, role/status selection, password entry, audit events, and backend API wiring.
 - Admin navigation routes, page ownership for Chat, Knowledge base, User, Playground, Settings, Reports, Logs, Review runs, System health, and User audit, plus nested Attachments, Settings section structure, standardized Settings status badges, Settings Access and security session/protected-route summaries, safe action links, secret-display guardrails, Settings Light / Dark / System theme preference markup, theme persistence keys, reload restore behavior, System-mode handling, Settings refresh cadence markup, refresh persistence key, manual refresh timer cancellation, Refresh now wiring, Playground required workspace sections, the profile dropdown, Update Profile form, Logout redirect, profile-menu-only admin logout, and the Mac-style clock wiring.
+- Static auth architecture checks for shared `server.js` admin middleware and guarded `register-user-management.js` compatibility behavior.
 
 ## GitHub Actions / auto-deploy
 
