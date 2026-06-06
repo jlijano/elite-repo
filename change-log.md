@@ -2,6 +2,7 @@
 
 ## [Unreleased]
 
+- Added a visible X close state to the mobile admin navigation button so users can close the full-screen menu without leaving the current module.
 - Changed the mobile admin navigation to an icon-only burger button on the left that opens a full-screen navigation menu.
 - Added a mobile admin Menu button that opens the hidden admin navigation options as a dropdown on phone and small-screen views.
 - Fixed mobile admin navigation so the hidden desktop sidebar becomes a compact, scrollable top navigation strip on phones and small displays.
