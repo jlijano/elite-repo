@@ -1,37 +1,23 @@
 (() => {
-  const colorStorageKey = "switchboard-bubble-color";
-  const nicknameStorageKey = "switchboard-chat-nickname";
-  const participantStorageKey = "switchboard-participant-id";
+  const colorKey = "switchboard-bubble-color";
+  const nicknameKey = "switchboard-chat-nickname";
+  const participantKey = "switchboard-participant-id";
   const quickReplyId = "chatQuickReplies";
-  const colorChoices = [
-    "#2563eb",
-    "#16a34a",
-    "#dc2626",
-    "#9333ea",
-    "#f97316",
-    "#0891b2",
-    "#be123c",
-    "#4f46e5"
-  ];
-  const queryParams = new URLSearchParams(window.location.search);
-  const sharedChatId = queryParams.get("chat") || "";
-  const sharedLinkNumber = Math.max(1, Number(queryParams.get("share") || 1));
-  let selectedColor = normalizeColor(getStored(colorStorageKey) || "");
-  let selectedNickname = cleanNickname(getStored(nicknameStorageKey) || "");
-  let knownParticipants = [];
+  const colors = ["#2563eb", "#16a34a", "#dc2626", "#9333ea", "#f97316", "#0891b2", "#be123c", "#4f46e5"];
+  const params = new URLSearchParams(location.search);
+  const sharedChatId = params.get("chat") || "";
+  const sharedLinkNumber = Math.max(1, Number(params.get("share") || 1));
+  let selectedColor = normalizeColor(getStored(colorKey) || "");
+  let selectedNickname = cleanNickname(getStored(nicknameKey) || "");
+  let participants = [];
   let modal = null;
-  let grid = null;
-  let nicknameInput = null;
-  let modalStatus = null;
-  let confirmButton = null;
-  let pendingResolve = null;
   let pendingColor = selectedColor;
+  let pendingResolve = null;
   let lastTypingStartAt = 0;
   let lastTypingStopAt = 0;
 
   function normalizeColor(value) {
-    if (typeof value !== "string") return "";
-    const color = value.trim().toLowerCase();
+    const color = String(value || "").trim().toLowerCase();
     return /^#[0-9a-f]{6}$/.test(color) ? color : "";
   }
 
@@ -40,12 +26,12 @@
   }
 
   function currentParticipantId() {
-    let value = getStored(participantStorageKey);
-    if (!value) {
-      value = crypto?.randomUUID ? crypto.randomUUID() : `participant-${Date.now()}-${Math.random().toString(16).slice(2)}`;
-      setStored(participantStorageKey, value);
+    let id = getStored(participantKey);
+    if (!id) {
+      id = crypto?.randomUUID ? crypto.randomUUID() : `participant-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+      setStored(participantKey, id);
     }
-    return value;
+    return id;
   }
 
   function deviceType() {
@@ -57,28 +43,28 @@
 
   function participantType() {
     if (!sharedChatId) return "original";
-    const originKey = `switchboard-origin-chat-${sharedChatId}`;
-    return getStored(originKey) === "true" ? "original" : "shared";
+    return getStored(`switchboard-origin-chat-${sharedChatId}`) === "true" ? "original" : "shared";
   }
 
   function currentShareCount() {
     const chatId = currentChatId || sharedChatId;
-    if (!chatId) return 0;
     const stored = Number(getStored(`switchboard-share-count-${chatId}`) || 0);
     return Math.max(stored, sharedChatId === chatId ? sharedLinkNumber : 0);
   }
 
-  function participantLabel() {
-    if (selectedNickname) return selectedNickname;
-    if (participantType() === "original") return "Original";
-    return `Shared link #${Math.max(1, currentShareCount() || sharedLinkNumber)}`;
+  function fallbackLabel() {
+    return participantType() === "original" ? "Original" : `Shared link #${Math.max(1, currentShareCount() || sharedLinkNumber)}`;
   }
 
-  function participantContext(extra = {}) {
+  function ownLabel() {
+    return selectedNickname || fallbackLabel();
+  }
+
+  function context(extra = {}) {
     return {
       participantId: currentParticipantId(),
       participantType: participantType(),
-      participantLabel: participantLabel(),
+      participantLabel: ownLabel(),
       deviceType: deviceType(),
       shareCount: currentShareCount(),
       bubbleColor: selectedColor,
@@ -86,55 +72,55 @@
     };
   }
 
+  function participantById(id) {
+    return participants.find((participant) => participant.participantId === id) || null;
+  }
+
+  function preferredLabel(rawLabel) {
+    const label = cleanNickname(rawLabel);
+    return label && !/^Original$|^Shared link/i.test(label) ? label : "";
+  }
+
+  function displayLabel(message = {}) {
+    const senderId = message.context?.participantId || "";
+    const sender = participantById(senderId);
+    return preferredLabel(sender?.participantLabel)
+      || preferredLabel(message.context?.participantLabel)
+      || (senderId === currentParticipantId() && selectedNickname ? selectedNickname : "")
+      || fallbackLabel();
+  }
+
   function setMenuStatus(message) {
-    const plusStatus = document.getElementById("plusMenuStatus");
-    if (plusStatus) plusStatus.textContent = message || "";
-  }
-
-  function participantById(participantId) {
-    return knownParticipants.find((participant) => participant.participantId === participantId) || null;
-  }
-
-  function displayLabelForMessage(message = {}) {
-    const participant = participantById(message.context?.participantId || "");
-    const label = cleanNickname(participant?.participantLabel || message.context?.participantLabel || "");
-    if (label && !/^Original$|^Shared link/i.test(label)) return label;
-    if (message.context?.participantId === currentParticipantId() && selectedNickname) return selectedNickname;
-    return label || (message.context?.participantType === "shared" ? "Shared link" : "Original");
+    const status = document.getElementById("plusMenuStatus");
+    if (status) status.textContent = message || "";
   }
 
   function absorbParticipants(data = {}) {
-    const participants = Array.isArray(data.participants)
-      ? data.participants
-      : Array.isArray(data.chat?.participants)
-        ? data.chat.participants
-        : null;
-    if (!participants) return;
-    knownParticipants = participants;
-    const own = participants.find((participant) => participant.participantId === currentParticipantId());
-    const ownColor = normalizeColor(own?.bubbleColor);
-    if (ownColor && ownColor !== "#2f2f2f") {
-      selectedColor = ownColor;
-      pendingColor = ownColor;
-      setStored(colorStorageKey, ownColor);
+    const next = Array.isArray(data.participants) ? data.participants : Array.isArray(data.chat?.participants) ? data.chat.participants : null;
+    if (!next) return;
+    participants = next;
+    const own = participantById(currentParticipantId());
+    const color = normalizeColor(own?.bubbleColor);
+    if (color && color !== "#2f2f2f") {
+      selectedColor = color;
+      pendingColor = color;
+      setStored(colorKey, color);
     }
-    const ownLabel = cleanNickname(own?.participantLabel || "");
-    if (ownLabel && !/^Original$|^Shared link/i.test(ownLabel)) {
-      selectedNickname = ownLabel;
-      setStored(nicknameStorageKey, ownLabel);
+    const nickname = preferredLabel(own?.participantLabel);
+    if (nickname) {
+      selectedNickname = nickname;
+      setStored(nicknameKey, nickname);
     }
   }
 
   function usedColors() {
-    return new Set(
-      knownParticipants
-        .filter((participant) => participant.participantId !== currentParticipantId())
-        .map((participant) => normalizeColor(participant.bubbleColor))
-        .filter((color) => color && color !== "#2f2f2f")
-    );
+    return new Set(participants
+      .filter((participant) => participant.participantId !== currentParticipantId())
+      .map((participant) => normalizeColor(participant.bubbleColor))
+      .filter((color) => color && color !== "#2f2f2f"));
   }
 
-  function colorIsTaken(color) {
+  function colorTaken(color) {
     return usedColors().has(normalizeColor(color));
   }
 
@@ -143,29 +129,17 @@
     const style = document.createElement("style");
     style.id = "bubbleColorStyles";
     style.textContent = `
-      .bubble-color-modal { position: fixed; inset: 0; z-index: 90; display: grid; place-items: center; padding: 20px; background: rgba(15, 23, 42, 0.48); }
-      .bubble-color-modal[hidden] { display: none; }
-      .bubble-color-card { width: min(440px, calc(100vw - 32px)); padding: 18px; border: 1px solid var(--line); border-radius: 18px; background: var(--composer); color: var(--text); box-shadow: 0 24px 70px rgba(0, 0, 0, 0.28); }
-      .bubble-color-card h2 { margin: 0 0 6px; font-size: 1.05rem; line-height: 1.2; }
-      .bubble-color-card p { margin: 0 0 14px; color: var(--muted); font-size: 0.9rem; line-height: 1.4; }
-      .bubble-nickname-label { display: grid; gap: 6px; margin: 0 0 14px; color: var(--text); font-size: 0.82rem; font-weight: 800; }
-      .bubble-nickname-input { width: 100%; min-height: 42px; padding: 0 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--panel-soft); color: var(--text); font: inherit; }
-      .bubble-color-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
-      .bubble-color-option { min-height: 46px; border: 2px solid transparent; border-radius: 14px; background: var(--bubble-choice); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.22); }
-      .bubble-color-option[aria-pressed="true"] { border-color: var(--text); box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.22), inset 0 0 0 1px rgba(255, 255, 255, 0.3); }
-      .bubble-color-option:disabled { cursor: not-allowed; opacity: 0.32; filter: grayscale(0.5); }
-      .bubble-color-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 14px; }
-      .bubble-color-confirm { width: auto; min-width: 108px; min-height: 42px; display: inline-flex; align-items: center; justify-content: center; padding: 0 16px; border-radius: 999px; background: var(--primary); color: #fff; font-weight: 800; line-height: 1; white-space: nowrap; }
-      .message.user .bubble.participant-bubble { background: var(--bubble-color); border-color: transparent; color: #fff; }
-      .message.user .bubble.participant-bubble .participant-label, .message.user .bubble.participant-bubble time, .message.user .bubble.participant-bubble .message-attachment { color: rgba(255, 255, 255, 0.86); }
-      .message-status { display: block; margin-top: 6px; color: var(--muted); font-size: 0.7rem; font-weight: 800; line-height: 1.2; text-align: right; }
-      .message-status.failed { color: #ffb4b4; }
-      .message.user .bubble.participant-bubble .message-status { color: rgba(255, 255, 255, 0.78); }
-      .message.user .bubble.participant-bubble .message-status.failed { color: #ffe1e1; }
-      .quick-replies { display: flex; flex-wrap: wrap; gap: 8px; margin: -2px 8px 10px; }
-      .quick-replies button { min-height: 34px; padding: 0 12px; border: 1px solid var(--line); border-radius: 999px; background: var(--panel-soft); color: var(--text); font-weight: 760; }
-      .quick-replies button:hover, .quick-replies button:focus-visible { border-color: var(--composer-border); background: var(--composer); }
-      @media (max-width: 420px) { .bubble-color-card { padding: 16px; border-radius: 16px; } .bubble-color-grid { gap: 8px; } .bubble-color-option { min-height: 42px; } .quick-replies { gap: 6px; } .quick-replies button { min-height: 32px; padding: 0 10px; } }
+      .bubble-color-modal{position:fixed;inset:0;z-index:90;display:grid;place-items:center;padding:20px;background:rgba(15,23,42,.48)}
+      .bubble-color-modal[hidden]{display:none}.bubble-color-card{width:min(440px,calc(100vw - 32px));padding:18px;border:1px solid var(--line);border-radius:18px;background:var(--composer);color:var(--text);box-shadow:0 24px 70px rgba(0,0,0,.28)}
+      .bubble-color-card h2{margin:0 0 6px;font-size:1.05rem;line-height:1.2}.bubble-color-card p{margin:0 0 14px;color:var(--muted);font-size:.9rem;line-height:1.4}
+      .bubble-nickname-label{display:grid;gap:6px;margin:0 0 14px;color:var(--text);font-size:.82rem;font-weight:800}.bubble-nickname-input{width:100%;min-height:42px;padding:0 12px;border:1px solid var(--line);border-radius:12px;background:var(--panel-soft);color:var(--text);font:inherit}
+      .bubble-color-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}.bubble-color-option{min-height:46px;border:2px solid transparent;border-radius:14px;background:var(--bubble-choice);box-shadow:inset 0 0 0 1px rgba(255,255,255,.22)}
+      .bubble-color-option[aria-pressed="true"]{border-color:var(--text);box-shadow:0 0 0 3px rgba(37,99,235,.22),inset 0 0 0 1px rgba(255,255,255,.3)}.bubble-color-option:disabled{cursor:not-allowed;opacity:.32;filter:grayscale(.5)}
+      .bubble-color-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:14px}.bubble-color-confirm{width:auto;min-width:108px;min-height:42px;display:inline-flex;align-items:center;justify-content:center;padding:0 16px;border-radius:999px;background:var(--primary);color:#fff;font-weight:800;line-height:1;white-space:nowrap}
+      .message.user .bubble.participant-bubble{background:var(--bubble-color);border-color:transparent;color:#fff}.participant-label{display:block;margin-bottom:5px;font-size:.72rem;font-weight:900;line-height:1.2;color:inherit;opacity:.88}
+      .message.user .bubble.participant-bubble time,.message.user .bubble.participant-bubble .message-attachment{color:rgba(255,255,255,.86)}.message-status{display:block;margin-top:6px;color:var(--muted);font-size:.7rem;font-weight:800;line-height:1.2;text-align:right}.message-status.failed{color:#ffb4b4}.message.user .bubble.participant-bubble .message-status{color:rgba(255,255,255,.78)}.message.user .bubble.participant-bubble .message-status.failed{color:#ffe1e1}
+      .quick-replies{display:flex;flex-wrap:wrap;gap:8px;margin:-2px 8px 10px}.quick-replies button{min-height:34px;padding:0 12px;border:1px solid var(--line);border-radius:999px;background:var(--panel-soft);color:var(--text);font-weight:760}.quick-replies button:hover,.quick-replies button:focus-visible{border-color:var(--composer-border);background:var(--composer)}
+      @media (max-width:420px){.bubble-color-card{padding:16px;border-radius:16px}.bubble-color-grid{gap:8px}.bubble-color-option{min-height:42px}.quick-replies{gap:6px}.quick-replies button{min-height:32px;padding:0 10px}}
     `;
     document.head.appendChild(style);
   }
@@ -180,125 +154,120 @@
       <section class="bubble-color-card" role="dialog" aria-modal="true" aria-labelledby="bubbleColorTitle">
         <h2 id="bubbleColorTitle">Set up your chat identity</h2>
         <p>Choose a nickname and message bubble color. Colors already used in this chat are locked.</p>
-        <label class="bubble-nickname-label" for="bubbleNicknameInput">Nickname<input class="bubble-nickname-input" id="bubbleNicknameInput" type="text" maxlength="40" autocomplete="nickname" placeholder="Example: Alex" /></label>
+        <label class="bubble-nickname-label" for="bubbleNicknameInput">Nickname<input class="bubble-nickname-input" id="bubbleNicknameInput" type="text" maxlength="40" autocomplete="nickname" placeholder="Example: Alex"></label>
         <div class="bubble-color-grid" id="bubbleColorGrid" role="group" aria-label="Bubble color choices"></div>
         <div class="plus-menu-status" id="bubbleColorStatus" aria-live="polite"></div>
         <div class="bubble-color-actions"><button class="bubble-color-confirm" id="bubbleColorConfirm" type="button">Use color</button></div>
-      </section>
-    `;
+      </section>`;
     document.body.appendChild(modal);
-    grid = modal.querySelector("#bubbleColorGrid");
-    nicknameInput = modal.querySelector("#bubbleNicknameInput");
-    modalStatus = modal.querySelector("#bubbleColorStatus");
-    confirmButton = modal.querySelector("#bubbleColorConfirm");
-    confirmButton.addEventListener("click", () => {
-      const normalized = normalizeColor(pendingColor);
+    modal.querySelector("#bubbleColorConfirm").addEventListener("click", () => {
+      const nicknameInput = modal.querySelector("#bubbleNicknameInput");
+      const status = modal.querySelector("#bubbleColorStatus");
       const nickname = cleanNickname(nicknameInput.value);
-      if (!nickname) { modalStatus.textContent = "Add a nickname to continue."; nicknameInput.focus(); return; }
-      if (!normalized) { modalStatus.textContent = "Pick a color to continue."; return; }
-      if (colorIsTaken(normalized)) { modalStatus.textContent = "That color is already taken in this chat."; renderColorChoices(); return; }
+      const color = normalizeColor(pendingColor);
+      if (!nickname) { status.textContent = "Add a nickname to continue."; nicknameInput.focus(); return; }
+      if (!color) { status.textContent = "Pick a color to continue."; return; }
+      if (colorTaken(color)) { status.textContent = "That color is already taken in this chat."; renderColors(); return; }
       selectedNickname = nickname;
-      selectedColor = normalized;
-      setStored(nicknameStorageKey, selectedNickname);
-      setStored(colorStorageKey, selectedColor);
+      selectedColor = color;
+      setStored(nicknameKey, nickname);
+      setStored(colorKey, color);
       modal.hidden = true;
-      setMenuStatus("");
       const resolve = pendingResolve;
       pendingResolve = null;
-      resolve?.(participantContext());
+      resolve?.(context());
     });
   }
 
-  function renderColorChoices() {
+  function renderColors() {
     ensureModal();
+    const grid = modal.querySelector("#bubbleColorGrid");
+    const status = modal.querySelector("#bubbleColorStatus");
     const taken = usedColors();
     grid.innerHTML = "";
-    for (const color of colorChoices) {
+    for (const color of colors) {
       const button = document.createElement("button");
       button.type = "button";
       button.className = "bubble-color-option";
       button.style.setProperty("--bubble-choice", color);
-      button.setAttribute("aria-label", `${color}${taken.has(color) ? " taken" : ""}`);
+      button.setAttribute("aria-label", taken.has(color) ? `${color} taken` : color);
       button.setAttribute("aria-pressed", String(normalizeColor(pendingColor) === color));
       button.disabled = taken.has(color);
-      button.addEventListener("click", () => { pendingColor = color; modalStatus.textContent = ""; renderColorChoices(); });
+      button.addEventListener("click", () => { pendingColor = color; status.textContent = ""; renderColors(); });
       grid.appendChild(button);
     }
-    if (taken.size >= colorChoices.length) modalStatus.textContent = "All colors are taken in this chat.";
+    if (taken.size >= colors.length) status.textContent = "All colors are taken in this chat.";
   }
 
   function openIdentityPicker() {
     ensureModal();
-    pendingColor = colorIsTaken(selectedColor) ? "" : selectedColor;
-    nicknameInput.value = selectedNickname;
-    renderColorChoices();
+    pendingColor = colorTaken(selectedColor) ? "" : selectedColor;
+    modal.querySelector("#bubbleNicknameInput").value = selectedNickname;
+    modal.querySelector("#bubbleColorStatus").textContent = "";
+    renderColors();
     modal.hidden = false;
-    modalStatus.textContent = "";
-    nicknameInput.focus();
+    modal.querySelector("#bubbleNicknameInput").focus();
     return new Promise((resolve) => { pendingResolve = resolve; });
   }
 
-  async function ensureChatIdentity() {
-    if (selectedNickname && selectedColor && !colorIsTaken(selectedColor)) return participantContext();
-    if (selectedColor && colorIsTaken(selectedColor)) { selectedColor = ""; removeStored(colorStorageKey); }
+  async function ensureIdentity() {
+    if (selectedNickname && selectedColor && !colorTaken(selectedColor)) return context();
+    if (selectedColor && colorTaken(selectedColor)) { selectedColor = ""; removeStored(colorKey); }
     return openIdentityPicker();
   }
 
-  function withParticipantContextBody(url, options = {}) {
+  function withContext(url, options = {}) {
     if (!selectedColor || !selectedNickname || !options.body || typeof options.body !== "string") return options;
     const target = String(url || "");
-    const shouldAttach = target === "/api/chat" || /\/api\/chats\/[^/]+\/(participants|typing|messages)$/.test(target);
-    if (!shouldAttach) return options;
+    if (target !== "/api/chat" && !/\/api\/chats\/[^/]+\/(participants|typing|messages)$/.test(target)) return options;
     try {
       const body = JSON.parse(options.body);
-      body.context = { ...(body.context && typeof body.context === "object" && !Array.isArray(body.context) ? body.context : {}), ...participantContext(body.context || {}) };
+      body.context = { ...(body.context && typeof body.context === "object" && !Array.isArray(body.context) ? body.context : {}), ...context(body.context || {}) };
       return { ...options, body: JSON.stringify(body) };
-    } catch (error) {
+    } catch {
       return options;
     }
   }
 
   function shouldSendTyping(url, options = {}) {
-    const target = String(url || "");
-    if (!/\/api\/chats\/[^/]+\/typing$/.test(target) || !options.body) return true;
+    if (!/\/api\/chats\/[^/]+\/typing$/.test(String(url || "")) || !options.body) return true;
     try {
       const body = JSON.parse(options.body);
-      const currentTime = Date.now();
+      const now = Date.now();
       if (body.isTyping !== false) {
-        if (currentTime - lastTypingStartAt < 1800) return false;
-        lastTypingStartAt = currentTime;
+        if (now - lastTypingStartAt < 1800) return false;
+        lastTypingStartAt = now;
         return true;
       }
-      if (currentTime - lastTypingStopAt < 900) return false;
-      lastTypingStopAt = currentTime;
+      if (now - lastTypingStopAt < 900) return false;
+      lastTypingStopAt = now;
       return true;
-    } catch (error) {
+    } catch {
       return true;
     }
   }
 
-  function readLabelsForMessage(message = {}) {
+  function readLabels(message = {}) {
     const createdAt = new Date(message.createdAt || 0).getTime();
     const senderId = message.context?.participantId || "";
     if (!createdAt) return [];
-    return knownParticipants
+    return participants
       .filter((participant) => participant.participantId && participant.participantId !== senderId)
       .filter((participant) => participant.lastSeenAt && new Date(participant.lastSeenAt).getTime() >= createdAt)
-      .map((participant) => participant.participantLabel)
+      .map((participant) => preferredLabel(participant.participantLabel) || participant.participantLabel)
       .filter(Boolean);
   }
 
-  function statusTextForMessage(message = {}) {
-    const labels = readLabelsForMessage(message);
+  function statusText(message = {}) {
+    const labels = readLabels(message);
     if (labels.length === 1) return `Seen by ${labels[0]}`;
     if (labels.length > 1) return `Seen by ${labels.length}`;
     return "Delivered";
   }
 
-  function appendMessageStatus(article, text, state = "delivered") {
-    if (!text) return;
-    const bubble = article.querySelector(".bubble");
-    if (!bubble) return;
+  function appendStatus(article, text, state = "delivered") {
+    const bubble = article?.querySelector(".bubble");
+    if (!bubble || !text) return;
     bubble.querySelector(".message-status")?.remove();
     const status = document.createElement("span");
     status.className = `message-status ${state}`;
@@ -306,26 +275,25 @@
     bubble.appendChild(status);
   }
 
-  function updatePendingStatuses(text, state = "delivered") {
+  function updatePending(text, state) {
     document.querySelectorAll(".message.user .message-status.pending").forEach((status) => {
       status.textContent = text;
       status.className = `message-status ${state}`;
     });
   }
 
-  async function markChatRead(data = {}) {
+  async function markRead(data = {}) {
     const chat = data.chat;
     if (!chat?.id || !Array.isArray(chat.messages) || !chat.messages.length || !selectedColor || !selectedNickname) return;
     await fetch(`/api/chats/${encodeURIComponent(chat.id)}/participants`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ context: participantContext() })
+      body: JSON.stringify({ context: context() })
     }).then((response) => response.json()).then(absorbParticipants).catch(() => {});
   }
 
   function installQuickReplies() {
     if (document.getElementById(quickReplyId)) return;
-    const typingStatus = document.getElementById("typingStatus");
     const row = document.createElement("div");
     row.id = quickReplyId;
     row.className = "quick-replies";
@@ -344,7 +312,7 @@
       button.addEventListener("click", action);
       row.appendChild(button);
     }
-    typingStatus?.insertAdjacentElement("afterend", row);
+    document.getElementById("typingStatus")?.insertAdjacentElement("afterend", row);
   }
 
   if (typeof requestJson === "function") {
@@ -352,16 +320,16 @@
     requestJson = async function identityRequestJson(url, options = {}) {
       if (!shouldSendTyping(url, options)) return {};
       try {
-        const data = await originalRequestJson(url, withParticipantContextBody(url, options));
+        const data = await originalRequestJson(url, withContext(url, options));
         absorbParticipants(data);
-        if (String(url || "") === "/api/chat" || /\/api\/chats\/[^/]+\/messages$/.test(String(url || ""))) updatePendingStatuses("Delivered", "delivered");
-        if (/\/api\/chats\/[^/?]+(?:\?|$)/.test(String(url || "")) && (!options.method || options.method === "GET")) markChatRead(data);
+        if (String(url || "") === "/api/chat" || /\/api\/chats\/[^/]+\/messages$/.test(String(url || ""))) updatePending("Delivered", "delivered");
+        if (/\/api\/chats\/[^/?]+(?:\?|$)/.test(String(url || "")) && (!options.method || options.method === "GET")) markRead(data);
         return data;
       } catch (error) {
-        if (String(url || "") === "/api/chat" || /\/api\/chats\/[^/]+\/messages$/.test(String(url || ""))) updatePendingStatuses("Failed", "failed");
+        if (String(url || "") === "/api/chat" || /\/api\/chats\/[^/]+\/messages$/.test(String(url || ""))) updatePending("Failed", "failed");
         if (/bubble color|color is already/i.test(error.message || "")) {
           selectedColor = "";
-          removeStored(colorStorageKey);
+          removeStored(colorKey);
           setMenuStatus("That color is already in use. Pick another color.");
         }
         throw error;
@@ -373,11 +341,20 @@
     const originalCreateMessageElement = createMessageElement;
     createMessageElement = function identityCreateMessageElement(role, content, options = {}) {
       const article = originalCreateMessageElement(role, content, options);
-      const color = normalizeColor(options.bubbleColor || options.context?.bubbleColor || "");
-      if (role === "user" && color) {
-        const bubble = article.querySelector(".bubble");
-        bubble?.classList.add("participant-bubble");
-        bubble?.style.setProperty("--bubble-color", color);
+      const bubble = article.querySelector(".bubble");
+      if (role === "user" && bubble) {
+        const label = cleanNickname(options.participantLabel || "");
+        if (label) {
+          const labelEl = document.createElement("span");
+          labelEl.className = "participant-label";
+          labelEl.textContent = label;
+          bubble.insertBefore(labelEl, bubble.firstChild);
+        }
+        const color = normalizeColor(options.bubbleColor || options.context?.bubbleColor || "");
+        if (color) {
+          bubble.classList.add("participant-bubble");
+          bubble.style.setProperty("--bubble-color", color);
+        }
       }
       return article;
     };
@@ -387,20 +364,17 @@
     renderMessages = function identityRenderMessages(messages = []) {
       messagesEl.innerHTML = "";
       chatHistory = [];
-      const visibleMessages = messages.filter((message) => !isAutomaticAssistantMessage(message));
-      if (!visibleMessages.length) { renderWelcome(); return; }
-      for (const message of visibleMessages) {
-        const context = message.context || {};
-        const attachments = Array.isArray(context.attachments) ? context.attachments : [];
-        const label = displayLabelForMessage(message);
+      const visible = messages.filter((message) => !isAutomaticAssistantMessage(message));
+      if (!visible.length) { renderWelcome(); return; }
+      for (const message of visible) {
+        const messageContext = message.context || {};
         const article = createMessageElement(message.role, message.content, {
           createdAt: message.createdAt,
-          attachments,
-          participantType: context.participantType || "original",
-          participantLabel: label,
-          bubbleColor: context.bubbleColor
+          attachments: Array.isArray(messageContext.attachments) ? messageContext.attachments : [],
+          participantLabel: displayLabel(message),
+          bubbleColor: messageContext.bubbleColor
         });
-        if (message.role === "user") appendMessageStatus(article, statusTextForMessage(message));
+        if (message.role === "user") appendStatus(article, statusText(message));
         messagesEl.appendChild(article);
         if (message.role === "user" || message.role === "assistant") chatHistory.push({ role: message.role, content: message.content });
       }
@@ -411,11 +385,8 @@
   if (typeof addMessage === "function") {
     const originalAddMessage = addMessage;
     addMessage = function identityAddMessage(role, content, options = {}) {
-      const nextOptions = role === "user"
-        ? { ...options, bubbleColor: options.bubbleColor || selectedColor, participantLabel: options.participantLabel || participantLabel() }
-        : options;
-      originalAddMessage(role, content, nextOptions);
-      if (role === "user") appendMessageStatus(messagesEl.lastElementChild, "Sending...", "pending");
+      originalAddMessage(role, content, role === "user" ? { ...options, bubbleColor: options.bubbleColor || selectedColor, participantLabel: options.participantLabel || ownLabel() } : options);
+      if (role === "user") appendStatus(messagesEl.lastElementChild, "Sending...", "pending");
     };
   }
 
@@ -423,9 +394,8 @@
     const originalSendMessage = sendMessage;
     sendMessage = async function identitySendMessage(...args) {
       const message = inputEl.value.trim();
-      const attachments = selectedAttachments.slice();
-      if ((!message && !attachments.length) || isSending) return;
-      await ensureChatIdentity();
+      if ((!message && !selectedAttachments.length) || isSending) return;
+      await ensureIdentity();
       return originalSendMessage.apply(this, args);
     };
   }
@@ -434,19 +404,18 @@
     const originalCreateChat = createChat;
     createChat = async function identityCreateChat(...args) {
       await originalCreateChat.apply(this, args);
-      await ensureChatIdentity();
+      await ensureIdentity();
       if (currentChatId) {
         await requestJson(`/api/chats/${encodeURIComponent(currentChatId)}/participants`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ context: participantContext() })
+          body: JSON.stringify({ context: context() })
         }).catch(() => {});
       }
     };
   }
 
   installQuickReplies();
-
   document.addEventListener("keydown", (event) => {
     if (event.key !== "Escape" || !modal || modal.hidden) return;
     event.preventDefault();
