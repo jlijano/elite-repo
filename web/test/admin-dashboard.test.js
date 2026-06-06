@@ -138,7 +138,13 @@ test("settings page owns preferences access review health diagnostics and refres
   assert.match(settingsHtml, />Preferences<\/p>/);
   assert.match(settingsHtml, />Access and security<\/p>/);
   assert.match(settingsHtml, /class="refresh-cadence-control"[\s\S]*aria-label="Refresh cadence"/);
+  assert.match(settingsHtml, /data-refresh-choice="manual"[\s\S]*>Manual<\/button>/);
+  assert.match(settingsHtml, /data-refresh-choice="fast"[\s\S]*>15s<\/button>/);
+  assert.match(settingsHtml, /data-refresh-choice="standard"[\s\S]*>40s<\/button>/);
+  assert.match(settingsHtml, /data-refresh-choice="minute"[\s\S]*>1m<\/button>/);
+  assert.match(settingsHtml, /data-refresh-choice="relaxed"[\s\S]*>5m<\/button>/);
   assert.match(settingsHtml, /id="settingsRefreshNow"/);
+  assert.match(settingsHtml, /id="settingsRefreshSummary"/);
 });
 
 test("settings page uses standardized status badges and expanded health layout", () => {
@@ -266,10 +272,34 @@ test("theme preference persists explicit choices and restores system mode", () =
   assert.match(adminJs, /applyStoredThemePreference\(\)/);
 });
 
+test("refresh cadence preference persists and controls the admin refresh timer", () => {
+  assert.match(adminJs, /const refreshCadenceStorageKey = "switchboard-refresh-cadence"/);
+  assert.match(adminJs, /const defaultRefreshCadence = "standard"/);
+  assert.match(adminJs, /manual: \{ label: "Manual", ms: 0/);
+  assert.match(adminJs, /fast: \{ label: "15 seconds", ms: 15000/);
+  assert.match(adminJs, /standard: \{ label: "40 seconds", ms: 40000/);
+  assert.match(adminJs, /minute: \{ label: "1 minute", ms: 60000/);
+  assert.match(adminJs, /relaxed: \{ label: "5 minutes", ms: 300000/);
+  assert.match(adminJs, /function getStoredRefreshCadence\(\)/);
+  assert.match(adminJs, /function applyRefreshCadence\(cadence\)/);
+  assert.match(adminJs, /localStorage\.setItem\(refreshCadenceStorageKey, choice\)/);
+  assert.match(adminJs, /function schedulePageRefresh\(cadence = getStoredRefreshCadence\(\)\)/);
+  assert.match(adminJs, /if \(refreshTimerId\) clearInterval\(refreshTimerId\)/);
+  assert.match(adminJs, /if \(intervalMs > 0\) refreshTimerId = setInterval\(\(\) => loadPage\(\)\.catch\(\(\) => \{\}\), intervalMs\)/);
+  assert.match(adminJs, /els\.settingsRefreshOptions\?\.forEach\(\(button\) => button\.addEventListener\("click", \(\) => applyRefreshCadence\(button\.dataset\.refreshChoice\)\)\)/);
+  assert.match(adminJs, /els\.settingsRefreshNow\?\.addEventListener\("click", \(\) => loadPage\(\)\.catch\(\(error\) => setStatus\(error\.message, true\)\)\)/);
+  assert.match(adminJs, /applyRefreshCadence\(getStoredRefreshCadence\(\)\)/);
+  assert.doesNotMatch(adminJs, /const refreshIntervalMs = 40000/);
+  assert.match(adminCss, /\.refresh-cadence-control/);
+  assert.match(adminCss, /\.refresh-cadence-option\.active/);
+  assert.match(adminCss, /\.refresh-cadence-summary/);
+});
+
 test("admin javascript switches behavior by page", () => {
   assert.match(adminJs, /const page = document\.body\.dataset\.adminPage/);
   assert.match(adminJs, /async function loadChatPage\(\)/);
   assert.match(adminJs, /async function loadKnowledgePage\(\)/);
   assert.match(adminJs, /async function loadUserPage\(\)/);
   assert.match(adminJs, /async function loadSettingsPage\(\)/);
+  assert.match(adminJs, /async function loadPlaygroundPage\(\)/);
 });
