@@ -23,80 +23,20 @@
         <nav class="primary-nav" aria-label="Admin navigation">
           <a class="nav-item" href="/" aria-label="Back to chat"><span aria-hidden="true">←</span>Back to chat</a>
           <a class="nav-item" href="/chat.html"><span aria-hidden="true">□</span>Chat</a>
-          <a class="nav-item" href="/knowledge.html"><span aria-hidden="true">◇</span>Knowledge base</a>
           <a class="nav-item active" href="/user.html" aria-current="page"><span aria-hidden="true">◉</span>User</a>
+          <a class="nav-item" href="/knowledge.html"><span aria-hidden="true">◇</span>Knowledge base</a>
           <a class="nav-item" href="/playground.html"><span aria-hidden="true">▦</span>Playground</a>
-          <div class="admin-section-list reports-nav" aria-label="Reports navigation">
-            <h2 class="session-heading">Reports</h2>
-            <a class="nav-item" href="/reports.html"><span aria-hidden="true">▣</span>Overview</a>
-            <a class="nav-item" href="/logs.html"><span aria-hidden="true">≡</span>Logs</a>
-            <a class="nav-item" href="/review-runs.html"><span aria-hidden="true">↻</span>Review runs</a>
-            <a class="nav-item" href="/system-health.html"><span aria-hidden="true">✚</span>System health</a>
-            <a class="nav-item" href="/user-audit.html"><span aria-hidden="true">◎</span>User audit</a>
-          </div>
-          <a class="nav-item" href="/settings.html"><span aria-hidden="true">⚙</span>Settings</a>
+          <details class="admin-section-list reports-nav" open>
+            <summary class="reports-summary"><span class="reports-summary-label">Reports</span><span class="reports-summary-chevron" aria-hidden="true">⌄</span></summary>
+            <div class="reports-nav-items" aria-label="Reports navigation"><a class="nav-item" href="/reports.html"><span aria-hidden="true">▣</span>Overview</a><a class="nav-item" href="/logs.html"><span aria-hidden="true">≡</span>Logs</a><a class="nav-item" href="/review-runs.html"><span aria-hidden="true">↻</span>Review runs</a><a class="nav-item" href="/system-health.html"><span aria-hidden="true">✚</span>System health</a><a class="nav-item" href="/user-audit.html"><span aria-hidden="true">◎</span>User audit</a><a class="nav-item" href="/settings.html"><span aria-hidden="true">⚙</span>Settings</a></div>
+          </details>
         </nav>
-        <section class="admin-section-list" aria-label="Admin workspace">
-          <h2 class="session-heading">Workspace</h2>
-          <div class="workspace-card"><strong>Switchboard Admin</strong><small>Update the current user profile.</small></div>
-        </section>
+        <section class="admin-section-list" aria-label="Admin workspace"><h2 class="session-heading">Workspace</h2><div class="workspace-card"><strong>Switchboard Admin</strong><small>Update the current user profile.</small></div></section>
         <div class="directory-card"><div class="status-row"><span class="status-dot online" aria-hidden="true"></span><span>Update profile</span></div><p>Backend-backed current-user profile.</p></div>
       </aside>
       <section class="admin-panel" aria-label="Update profile controls">
-        <header class="chat-header admin-header">
-          <div class="admin-header-title"><h1>Update Profile</h1><p>Update your profile photo, name, email, and password.</p></div>
-          <div class="header-actions">
-            <span class="admin-clock" id="menuClock" aria-live="polite"></span>
-            <div class="profile-menu">
-              <button class="profile-settings" id="profileMenuButton" type="button" aria-label="Open profile menu" aria-haspopup="true" aria-expanded="false">👤</button>
-              <div class="profile-dropdown" id="profileDropdown" role="menu" hidden>
-                <a href="/update-profile.html" role="menuitem">Update Profile</a>
-                <button class="profile-logout" type="button" role="menuitem">Logout</button>
-              </div>
-            </div>
-          </div>
-        </header>
-        <div class="admin-scroll">
-          <div class="admin-layout">
-            <p class="admin-status" id="status">Loading profile...</p>
-            <section class="admin-card wide" id="updateProfilePage">
-              <div class="card-head">
-                <div><h2>Profile details</h2><p class="card-subtitle">Changes are saved to your account and require your current password when changing password.</p></div>
-              </div>
-              <form class="profile-form" id="profileForm" autocomplete="on">
-                <div class="profile-photo-preview" id="profilePhotoPreview" aria-hidden="true">👤</div>
-                <label>
-                  <span>Profile photo URL</span>
-                  <input id="profilePhoto" name="photo" type="url" placeholder="https://example.com/photo.jpg" autocomplete="photo" />
-                </label>
-                <label>
-                  <span>Name</span>
-                  <input id="profileName" name="name" type="text" placeholder="Your name" autocomplete="name" required />
-                </label>
-                <label>
-                  <span>Email address</span>
-                  <input id="profileEmail" name="email" type="email" placeholder="you@example.com" autocomplete="email" required />
-                </label>
-                <label>
-                  <span>Current password</span>
-                  <input id="profileCurrentPassword" name="current-password" type="password" autocomplete="current-password" />
-                </label>
-                <label>
-                  <span>New password</span>
-                  <input id="profileNewPassword" name="new-password" type="password" autocomplete="new-password" minlength="8" />
-                </label>
-                <label>
-                  <span>Confirm new password</span>
-                  <input id="profileConfirmPassword" name="confirm-password" type="password" autocomplete="new-password" minlength="8" />
-                </label>
-                <div class="form-actions">
-                  <a class="secondary-action" href="/user.html">Cancel</a>
-                  <button id="saveProfileButton" type="submit">Save profile</button>
-                </div>
-              </form>
-            </section>
-          </div>
-        </div>
+        <header class="chat-header admin-header"><div class="admin-header-title"><h1>Update Profile</h1><p>Update your profile photo, name, email, and password.</p></div><div class="header-actions"><span class="admin-clock" id="menuClock" aria-live="polite"></span><div class="profile-menu"><button class="profile-settings" id="profileMenuButton" type="button" aria-label="Open profile menu" aria-haspopup="true" aria-expanded="false">👤</button><div class="profile-dropdown" id="profileDropdown" role="menu" hidden><a href="/update-profile.html" role="menuitem">Update Profile</a><button class="profile-logout" type="button" role="menuitem">Logout</button></div></div></div></header>
+        <div class="admin-scroll"><div class="admin-layout"><p class="admin-status" id="status">Loading profile...</p><section class="admin-card wide" id="updateProfilePage"><div class="card-head"><div><h2>Profile details</h2><p class="card-subtitle">Changes are saved to your account and require your current password when changing password.</p></div></div><form class="profile-form" id="profileForm" autocomplete="on"><div class="profile-photo-preview" id="profilePhotoPreview" aria-hidden="true">👤</div><label><span>Profile photo URL</span><input id="profilePhoto" name="photo" type="url" placeholder="https://example.com/photo.jpg" autocomplete="photo" /></label><label><span>Name</span><input id="profileName" name="name" type="text" placeholder="Your name" autocomplete="name" required /></label><label><span>Email address</span><input id="profileEmail" name="email" type="email" placeholder="you@example.com" autocomplete="email" required /></label><label><span>Current password</span><input id="profileCurrentPassword" name="current-password" type="password" autocomplete="current-password" /></label><label><span>New password</span><input id="profileNewPassword" name="new-password" type="password" autocomplete="new-password" minlength="8" /></label><label><span>Confirm new password</span><input id="profileConfirmPassword" name="confirm-password" type="password" autocomplete="new-password" minlength="8" /></label><div class="form-actions"><a class="secondary-action" href="/user.html">Cancel</a><button id="saveProfileButton" type="submit">Save profile</button></div></form></section></div></div>
       </section>
     </main>
     <script src="profile.js"></script>
