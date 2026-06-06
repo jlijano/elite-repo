@@ -5,6 +5,9 @@ const sessionUserStorageKey = "switchboard-session-user";
 const adminPaths = new Set([
   "/chat.html",
   "/knowledge.html",
+  "/company.html",
+  "/department.html",
+  "/group.html",
   "/user.html",
   "/playground.html",
   "/reports.html",
