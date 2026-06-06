@@ -2,6 +2,7 @@
 
 ## [Unreleased]
 
+- Added Chat Review to the admin Settings visible-widget controls as a default-off option, preserving the cleaned Knowledge Queue default view while letting admins show Chat Review when needed.
 - Removed the generic admin Dashboard/Overview landing block so the admin side starts directly with actionable sections, and updated frontend contract tests to protect the cleanup.
 - Finalized admin dashboard frontend contract tests for navigation targets, active states, hidden Chat Review behavior, Settings theme toggling, visible labels, and configurable widget markup before drag-and-drop work begins.
 - Added admin dashboard frontend contract tests and replaced the static admin grid with configurable widgets for Overview, Chat Review, Knowledge Queue, Review Runs, Attachments, Admin Access, System Health, and Settings.
