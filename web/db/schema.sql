@@ -6,10 +6,16 @@ CREATE TABLE IF NOT EXISTS chats (
 );
 
 ALTER TABLE chats
-  ADD COLUMN IF NOT EXISTS archived_at TIMESTAMPTZ;
+  ADD COLUMN IF NOT EXISTS archived_at TIMESTAMPTZ,
+  ADD COLUMN IF NOT EXISTS created_by_user_id UUID,
+  ADD COLUMN IF NOT EXISTS is_anonymous BOOLEAN NOT NULL DEFAULT FALSE,
+  ADD COLUMN IF NOT EXISTS expires_at TIMESTAMPTZ;
 
 CREATE INDEX IF NOT EXISTS chats_archived_updated_at_idx
   ON chats(archived_at, updated_at);
+
+CREATE INDEX IF NOT EXISTS chats_anonymous_expires_at_idx
+  ON chats(is_anonymous, expires_at);
 
 CREATE TABLE IF NOT EXISTS chat_messages (
   id UUID PRIMARY KEY,
