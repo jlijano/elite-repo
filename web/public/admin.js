@@ -80,6 +80,8 @@ let selectedChatId = "";
 let editingUserId = "";
 let lastStatus = null;
 let refreshTimerId = null;
+let mobileAdminMenuButton = null;
+let mobileAdminMenuPanel = null;
 
 const html = (value) => String(value ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 const time = (value) => value ? new Intl.DateTimeFormat(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }).format(new Date(value)) : "";
@@ -353,6 +355,98 @@ function closeProfileDropdown() {
 
 function toggleProfileDropdown() {
   setProfileDropdownOpen(els.profileDropdown?.hidden !== false);
+}
+
+function injectMobileAdminMenuStyles() {
+  if (document.getElementById("mobileAdminMenuStyles")) return;
+  const style = document.createElement("style");
+  style.id = "mobileAdminMenuStyles";
+  style.textContent = `
+    .mobile-admin-menu { display: none; position: relative; }
+    .mobile-admin-menu-button { min-height: 38px; display: inline-flex; align-items: center; gap: 8px; padding: 0 10px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel-soft); color: var(--text); font: inherit; font-weight: 900; cursor: pointer; }
+    .mobile-admin-menu-button:hover, .mobile-admin-menu-button:focus-visible { border-color: var(--primary); background: var(--sidebar-card); outline: 3px solid var(--focus-ring); outline-offset: 2px; }
+    .mobile-admin-menu-icon { width: 16px; display: grid; gap: 3px; }
+    .mobile-admin-menu-icon span { display: block; height: 2px; border-radius: 999px; background: currentColor; }
+    .mobile-admin-menu-panel { position: absolute; top: calc(100% + 8px); left: 0; z-index: 40; width: min(300px, calc(100vw - 20px)); max-height: min(72vh, 520px); overflow: auto; padding: 8px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel); color: var(--text); box-shadow: 0 20px 60px rgba(0, 0, 0, 0.32); }
+    .mobile-admin-menu-panel[hidden] { display: none; }
+    .mobile-admin-menu-list { display: grid; gap: 4px; }
+    .mobile-admin-menu-link { min-height: 40px; display: flex; align-items: center; gap: 8px; padding: 0 10px; border-radius: calc(var(--radius) - 4px); color: var(--text); text-decoration: none; font-weight: 850; }
+    .mobile-admin-menu-link:hover, .mobile-admin-menu-link:focus-visible { background: var(--panel-soft); outline: 3px solid var(--focus-ring); outline-offset: 1px; }
+    .mobile-admin-menu-link.active { background: rgba(16, 163, 127, 0.14); box-shadow: inset 3px 0 0 var(--primary); }
+    @media (max-width: 900px) {
+      .mobile-admin-menu { display: block; }
+      .app-shell.admin-shell { grid-template-columns: 1fr !important; grid-template-rows: minmax(0, 1fr) !important; }
+      .admin-shell .sidebar { display: none !important; }
+      .admin-panel { height: 100vh !important; height: 100dvh !important; }
+      .chat-header.admin-header { overflow: visible; }
+      .header-actions { position: relative; }
+    }
+    @media (max-width: 520px) {
+      .mobile-admin-menu-button { min-height: 34px; padding: 0 9px; font-size: 0.88rem; }
+      .mobile-admin-menu-panel { width: min(280px, calc(100vw - 16px)); max-height: 68vh; }
+      .mobile-admin-menu-link { min-height: 38px; font-size: 0.9rem; }
+    }
+    @media (max-width: 340px), (max-height: 420px) and (max-width: 740px) {
+      .mobile-admin-menu-button { min-height: 32px; padding: 0 8px; font-size: 0.82rem; }
+      .mobile-admin-menu-panel { width: min(260px, calc(100vw - 12px)); max-height: 62vh; padding: 6px; }
+      .mobile-admin-menu-link { min-height: 34px; padding: 0 8px; font-size: 0.8rem; }
+    }
+  `;
+  document.head.appendChild(style);
+}
+
+function setMobileAdminMenuOpen(open) {
+  if (!mobileAdminMenuButton || !mobileAdminMenuPanel) return;
+  mobileAdminMenuButton.setAttribute("aria-expanded", String(open));
+  mobileAdminMenuPanel.hidden = !open;
+}
+
+function closeMobileAdminMenu() {
+  setMobileAdminMenuOpen(false);
+}
+
+function toggleMobileAdminMenu() {
+  setMobileAdminMenuOpen(mobileAdminMenuPanel?.hidden !== false);
+}
+
+function initMobileAdminMenu() {
+  const headerActions = document.querySelector(".admin-header .header-actions");
+  const sourceNav = document.querySelector(".admin-shell .primary-nav");
+  if (!headerActions || !sourceNav || document.querySelector(".mobile-admin-menu")) return;
+  injectMobileAdminMenuStyles();
+
+  const menu = document.createElement("div");
+  menu.className = "mobile-admin-menu";
+  mobileAdminMenuButton = document.createElement("button");
+  mobileAdminMenuButton.className = "mobile-admin-menu-button";
+  mobileAdminMenuButton.type = "button";
+  mobileAdminMenuButton.setAttribute("aria-label", "Open admin navigation");
+  mobileAdminMenuButton.setAttribute("aria-haspopup", "true");
+  mobileAdminMenuButton.setAttribute("aria-expanded", "false");
+  mobileAdminMenuButton.innerHTML = `<span class="mobile-admin-menu-icon" aria-hidden="true"><span></span><span></span><span></span></span><span>Menu</span>`;
+
+  mobileAdminMenuPanel = document.createElement("div");
+  mobileAdminMenuPanel.className = "mobile-admin-menu-panel";
+  mobileAdminMenuPanel.id = "mobileAdminMenuPanel";
+  mobileAdminMenuPanel.setAttribute("role", "menu");
+  mobileAdminMenuPanel.hidden = true;
+  mobileAdminMenuButton.setAttribute("aria-controls", mobileAdminMenuPanel.id);
+
+  const list = document.createElement("div");
+  list.className = "mobile-admin-menu-list";
+  sourceNav.querySelectorAll("a.nav-item").forEach((link) => {
+    const item = link.cloneNode(true);
+    item.classList.remove("nav-item");
+    item.classList.add("mobile-admin-menu-link");
+    item.setAttribute("role", "menuitem");
+    item.addEventListener("click", closeMobileAdminMenu);
+    list.appendChild(item);
+  });
+  mobileAdminMenuPanel.appendChild(list);
+  menu.appendChild(mobileAdminMenuButton);
+  menu.appendChild(mobileAdminMenuPanel);
+  headerActions.prepend(menu);
+  mobileAdminMenuButton.addEventListener("click", toggleMobileAdminMenu);
 }
 
 function renderFileManagementFromMessages(messages = []) {
@@ -677,6 +771,7 @@ async function loadPage() {
 }
 
 applyStoredThemePreference();
+initMobileAdminMenu();
 updateClock();
 setInterval(updateClock, 30000);
 refreshTokenFromSession();
@@ -684,7 +779,7 @@ els.themeToggle?.addEventListener("click", toggleTheme);
 els.settingsThemeOptions?.forEach((button) => button.addEventListener("click", () => applyThemePreference(button.dataset.themeChoice)));
 els.settingsThemeButton?.addEventListener("click", toggleTheme);
 systemThemeQuery?.addEventListener?.("change", handleSystemThemeChange);
-els.settingsRefreshOptions?.forEach((button) => button.addEventListener("click", () => applyRefreshCadence(button.dataset.refreshChoice)));
+els.settingsRefreshOptions?.forEach((button) => button.addEventListener("click", () => applyRefreshCadence(button.datasetRefreshChoice || button.dataset.refreshChoice)));
 els.settingsRefreshNow?.addEventListener("click", () => loadPage().catch((error) => setStatus(error.message, true)));
 els.logoutButton?.addEventListener("click", logout);
 els.profileMenuButton?.addEventListener("click", toggleProfileDropdown);
@@ -700,13 +795,17 @@ els.manageUsersButton?.addEventListener("click", () => {
   setStatus("Ready to create a new user.");
 });
 document.addEventListener("click", (event) => {
+  if (mobileAdminMenuPanel && !mobileAdminMenuPanel.hidden && !event.target.closest(".mobile-admin-menu")) closeMobileAdminMenu();
   if (!els.profileDropdown || !els.profileMenuButton) return;
   if (els.profileDropdown.hidden) return;
   if (event.target.closest(".profile-menu")) return;
   closeProfileDropdown();
 });
 document.addEventListener("keydown", (event) => {
-  if (event.key === "Escape") closeProfileDropdown();
+  if (event.key === "Escape") {
+    closeMobileAdminMenu();
+    closeProfileDropdown();
+  }
 });
 els.chatSearch?.addEventListener("input", renderChats);
 els.knowledgeSearch?.addEventListener("input", renderKnowledge);
