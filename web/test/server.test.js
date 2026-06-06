@@ -108,7 +108,7 @@ test("reports health and storage-only status", async () => {
   assert.equal(status.data.aiAvailable, false);
 });
 
-test("stores chat messages and returns the pending-review chat fallback", async () => {
+test("stores chat messages without creating backend assistant replies", async () => {
   const created = await jsonFetch("/api/chats", {
     method: "POST",
     body: JSON.stringify({ title: "Backend test chat" })
@@ -131,13 +131,17 @@ test("stores chat messages and returns the pending-review chat fallback", async 
     body: JSON.stringify({ chatId, message: "Route this request" })
   });
   assert.equal(chatReply.response.status, 200);
-  assert.equal(chatReply.data.pendingReview, true);
+  assert.equal(chatReply.data.pendingReview, false);
+  assert.equal(chatReply.data.reply, null);
+  assert.equal(chatReply.data.messageSaved, true);
   assert.equal(chatReply.data.aiAvailable, false);
-  assert.equal(chatReply.data.messages.length, 2);
+  assert.equal(chatReply.data.messages.length, 1);
+  assert.equal(chatReply.data.messages[0].role, "user");
 
   const loaded = await jsonFetch(`/api/chats/${chatId}`);
   assert.equal(loaded.response.status, 200);
-  assert.equal(loaded.data.chat.messages.length, 3);
+  assert.equal(loaded.data.chat.messages.length, 2);
+  assert.equal(loaded.data.chat.messages.some((message) => message.role === "assistant"), false);
 });
 
 test("archives chats without deleting history", async () => {
@@ -233,7 +237,9 @@ test("stores text attachments with chat messages", async () => {
     })
   });
   assert.equal(reply.response.status, 200);
-  assert.equal(reply.data.pendingReview, true);
+  assert.equal(reply.data.pendingReview, false);
+  assert.equal(reply.data.reply, null);
+  assert.equal(reply.data.messages[0].role, "user");
   assert.equal(reply.data.messages[0].context.attachments.length, 1);
   assert.equal(reply.data.messages[0].context.attachments[0].name, "notes.txt");
   assert.match(reply.data.messages[0].context.attachments[0].content, /\[REDACTED\]/);
