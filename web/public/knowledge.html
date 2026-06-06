@@ -39,7 +39,13 @@
           <div class="admin-header-title"><h1>Knowledge base</h1><p>Search, filter, and approve durable Switchboard knowledge.</p></div>
           <div class="header-actions">
             <span class="admin-clock" id="menuClock" aria-live="polite"></span>
-            <a class="profile-settings" href="/user.html#profile" aria-label="User profile settings">👤</a>
+            <div class="profile-menu">
+              <button class="profile-settings" id="profileMenuButton" type="button" aria-label="Open profile menu" aria-haspopup="true" aria-expanded="false">👤</button>
+              <div class="profile-dropdown" id="profileDropdown" role="menu" hidden>
+                <a href="/update-profile.html" role="menuitem">Update Profile</a>
+                <button class="profile-logout" type="button" role="menuitem">Logout</button>
+              </div>
+            </div>
           </div>
         </header>
         <div class="admin-scroll">
