@@ -7,11 +7,11 @@
   const params = new URLSearchParams(location.search);
   const sharedChatId = params.get("chat") || "";
   const sharedLinkNumber = Math.max(1, Number(params.get("share") || 1));
-  let selectedColor = normalizeColor(getStored(colorKey) || "");
-  let selectedNickname = cleanNickname(getStored(nicknameKey) || "");
+  let selectedColor = "";
+  let selectedNickname = "";
   let participants = [];
   let modal = null;
-  let pendingColor = selectedColor;
+  let pendingColor = "";
   let pendingResolve = null;
   let lastTypingStartAt = 0;
   let lastTypingStopAt = 0;
@@ -25,11 +25,45 @@
     return String(value || "").trim().replace(/\s+/g, " ").slice(0, 40);
   }
 
-  function currentParticipantId() {
-    let id = getStored(participantKey);
+  function identityChatId(chatId = currentChatId || sharedChatId || "") {
+    return String(chatId || "");
+  }
+
+  function identityScope(chatId = currentChatId || sharedChatId || "") {
+    const id = identityChatId(chatId);
+    if (!id) return "pending";
+    const role = sharedChatId === id ? `share-${sharedLinkNumber}` : "original";
+    return `${id}:${role}`;
+  }
+
+  function scopedKey(baseKey, chatId) {
+    return `${baseKey}:${identityScope(chatId)}`;
+  }
+
+  function loadStoredIdentity(chatId = currentChatId || sharedChatId || "") {
+    selectedNickname = cleanNickname(getStored(scopedKey(nicknameKey, chatId)) || "");
+    selectedColor = normalizeColor(getStored(scopedKey(colorKey, chatId)) || "");
+    pendingColor = selectedColor;
+  }
+
+  function persistIdentity(chatId = currentChatId || sharedChatId || "") {
+    if (!selectedNickname || !selectedColor) return;
+    setStored(scopedKey(nicknameKey, chatId), selectedNickname);
+    setStored(scopedKey(colorKey, chatId), selectedColor);
+  }
+
+  function clearLegacyIdentity() {
+    removeStored(nicknameKey);
+    removeStored(colorKey);
+    removeStored(participantKey);
+  }
+
+  function currentParticipantId(chatId = currentChatId || sharedChatId || "") {
+    const key = scopedKey(participantKey, chatId);
+    let id = getStored(key);
     if (!id) {
       id = crypto?.randomUUID ? crypto.randomUUID() : `participant-${Date.now()}-${Math.random().toString(16).slice(2)}`;
-      setStored(participantKey, id);
+      setStored(key, id);
     }
     return id;
   }
@@ -61,8 +95,9 @@
   }
 
   function context(extra = {}) {
+    const chatId = currentChatId || sharedChatId || "";
     return {
-      participantId: currentParticipantId(),
+      participantId: currentParticipantId(chatId),
       participantType: participantType(),
       participantLabel: ownLabel(),
       deviceType: deviceType(),
@@ -95,8 +130,10 @@
     selectedColor = "";
     pendingColor = "";
     participants = [];
-    removeStored(nicknameKey);
-    removeStored(colorKey);
+    clearLegacyIdentity();
+    removeStored(scopedKey(nicknameKey));
+    removeStored(scopedKey(colorKey));
+    removeStored(scopedKey(participantKey));
   }
 
   function setMenuStatus(message) {
@@ -113,13 +150,10 @@
     if (color && color !== "#2f2f2f") {
       selectedColor = color;
       pendingColor = color;
-      setStored(colorKey, color);
     }
     const nickname = preferredLabel(own?.participantLabel);
-    if (nickname) {
-      selectedNickname = nickname;
-      setStored(nicknameKey, nickname);
-    }
+    if (nickname) selectedNickname = nickname;
+    persistIdentity();
   }
 
   function usedColors() {
@@ -179,8 +213,7 @@
       if (colorTaken(color)) { status.textContent = "That color is already taken in this chat."; renderColors(); return; }
       selectedNickname = nickname;
       selectedColor = color;
-      setStored(nicknameKey, nickname);
-      setStored(colorKey, color);
+      persistIdentity();
       modal.hidden = true;
       const resolve = pendingResolve;
       pendingResolve = null;
@@ -221,7 +254,7 @@
 
   async function ensureIdentity() {
     if (selectedNickname && selectedColor && !colorTaken(selectedColor)) return context();
-    if (selectedColor && colorTaken(selectedColor)) { selectedColor = ""; removeStored(colorKey); }
+    if (selectedColor && colorTaken(selectedColor)) { selectedColor = ""; removeStored(scopedKey(colorKey)); }
     return openIdentityPicker();
   }
 
@@ -342,7 +375,7 @@
         if (String(url || "") === "/api/chat" || /\/api\/chats\/[^/]+\/messages$/.test(String(url || ""))) updatePending("Failed", "failed");
         if (/bubble color|color is already/i.test(error.message || "")) {
           selectedColor = "";
-          removeStored(colorKey);
+          removeStored(scopedKey(colorKey));
           setMenuStatus("That color is already in use. Pick another color.");
         }
         throw error;
@@ -356,6 +389,7 @@
       const article = originalCreateMessageElement(role, content, options);
       const bubble = article.querySelector(".bubble");
       if (role === "user" && bubble) {
+        bubble.querySelectorAll(".participant-label").forEach((label) => label.remove());
         const label = cleanNickname(options.participantLabel || "");
         if (label) {
           const labelEl = document.createElement("span");
@@ -413,12 +447,21 @@
     };
   }
 
+  if (typeof saveCurrentChat === "function") {
+    const originalSaveCurrentChat = saveCurrentChat;
+    saveCurrentChat = function identitySaveCurrentChat(chatId) {
+      originalSaveCurrentChat(chatId);
+      loadStoredIdentity(chatId);
+    };
+  }
+
   if (typeof createChat === "function") {
     const originalCreateChat = createChat;
     createChat = async function identityCreateChat(...args) {
       resetIdentityForNewChat();
       await ensureIdentity();
       await originalCreateChat.apply(this, args);
+      persistIdentity(currentChatId);
       if (currentChatId) {
         await requestJson(`/api/chats/${encodeURIComponent(currentChatId)}/participants`, {
           method: "POST",
@@ -429,6 +472,8 @@
     };
   }
 
+  loadStoredIdentity(sharedChatId || currentChatId || "");
+  clearLegacyIdentity();
   installQuickReplies();
   document.addEventListener("keydown", (event) => {
     if (event.key !== "Escape" || !modal || modal.hidden) return;
