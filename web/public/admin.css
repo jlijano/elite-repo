@@ -177,3 +177,9 @@ input:focus-visible, select:focus-visible, .admin-panel button:focus-visible { o
   .mobile-admin-menu-panel { padding: max(50px, calc(env(safe-area-inset-top) + 46px)) 10px max(12px, env(safe-area-inset-bottom)) !important; }
   .mobile-admin-menu-link { min-height: 40px !important; font-size: 0.86rem !important; }
 }
+@media (max-width: 900px) {
+  .mobile-admin-menu-button .mobile-admin-menu-icon span { transition: transform 160ms ease, opacity 160ms ease !important; transform-origin: center !important; }
+  .mobile-admin-menu-button[aria-expanded="true"] .mobile-admin-menu-icon span:nth-child(1) { transform: translateY(5px) rotate(45deg) !important; }
+  .mobile-admin-menu-button[aria-expanded="true"] .mobile-admin-menu-icon span:nth-child(2) { opacity: 0 !important; }
+  .mobile-admin-menu-button[aria-expanded="true"] .mobile-admin-menu-icon span:nth-child(3) { transform: translateY(-5px) rotate(-45deg) !important; }
+}
