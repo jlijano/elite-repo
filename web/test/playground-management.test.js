@@ -101,3 +101,14 @@ test("playground script includes task modal, filters, drawer, and stable status 
   assert.ok(script.includes("statusKey"));
   assert.ok(script.includes("/api/admin/playground/tasks/"));
 });
+
+test("playground task modal save shows progress and backend errors", () => {
+  const script = fs.readFileSync(path.join(__dirname, "..", "public", "playground.js"), "utf8");
+
+  assert.ok(script.includes("playgroundTaskFormMessage"));
+  assert.ok(script.includes('id="playgroundTaskSave" type="button"'));
+  assert.ok(script.includes("requestSubmit()"));
+  assert.ok(script.includes("setTaskFormMessage(error.message, true)"));
+  assert.ok(script.includes("Saving task changes..."));
+  assert.ok(script.includes("Task saved to Playground storage."));
+});
