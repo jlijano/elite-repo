@@ -26,6 +26,9 @@ The `web/` directory contains a Render-ready Express app that serves a plain HTM
 - Backend management area split into dedicated admin pages instead of one scrolling static dashboard:
   - `/chat.html` for chat review and selected-chat attachments.
   - `/knowledge.html` for the Knowledge base.
+  - `/company.html` for Company management.
+  - `/department.html` for Department management.
+  - `/group.html` for Group management.
   - `/user.html` for User management, profile settings, and the Manage users action.
   - `/playground.html` for task, project, and board planning views, including summary metrics, a Kanban board, project progress cards, Today's Tasks, and Workspace Notes.
   - `/settings.html` for Settings, Review runs, and System health.
@@ -54,6 +57,7 @@ The `web/` directory contains a Render-ready Express app that serves a plain HTM
 - Logout clears browser-held auth tokens, calls backend session logout when a user session is present, and redirects to `/login.html`.
 - Admin pages no longer expose visible token-entry, Login, or Run Review controls; protected backend admin routes accept either `ADMIN_TOKEN` or an active owner/admin user session.
 - Protected user-management APIs and the `/user.html` admin UI support table-based user listing and searching, Add user modal creation, drag-and-drop or click-to-select profile photo upload with preview, hosted profile photo URLs, user editing, disabling, and reactivating when `ADMIN_TOKEN` or an active owner/admin user session is available.
+- Company, Department, and Group admin pages now match the User management UI pattern with table-based records, search plus Add actions in the card header, status/action columns, responsive mobile rows, and modal create/edit forms.
 - The `/user-audit.html` report page reads protected audit events, shows the acting user, a plain-language update summary, and timestamp, and exports the same audit data as CSV.
 - Knowledge base includes source-controlled project knowledge cards plus review-created backend knowledge when an admin session is available.
 - Chat and knowledge search controls filter cached management data, keep selected chats highlighted, and show clear loading and error states during admin actions.
@@ -165,6 +169,7 @@ The review workflow is implemented as an idempotent backend route and optional b
 - Protected user-management routes, user creation/listing/loading/updating, duplicate email handling, disable/reactivate actions, uploaded profile photo Data URL validation, and audit-event creation.
 - Real auth/profile behavior: failed and successful login, login rate limiting, session profile reads, backend-backed profile updates, current-password verification for password changes, stricter password rejection, password-change session rotation and old-token revocation, session-backed owner/admin access to all `/api/admin/*` routes, logout revocation, non-admin rejection from admin APIs, audit entries for login/profile activity, and new-password login.
 - User page controls for searchable table listing, Add user modal creation, drag-and-drop profile photo upload, photo preview, create/edit fields, role/status selection, password entry, and backend API wiring.
+- Entra Company, Department, and Group pages for table-based management layout, search, Add buttons, modal create/edit forms, status actions, and responsive rows.
 - User Audit report controls for User, Update, Timestamp rows, protected audit data, actor/target identity display, and CSV export.
 - Admin navigation routes, page ownership for Chat, Knowledge base, User, Playground, Settings, Reports, Logs, Review runs, System health, and User audit, plus nested Attachments, Settings section structure, standardized Settings status badges, Settings Access and security session/protected-route summaries, safe action links, secret-display guardrails, Settings Review runs summary cards, System health hints, live Diagnostics rendering, Settings Light / Dark / System theme preference markup, theme persistence keys, reload restore behavior, System-mode handling, Settings refresh cadence markup, refresh persistence key, manual refresh timer cancellation, Refresh now wiring, Playground required workspace sections, the profile dropdown, Update Profile form, Logout redirect, profile-menu-only admin logout, and the Mac-style clock wiring.
 - Static auth architecture checks for shared `server.js` admin middleware and guarded `register-user-management.js` compatibility behavior.
