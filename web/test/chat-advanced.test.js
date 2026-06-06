@@ -11,7 +11,7 @@ test("advanced chat backend exposes receipt, delivery, realtime, and presence ro
   assert.match(backendSource, /app\.post\("\/api\/chats\/:chatId\/read"/);
   assert.match(backendSource, /app\.post\("\/api\/chats\/:chatId\/messages\/:messageId\/delivery"/);
   assert.match(backendSource, /app\.get\("\/api\/chats\/:chatId\/events"/);
-  assert.match(backendSource, /Content-Type"\s*,\s*"text\/event-stream"/);
+  assert.match(backendSource, /"Content-Type"\s*:\s*"text\/event-stream"/);
   assert.match(backendSource, /function markRead\(/);
   assert.match(backendSource, /function setDelivery\(/);
   assert.match(backendSource, /function touchPresence\(/);
