@@ -31,7 +31,7 @@ The `web/` directory contains a Render-ready Express app that serves a plain HTM
   - `/update-profile.html` for the current user's backend-backed profile photo, name, email, and password form.
   - `/login.html` for email/password login and post-logout redirects.
   - `/admin.html` redirects to `/chat.html` for backward compatibility.
-- Real user login sessions are backed by `/api/auth/login`, `/api/auth/logout`, and `user_sessions` storage. Owner/admin sessions can access the User management API; non-admin sessions can update their own profile.
+- Real user login sessions are backed by `/api/auth/login`, `/api/auth/logout`, and `user_sessions` storage. Owner/admin sessions can access all `/api/admin/*` APIs; non-admin sessions can update only their own profile.
 - Profile updates are saved through `/api/profile` instead of browser-local profile storage. Password changes require the current password before the backend updates the password hash.
 - Admin navigation uses Back to chat, Chat, Knowledge base, User, and Settings. Admin logout is available from the top-header profile menu.
 - Admin pages share the chat UI shell, theme tokens, fixed desktop sidebar, independently scrolling right panel, and reload-safe theme behavior.
@@ -39,7 +39,7 @@ The `web/` directory contains a Render-ready Express app that serves a plain HTM
 - Admin Settings includes a Light / Dark / System theme preference control. Explicit Light and Dark choices are restored after reload, while System follows the visitor's device preference.
 - Admin top headers include a Mac-style current day/time display and a user profile menu with Update Profile and Logout actions.
 - Logout clears browser-held auth tokens, calls backend session logout when a user session is present, and redirects to `/login.html`.
-- Admin pages no longer expose visible token-entry, Login, or Run Review controls; legacy protected backend admin routes still require `ADMIN_TOKEN` for management-only data unless a route explicitly supports user sessions.
+- Admin pages no longer expose visible token-entry, Login, or Run Review controls; protected backend admin routes accept either `ADMIN_TOKEN` or an active owner/admin user session.
 - Protected user-management APIs and the `/user.html` admin UI support listing, searching, creating, editing, disabling, and reactivating users, plus recent user audit-event visibility when `ADMIN_TOKEN` or an active owner/admin user session is available.
 - Knowledge base includes source-controlled project knowledge cards plus review-created backend knowledge when an admin session is available.
 - Chat and knowledge search controls filter cached management data, keep selected chats highlighted, and show clear loading and error states during admin actions.
@@ -84,7 +84,7 @@ Without `DATABASE_URL`, the app starts in in-memory storage mode for local testi
 - `OPENAI_API_KEY`: optional. Enables AI responses when present.
 - `OPENAI_MODEL`: optional. Defaults to `gpt-4.1-mini`.
 - `REVIEW_RUN_TOKEN`: optional. When set, `/api/reviews/run` requires the token through `x-review-token` or `Authorization: Bearer ...`.
-- `ADMIN_TOKEN`: required for legacy protected backend management data and for bootstrapping user records before an owner/admin account can log in.
+- `ADMIN_TOKEN`: recommended for bootstrapping user records before an owner/admin account can log in; also remains supported as a compatibility path for `/api/admin/*` routes.
 - `REVIEW_RUN_INTERVAL_MS`: optional. Enables the backend scheduled review runner when set to at least `60000`.
 
 Do not commit secrets, API keys, deploy hooks, database URLs, passwords, session cookies, or Render credentials. Configure secrets only in Render environment variables or another approved secret store.
@@ -106,13 +106,13 @@ Do not commit secrets, API keys, deploy hooks, database URLs, passwords, session
 - `POST /api/auth/logout`: revokes the current user session when called with `x-session-token`.
 - `GET /api/profile`: returns the current logged-in user's public profile. Requires `x-session-token`.
 - `PATCH /api/profile`: updates the current user's name, email, photo URL, or password. Password changes require `currentPassword` and `newPassword`. Requires `x-session-token`.
-- `GET /api/admin/summary`: returns backend management counts and runtime status. Requires `ADMIN_TOKEN`.
-- `GET /api/admin/chats`: lists chats for management review. Requires `ADMIN_TOKEN`.
-- `GET /api/admin/chats/:chatId`: loads a chat and messages for management review. Requires `ADMIN_TOKEN`.
-- `GET /api/admin/knowledge?status=all`: lists knowledge entries. Requires `ADMIN_TOKEN`.
-- `PATCH /api/admin/knowledge/:entryId`: updates knowledge entry status, title, or content. Requires `ADMIN_TOKEN`.
-- `GET /api/admin/review-runs`: lists review run history. Requires `ADMIN_TOKEN`.
-- `POST /api/admin/reviews/run`: manually triggers a review run. Requires `ADMIN_TOKEN`.
+- `GET /api/admin/summary`: returns backend management counts and runtime status. Requires `ADMIN_TOKEN` or an active owner/admin user session.
+- `GET /api/admin/chats`: lists chats for management review. Requires `ADMIN_TOKEN` or an active owner/admin user session.
+- `GET /api/admin/chats/:chatId`: loads a chat and messages for management review. Requires `ADMIN_TOKEN` or an active owner/admin user session.
+- `GET /api/admin/knowledge?status=all`: lists knowledge entries. Requires `ADMIN_TOKEN` or an active owner/admin user session.
+- `PATCH /api/admin/knowledge/:entryId`: updates knowledge entry status, title, or content. Requires `ADMIN_TOKEN` or an active owner/admin user session.
+- `GET /api/admin/review-runs`: lists review run history. Requires `ADMIN_TOKEN` or an active owner/admin user session.
+- `POST /api/admin/reviews/run`: manually triggers a review run. Requires `ADMIN_TOKEN` or an active owner/admin user session.
 - `GET /api/admin/users`: lists user records. Requires `ADMIN_TOKEN` or an active owner/admin user session.
 - `POST /api/admin/users`: creates a user record. Requires `ADMIN_TOKEN` or an active owner/admin user session.
 - `GET /api/admin/users/:userId`: loads one user record. Requires `ADMIN_TOKEN` or an active owner/admin user session.
@@ -146,7 +146,7 @@ The review workflow is implemented as an idempotent backend route and optional b
 - Review-run creation of pending knowledge entries.
 - Admin approval of knowledge entries and approved knowledge retrieval.
 - Protected user-management routes, user creation/listing/loading/updating, duplicate email handling, disable/reactivate actions, and audit-event creation.
-- Real auth/profile behavior: failed and successful login, session profile reads, backend-backed profile updates, current-password verification for password changes, session-backed owner/admin access to user management, logout revocation, and new-password login.
+- Real auth/profile behavior: failed and successful login, session profile reads, backend-backed profile updates, current-password verification for password changes, session-backed owner/admin access to all `/api/admin/*` routes, logout revocation, non-admin rejection from admin APIs, and new-password login.
 - User page controls for search, create/edit fields, role/status selection, password entry, audit events, and backend API wiring.
 - Admin navigation routes, page ownership for Chat, Knowledge base, User, Settings, nested Attachments, nested Review runs, nested System health, Settings section structure, standardized Settings status badges, Settings Light / Dark / System theme preference markup, persistence keys, reload restore behavior, System-mode handling, the profile dropdown, Update Profile form, Logout redirect, profile-menu-only admin logout, and the Mac-style clock wiring.
 
