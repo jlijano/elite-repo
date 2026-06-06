@@ -31,6 +31,13 @@ function setLoginStatus(message, error = false) {
   status.classList.toggle("error", error);
 }
 
+function clearLoginStatus() {
+  if (!status) return;
+  status.textContent = "";
+  status.hidden = true;
+  status.classList.remove("error");
+}
+
 function isAdminRole(role) {
   return role === "owner" || role === "admin";
 }
@@ -54,12 +61,22 @@ function redirectTarget(user) {
   return isAdminRole(user?.role) ? "/user.html" : "/update-profile.html?reason=not-admin";
 }
 
+function clearReason(reasonToClear) {
+  const url = new URL(window.location.href);
+  if (url.searchParams.get("reason") !== reasonToClear) return;
+  url.searchParams.delete("reason");
+  window.history.replaceState({}, document.title, `${url.pathname}${url.search}`);
+}
+
 function explainReason() {
   const reason = new URLSearchParams(window.location.search).get("reason");
   if (reason === "expired") setLoginStatus("Your session expired. Please sign in again.", true);
   if (reason === "required") setLoginStatus("Please sign in to continue.", true);
   if (reason === "not-admin") setLoginStatus("That area requires an admin account. Sign in with an admin user to continue.", true);
-  if (reason === "github-unavailable") setLoginStatus("GitHub login is not configured yet.", true);
+  if (reason === "github-unavailable") {
+    clearReason("github-unavailable");
+    clearLoginStatus();
+  }
   if (reason === "github-user-missing") setLoginStatus("No active Switchboard user matches that GitHub email.", true);
   if (reason === "github-email-missing") setLoginStatus("GitHub did not provide a verified email address.", true);
   if (reason === "github-failed") setLoginStatus("GitHub login could not be completed.", true);
@@ -71,6 +88,17 @@ function prepareGithubLoginLink() {
   const url = new URL(githubLogin.getAttribute("href"), window.location.origin);
   url.searchParams.set("redirect", redirect);
   githubLogin.href = `${url.pathname}${url.search}`;
+}
+
+async function syncGithubLoginAvailability() {
+  if (!githubLogin) return;
+  try {
+    const response = await fetch("/api/auth/github/status", { cache: "no-store" });
+    const data = await response.json().catch(() => ({}));
+    githubLogin.hidden = !data.enabled;
+  } catch {
+    githubLogin.hidden = true;
+  }
 }
 
 form?.addEventListener("submit", async (event) => {
@@ -100,3 +128,4 @@ form?.addEventListener("submit", async (event) => {
 
 prepareGithubLoginLink();
 explainReason();
+syncGithubLoginAvailability();
