@@ -49,7 +49,7 @@ The `web/` directory contains a Render-ready Express app that serves a plain HTM
 - Admin sessions are bootstrapped from `/api/profile` in the browser, display the signed-in user in admin headers, clear expired sessions, redirect stale sessions back to login, and redirect non-admin users to their profile page instead of leaving them in admin-only screens.
 - Profile updates are saved through `/api/profile` instead of browser-local profile storage. Password changes require the current password, must satisfy the stricter password policy, rotate the current session token, and revoke the old session token.
 - Login is rate-limited after repeated failures, and login, logout, user creation/update, and profile-change activity is written to user audit events.
-- Admin navigation uses Back to chat, Chat, Knowledge base, User, Playground, a Reports section, and Settings. Admin logout is available from the top-header profile menu.
+- Admin navigation uses Back to chat, Chat, Knowledge base, User, Playground, a Reports section, and Settings. The Playground submenu is ordered Board, Projects, Tasks, Notes, and Automation. Admin logout is available from the top-header profile menu.
 - Admin Reports groups Overview, Logs, Review runs, System health, and User audit pages. Reports load public `/api/status` data and use protected admin summary, review-run, and user-audit routes when an owner/admin session or admin token is already available.
 - Admin pages share the chat UI shell, theme tokens, fixed desktop sidebar, independently scrolling right panel, and reload-safe theme behavior.
 - Admin Settings is organized into Preferences, Access and security, Review runs, System health, and Diagnostics sections with standardized `Ready`, `Loaded`, `Public view`, `Storage-only`, and `Error` status badges.
@@ -132,7 +132,7 @@ Do not commit secrets, API keys, deploy hooks, database URLs, passwords, session
 - `POST /api/auth/login`: logs in an active user with email and password, returning a session token and public user record. Repeated failed attempts are rate-limited and successful logins are audited.
 - `POST /api/auth/logout`: revokes the current user session when called with `x-session-token` and audits logout when a valid session is present.
 - `GET /api/profile`: returns the current logged-in user's public profile. Requires `x-session-token`.
-- `PATCH /api/profile`: updates the current user's name, email, photo URL, or password. Password changes require `currentPassword` and `newPassword`, enforce the password policy, rotate the current session token, revoke the old token, and audit the profile update. Requires `x-session-token`.
+- `PATCH /api/profile`: updates the current user's name, email, photo URL, or password. Password changes require `currentPassword` and `newPassword`, enforce the password policy, rotate the session token, revoke the old token, and audit the profile update. Requires `x-session-token`.
 - `GET /api/users/available-chat-users`: lists active users available to the current logged-in user because they share the same company, department, or group. Requires `x-session-token`.
 - `GET /api/admin/summary`: returns backend management counts and runtime status. Requires `ADMIN_TOKEN` or an active owner/admin user session.
 - `GET /api/admin/chats`: lists chats for management review. Requires `ADMIN_TOKEN` or an active owner/admin user session.
