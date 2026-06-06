@@ -23,9 +23,10 @@ test("playground store seeds tasks, projects, notes, and metrics", async () => {
     completed: 1
   });
   assert.equal(data.tasks[0].statusKey, data.tasks[0].status);
+  assert.ok(Array.isArray(data.tasks[0].customFields));
 });
 
-test("playground store persists created tasks and projects in memory mode", async () => {
+test("playground store persists created tasks, custom fields, and projects in memory mode", async () => {
   const store = createStore();
   const task = await store.createTask({
     title: "Stored task",
@@ -36,7 +37,8 @@ test("playground store persists created tasks and projects in memory mode", asyn
     dueLabel: "Today",
     dueDate: null,
     projectId: "00000000-0000-4000-9000-000000000201",
-    assigneeIds: ["00000000-0000-4000-8000-000000000002"]
+    assigneeIds: ["00000000-0000-4000-8000-000000000002"],
+    customFields: [{ name: "Client", value: "Acme" }]
   }, "Tester");
   const project = await store.createProject({
     title: "Stored project",
@@ -45,20 +47,21 @@ test("playground store persists created tasks and projects in memory mode", asyn
     progress: 0,
     taskCount: 0
   });
-  const data = await store.listAll();
+  const data = await store.listAll({ search: "acme" });
 
   assert.ok(data.tasks.some((item) => item.id === task.id && item.title === "Stored task" && item.projectTitle === "Website Redesign"));
-  assert.ok(data.projects.some((item) => item.id === project.id && item.title === "Stored project"));
-  assert.equal(data.metrics.totalTasks, 7);
-  assert.equal(data.metrics.activeProjects, 5);
+  assert.deepEqual(data.tasks.find((item) => item.id === task.id).customFields, [{ name: "Client", value: "Acme" }]);
+  assert.ok((await store.listAll()).projects.some((item) => item.id === project.id && item.title === "Stored project"));
+  assert.equal((await store.listAll()).metrics.totalTasks, 7);
+  assert.equal((await store.listAll()).metrics.activeProjects, 5);
 });
 
 test("playground store filters and paginates task records", async () => {
   const store = createStore();
-  await store.createTask({ title: "Filtered high task", description: "Find me", status: "todo", category: "QA", priority: "high", dueLabel: "Today", dueDate: null, projectId: "", assigneeIds: ["user-1"] });
+  await store.createTask({ title: "Filtered high task", description: "Find me", status: "todo", category: "QA", priority: "high", dueLabel: "Today", dueDate: null, projectId: "", assigneeIds: [], customFields: [{ name: "Workflow", value: "filtered" }] });
   await store.createTask({ title: "Filtered low task", description: "Skip me", status: "backlog", category: "QA", priority: "low", dueLabel: "Later", dueDate: null, projectId: "", assigneeIds: [] });
 
-  const high = await store.listAll({ priority: "high", search: "filtered", limit: 1 });
+  const high = await store.listAll({ priority: "high", search: "workflow", limit: 1 });
   assert.equal(high.tasks.length, 1);
   assert.equal(high.taskPage.total, 1);
   assert.equal(high.tasks[0].title, "Filtered high task");
@@ -70,19 +73,21 @@ test("playground store filters and paginates task records", async () => {
   assert.equal(second.taskPage.cursor, "2");
 });
 
-test("playground store updates task detail, comments, and activity", async () => {
+test("playground store updates task detail, comments, custom fields, and activity", async () => {
   const store = createStore();
-  const created = await store.createTask({ title: "Detail task", description: "Before", status: "todo", category: "QA", priority: "medium", dueLabel: "Today", dueDate: null, projectId: "", assigneeIds: [] }, "Tester");
-  const updated = await store.updateTask(created.id, { title: "Detail task", description: "After", status: "in_progress", category: "QA", priority: "high", dueLabel: "Tomorrow", dueDate: "2026-06-07", projectId: "00000000-0000-4000-9000-000000000201", assigneeIds: ["user-1"] }, "Tester");
+  const created = await store.createTask({ title: "Detail task", description: "Before", status: "todo", category: "QA", priority: "medium", dueLabel: "Today", dueDate: null, projectId: "", assigneeIds: [], customFields: [] }, "Tester");
+  const updated = await store.updateTask(created.id, { title: "Detail task", description: "After", status: "in_progress", category: "QA", priority: "high", dueLabel: "Tomorrow", dueDate: "2026-06-07", projectId: "00000000-0000-4000-9000-000000000201", assigneeIds: ["user-1"], customFields: [{ name: "Stage", value: "Build" }] }, "Tester");
   const comment = await store.createTaskUpdate(created.id, { body: "Progress note" }, "Tester");
   const detail = await store.getTask(created.id);
 
   assert.equal(updated.statusKey, "in_progress");
   assert.equal(updated.projectTitle, "Website Redesign");
+  assert.deepEqual(updated.customFields, [{ name: "Stage", value: "Build" }]);
   assert.equal(comment.body, "Progress note");
   assert.equal(detail.task.description, "After");
   assert.ok(detail.updates.some((item) => item.body === "Progress note"));
   assert.ok(detail.activity.some((item) => item.action === "task.updated"));
+  assert.ok(detail.activity.some((item) => (item.details.changes || []).some((change) => change.field === "customFields")));
 });
 
 test("playground page loads the storage-backed script after admin session bootstrap", () => {
@@ -107,6 +112,9 @@ test("playground tasks page loads session bootstrap and task list script", () =>
   const taskListIndex = html.indexOf('<script src="playground-tasks.js"></script>');
 
   assert.ok(html.includes('data-admin-page="playground-tasks"'));
+  assert.ok(html.includes('id="taskListNewTaskButton"'));
+  assert.ok(html.includes('id="taskListCardNewTaskButton"'));
+  assert.ok(html.includes("<th>Custom Fields</th>"));
   assert.ok(html.includes('class="admin-section-list reports-nav playground-nav"'));
   assert.ok(html.includes('<span class="reports-summary-label">Playground</span>'));
   assert.ok(html.includes('href="/playground.html"><span aria-hidden="true">▦</span>Board'));
@@ -129,13 +137,18 @@ test("shared admin navigation nests Tasks under Playground", () => {
   assert.ok(script.includes("tasksLink?.remove()"));
 });
 
-test("playground tasks script lists saved tasks through the Playground API", () => {
+test("playground tasks script creates saved tasks with optional custom fields", () => {
   const script = fs.readFileSync(path.join(__dirname, "..", "public", "playground-tasks.js"), "utf8");
 
   assert.ok(script.includes("/api/admin/playground?"));
   assert.ok(script.includes("taskListBody"));
   assert.ok(script.includes("taskListSearch"));
   assert.ok(script.includes("taskListProject"));
+  assert.ok(script.includes("taskListTaskModal"));
+  assert.ok(script.includes("taskListTaskTitle"));
+  assert.ok(script.includes("taskListAddCustomField"));
+  assert.ok(script.includes("customFields"));
+  assert.ok(script.includes("/api/admin/playground/tasks"));
   assert.ok(script.includes("Loaded ${total} saved task"));
 });
 
