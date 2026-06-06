@@ -90,6 +90,21 @@
       .user-edit-action-hidden {
         display: none !important;
       }
+
+      body[data-admin-page="user"] .users-table.user-list-compact {
+        min-width: 620px;
+      }
+
+      @media (max-width: 520px) {
+        body[data-admin-page="user"] .users-table.user-list-compact td:nth-child(5) {
+          display: block;
+          padding-top: 8px;
+        }
+
+        body[data-admin-page="user"] .users-table.user-list-compact td:nth-child(5)::before {
+          content: none;
+        }
+      }
     `;
     document.head.appendChild(style);
   }
@@ -149,9 +164,36 @@
     });
   }
 
+  function hideListOnlyFields() {
+    const list = document.getElementById("users");
+    if (!list) return;
+
+    list.querySelectorAll(".user-item > p").forEach((paragraph) => {
+      if (/^Updated\b/i.test(paragraph.textContent?.trim() || "")) paragraph.hidden = true;
+    });
+
+    list.querySelectorAll("table").forEach((table) => {
+      const headers = Array.from(table.querySelectorAll("thead th"));
+      if (!headers.length) return;
+      const hiddenColumnLabels = new Set(["department", "group", "updated"]);
+      const columnsToRemove = headers
+        .map((header, index) => ({ header, index }))
+        .filter(({ header }) => hiddenColumnLabels.has((header.textContent || "").trim().toLowerCase()))
+        .map(({ index }) => index)
+        .sort((left, right) => right - left);
+
+      if (!columnsToRemove.length) return;
+      columnsToRemove.forEach((index) => {
+        table.querySelectorAll("tr").forEach((row) => row.children[index]?.remove());
+      });
+      table.classList.add("user-list-compact");
+    });
+  }
+
   function enhanceRows() {
     const list = document.getElementById("users");
     if (!list) return;
+    hideListOnlyFields();
     list.querySelectorAll("tr, .user-card, li, article").forEach((row) => {
       const editButton = row.querySelector("[data-user-edit]");
       const userId = rowUserId(row);
