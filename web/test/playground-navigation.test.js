@@ -7,15 +7,39 @@ const publicDir = path.join(__dirname, "..", "public");
 const pages = {
   board: readFileSync(path.join(publicDir, "playground.html"), "utf8"),
   tasks: readFileSync(path.join(publicDir, "playground-tasks.html"), "utf8"),
+  projects: readFileSync(path.join(publicDir, "playground-projects.html"), "utf8"),
+  notes: readFileSync(path.join(publicDir, "playground-notes.html"), "utf8"),
   automation: readFileSync(path.join(publicDir, "playground-automation.html"), "utf8")
 };
 
-test("Playground pages expose Board, Tasks, and Automation navigation", () => {
+const navLinks = [
+  ["Board", /href="\/playground\.html"/],
+  ["Tasks", /href="\/playground-tasks\.html"/],
+  ["Projects", /href="\/playground-projects\.html"/],
+  ["Notes", /href="\/playground-notes\.html"/],
+  ["Automation", /href="\/playground-automation\.html"/]
+];
+
+test("Playground pages expose Board, Tasks, Projects, Notes, and Automation navigation", () => {
   for (const [name, html] of Object.entries(pages)) {
-    assert.match(html, /href="\/playground\.html"/, `${name} page links to Board`);
-    assert.match(html, /href="\/playground-tasks\.html"/, `${name} page links to Tasks`);
-    assert.match(html, /href="\/playground-automation\.html"/, `${name} page links to Automation`);
+    for (const [label, pattern] of navLinks) {
+      assert.match(html, pattern, `${name} page links to ${label}`);
+    }
   }
+});
+
+test("Projects page is the active Playground subpage", () => {
+  assert.match(pages.projects, /<h1>Playground Projects<\/h1>/);
+  assert.match(pages.projects, /<a class="nav-item active" href="\/playground-projects\.html" aria-current="page">/);
+  assert.match(pages.projects, /Active Projects/);
+  assert.match(pages.projects, /Website Redesign/);
+});
+
+test("Notes page is the active Playground subpage", () => {
+  assert.match(pages.notes, /<h1>Playground Notes<\/h1>/);
+  assert.match(pages.notes, /<a class="nav-item active" href="\/playground-notes\.html" aria-current="page">/);
+  assert.match(pages.notes, /Workspace Notes/);
+  assert.match(pages.notes, /Sprint planning notes/);
 });
 
 test("Automation page is the active Playground subpage", () => {
