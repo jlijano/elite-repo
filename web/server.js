@@ -427,6 +427,39 @@ const userManagementStore = attachUserManagementRoutes(app, {
 });
 app.locals.userManagementAttached = true;
 
+function scopeValue(user, field) {
+  return typeof user?.[field] === "string" ? user[field].trim().toLowerCase() : "";
+}
+
+function sharedUserScopes(currentUser, candidate) {
+  return ["company", "department", "group"].filter((field) => {
+    const currentValue = scopeValue(currentUser, field);
+    return currentValue && currentValue === scopeValue(candidate, field);
+  });
+}
+
+function chatAvailableUser(user, sharedScopes) {
+  return {
+    id: user.id,
+    name: user.name,
+    email: user.email,
+    photoUrl: user.photoUrl || "",
+    company: user.company || "",
+    department: user.department || "",
+    group: user.group || "",
+    sharedScopes
+  };
+}
+
+function availableChatUsers(currentUser, users = []) {
+  return users
+    .filter((user) => user.id !== currentUser.id && user.status === "active")
+    .map((user) => ({ user, sharedScopes: sharedUserScopes(currentUser, user) }))
+    .filter((entry) => entry.sharedScopes.length > 0)
+    .map((entry) => chatAvailableUser(entry.user, entry.sharedScopes))
+    .sort((a, b) => a.name.localeCompare(b.name));
+}
+
 async function requireAdmin(req, res, next) {
   try {
     const sessionToken = req.get("x-session-token");
@@ -449,6 +482,18 @@ app.get("/api/status", async (req, res) => {
   let storageAvailable = true;
   try { await db.health(); } catch { storageAvailable = false; }
   res.json({ ok: true, directoryAvailable: knowledge.directoryAvailable, filesLoaded: knowledge.filesLoaded, aiAvailable: Boolean(process.env.OPENAI_API_KEY), storageAvailable, storageMode: db.mode });
+});
+
+app.get("/api/users/available-chat-users", async (req, res) => {
+  try {
+    const sessionToken = req.get("x-session-token");
+    const session = sessionToken ? await userManagementStore.getSessionUser(sessionToken) : null;
+    if (!session) return res.status(401).json({ error: "Login required." });
+    const users = await userManagementStore.listUsers();
+    res.json({ users: availableChatUsers(session.user, users) });
+  } catch (error) {
+    res.status(500).json({ error: "Could not load available users." });
+  }
 });
 
 app.post("/api/chats", async (req, res) => {
