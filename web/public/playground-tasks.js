@@ -21,7 +21,7 @@ const taskListState = {
   filters: { search: "", status: "", priority: "", projectId: "", assigneeId: "", cursor: "0", limit: "100" }
 };
 
-const taskListHtml = (value) => String(value ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/\"/g, "&quot;");
+const taskListHtml = (value) => String(value ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 
 function taskListHeaders() {
   const headers = { "Content-Type": "application/json" };
@@ -262,6 +262,7 @@ function addTaskListCustomField(name = "", value = "", type = "text", meta = {})
   const safeType = taskListCommonFieldTypes.some(([key]) => key === type) ? type : "text";
   row.className = "custom-field-row";
   row.dataset.customFieldType = safeType;
+  row.setAttribute("data-custom-field-type", safeType);
   if (meta.fileName) row.dataset.fileName = meta.fileName;
   if (meta.fileType) row.dataset.fileType = meta.fileType;
   if (meta.fileSize) row.dataset.fileSize = String(meta.fileSize);
