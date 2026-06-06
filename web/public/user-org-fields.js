@@ -5,6 +5,7 @@
   const html = (value) => String(value ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/\"/g, "&quot;");
   const time = (value) => value ? new Intl.DateTimeFormat(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }).format(new Date(value)) : "";
   const textMatch = (value, query = "") => String(value || "").toLowerCase().includes(query.trim().toLowerCase());
+  const csvKey = (value) => String(value || "").trim().toLowerCase().replace(/[^a-z0-9]/g, "");
 
   function injectStyles() {
     if (document.getElementById("userOrgFieldsStyles")) return;
@@ -12,6 +13,7 @@
     style.id = "userOrgFieldsStyles";
     style.textContent = `
       body[data-admin-page="user"] .users-table { min-width: 1040px; }
+      body[data-admin-page="user"] .user-import-input { display: none; }
       body[data-admin-page="user"] .user-identity { display: flex; align-items: center; gap: 10px; min-width: 0; }
       body[data-admin-page="user"] .user-avatar { width: 36px; height: 36px; flex: 0 0 36px; display: grid; place-items: center; overflow: hidden; border: 1px solid var(--line); border-radius: 50%; background: var(--panel-soft); color: var(--muted); font-weight: 900; }
       body[data-admin-page="user"] .user-avatar img { width: 100%; height: 100%; object-fit: cover; }
@@ -121,6 +123,157 @@
     return fetchJson(`/api/admin/users/${encodeURIComponent(userId)}/invite`, { method: "POST", body: "{}" }, true);
   }
 
+  function csvEscape(value) {
+    const text = String(value ?? "");
+    return /[",\n\r]/.test(text) ? `"${text.replace(/"/g, "\"\"")}"` : text;
+  }
+
+  function downloadCsv(filename, rows) {
+    const csv = rows.map((row) => row.map(csvEscape).join(",")).join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = filename;
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    URL.revokeObjectURL(url);
+  }
+
+  function exportUsersCsv() {
+    const rows = [["name", "email", "company", "department", "group", "role", "status", "photoUrl"], ...currentUsers().map((user) => [
+      user.name || "",
+      user.email || "",
+      user.company || "",
+      user.department || "",
+      user.group || "",
+      user.role || "viewer",
+      user.status || "active",
+      user.photoUrl || ""
+    ])];
+    downloadCsv(`switchboard-users-${new Date().toISOString().slice(0, 10)}.csv`, rows);
+    setStatus?.("User list exported.");
+  }
+
+  function parseCsv(text) {
+    const rows = [];
+    let row = [];
+    let value = "";
+    let quoted = false;
+    for (let index = 0; index < text.length; index += 1) {
+      const char = text[index];
+      const next = text[index + 1];
+      if (quoted) {
+        if (char === '"' && next === '"') {
+          value += '"';
+          index += 1;
+        } else if (char === '"') {
+          quoted = false;
+        } else {
+          value += char;
+        }
+      } else if (char === '"') {
+        quoted = true;
+      } else if (char === ",") {
+        row.push(value);
+        value = "";
+      } else if (char === "\n") {
+        row.push(value);
+        rows.push(row);
+        row = [];
+        value = "";
+      } else if (char !== "\r") {
+        value += char;
+      }
+    }
+    row.push(value);
+    rows.push(row);
+    return rows.filter((item) => item.some((cell) => String(cell || "").trim()));
+  }
+
+  function rowsFromCsv(text) {
+    const rows = parseCsv(text);
+    if (!rows.length) return [];
+    const headers = rows.shift().map(csvKey);
+    return rows.map((row) => headers.reduce((record, header, index) => {
+      record[header] = String(row[index] || "").trim();
+      return record;
+    }, {})).filter((record) => Object.values(record).some(Boolean));
+  }
+
+  function importedUserPayload(row) {
+    const email = row.email || row.emailaddress || "";
+    return {
+      name: row.name || email,
+      email,
+      photoUrl: row.photourl || row.photo || "",
+      company: row.company || "",
+      department: row.department || "",
+      group: row.group || row.groupname || "",
+      role: row.role || "viewer",
+      status: "invited"
+    };
+  }
+
+  async function importUsersFile(file) {
+    if (!file) return;
+    const rows = rowsFromCsv(await file.text());
+    const counts = { created: 0, skipped: 0, failed: 0 };
+    const inviteRows = [["email", "verificationLink", "emailSent", "emailStatus"]];
+    setStatus?.("Importing users...");
+    for (const row of rows) {
+      const payload = importedUserPayload(row);
+      if (!payload.email || !payload.name) {
+        counts.skipped += 1;
+        continue;
+      }
+      try {
+        const result = await fetchJson("/api/admin/users", { method: "POST", body: JSON.stringify(payload) }, true);
+        counts.created += 1;
+        if (result.user?.id) {
+          const invite = await createInvite(result.user.id);
+          const details = invite.invite || {};
+          inviteRows.push([payload.email, details.verificationLink || "", details.emailSent ? "yes" : "no", details.emailStatus || ""]);
+        }
+      } catch (error) {
+        counts.failed += 1;
+      }
+    }
+    await loadUserPage();
+    renderOrgUserTable();
+    if (inviteRows.length > 1) downloadCsv(`switchboard-user-invites-${new Date().toISOString().slice(0, 10)}.csv`, inviteRows);
+    setStatus?.(`Imported ${counts.created} users. Skipped ${counts.skipped}. Failed ${counts.failed}.`);
+  }
+
+  function injectUserImportExportControls() {
+    const toolbar = document.querySelector(".user-toolbar");
+    if (!toolbar || document.getElementById("exportUsersButton")) return;
+    const exportButton = document.createElement("button");
+    exportButton.id = "exportUsersButton";
+    exportButton.type = "button";
+    exportButton.textContent = "Export list";
+
+    const importButton = document.createElement("button");
+    importButton.id = "importUsersButton";
+    importButton.type = "button";
+    importButton.textContent = "Import list";
+
+    const input = document.createElement("input");
+    input.id = "importUsersInput";
+    input.className = "user-import-input";
+    input.type = "file";
+    input.accept = ".csv,text/csv";
+
+    toolbar.append(exportButton, importButton, input);
+    exportButton.addEventListener("click", exportUsersCsv);
+    importButton.addEventListener("click", () => input.click());
+    input.addEventListener("change", () => {
+      const [file] = input.files || [];
+      importUsersFile(file).catch((error) => setStatus?.(error.message, true)).finally(() => { input.value = ""; });
+    });
+  }
+
   function renderOrgUserTable() {
     const usersContainer = document.getElementById("users");
     if (!usersContainer || !currentUsers().length) return;
@@ -222,6 +375,7 @@
   function init() {
     injectStyles();
     addOrgFields();
+    injectUserImportExportControls();
     bindActions();
     const usersContainer = document.getElementById("users");
     if (usersContainer) {
