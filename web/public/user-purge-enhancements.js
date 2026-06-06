@@ -112,6 +112,103 @@
         box-shadow: none !important;
       }
 
+      body[data-admin-page="user"] #userDialog {
+        width: min(760px, calc(100vw - 32px));
+        max-height: min(780px, calc(100dvh - 32px));
+        border-radius: 14px;
+      }
+
+      body[data-admin-page="user"] #userDialog .modal-content {
+        max-height: min(780px, calc(100dvh - 32px));
+      }
+
+      body[data-admin-page="user"] #userDialog .modal-head {
+        padding: 18px 20px;
+        background: linear-gradient(180deg, var(--panel-soft), var(--panel));
+      }
+
+      body[data-admin-page="user"] #userDialog .modal-head h2 {
+        font-size: 1.05rem;
+        font-weight: 900;
+      }
+
+      body[data-admin-page="user"] #userDialog .user-dialog-body {
+        padding: 18px 20px 20px;
+      }
+
+      body[data-admin-page="user"] #userDialog .management-form {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 14px;
+        padding: 0;
+      }
+
+      body[data-admin-page="user"] #userDialog .form-heading,
+      body[data-admin-page="user"] #userDialog .photo-field,
+      body[data-admin-page="user"] #userDialog .form-actions {
+        grid-column: 1 / -1;
+      }
+
+      body[data-admin-page="user"] #userDialog .form-heading {
+        min-height: 38px;
+        padding-bottom: 2px;
+        border-bottom: 1px solid var(--line);
+      }
+
+      body[data-admin-page="user"] #userDialog .form-heading h3 {
+        font-size: 0.98rem;
+        font-weight: 900;
+      }
+
+      body[data-admin-page="user"] #userDialog .management-form label,
+      body[data-admin-page="user"] #userDialog .photo-field {
+        gap: 7px;
+      }
+
+      body[data-admin-page="user"] #userDialog .management-form label span,
+      body[data-admin-page="user"] #userDialog .photo-field-label {
+        color: var(--muted);
+        font-size: 0.75rem;
+        font-weight: 900;
+        text-transform: uppercase;
+      }
+
+      body[data-admin-page="user"] #userDialog input,
+      body[data-admin-page="user"] #userDialog select {
+        min-height: 42px;
+      }
+
+      body[data-admin-page="user"] #userDialog .photo-drop-zone {
+        min-height: 104px;
+        grid-template-columns: 74px minmax(0, 1fr);
+        padding: 14px;
+        border-style: solid;
+      }
+
+      body[data-admin-page="user"] #userDialog .photo-preview {
+        width: 64px;
+        height: 64px;
+      }
+
+      body[data-admin-page="user"] #userDialog .form-row {
+        grid-column: 1 / -1;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      body[data-admin-page="user"] #userDialog label:has(#userPassword) {
+        grid-column: 1 / -1;
+      }
+
+      body[data-admin-page="user"] #userDialog .form-actions {
+        justify-content: flex-end;
+        padding-top: 4px;
+        border-top: 1px solid var(--line);
+      }
+
+      body[data-admin-page="user"] #userDialog #saveUserButton {
+        min-width: 150px;
+      }
+
       .user-edit-action-hidden {
         display: none !important;
       }
@@ -172,6 +269,15 @@
       }
 
       @media (max-width: 520px) {
+        body[data-admin-page="user"] #userDialog .management-form,
+        body[data-admin-page="user"] #userDialog .form-row {
+          grid-template-columns: 1fr;
+        }
+
+        body[data-admin-page="user"] #userDialog .photo-drop-zone {
+          grid-template-columns: 1fr;
+        }
+
         .user-transfer-menu {
           width: 100%;
         }
@@ -244,6 +350,18 @@
     });
   }
 
+  function cleanUserName(value) {
+    const parts = String(value || "")
+      .split(/\n|\||•|·/)
+      .map((part) => part.trim())
+      .filter(Boolean);
+    const ignored = new Set(["admin", "owner", "member", "viewer", "active", "invited", "disabled"]);
+    return parts.find((part) => {
+      const normalized = part.toLowerCase();
+      return !ignored.has(normalized) && !/^(role|company|department|group|status)\b/i.test(part);
+    }) || parts[0] || "user";
+  }
+
   function enhanceNameTrigger(row, editButton) {
     if (!editButton || row.querySelector(".user-name-edit-trigger")) return;
     const titleRow = row.querySelector(".row");
@@ -258,7 +376,7 @@
 
     const nameCell = row.querySelector("td:first-child");
     if (!nameCell) return;
-    const nameText = nameCell.textContent?.trim() || "user";
+    const nameText = cleanUserName(nameCell.textContent);
     const trigger = document.createElement("button");
     bindNameTrigger(trigger, editButton, nameText);
     const label = document.createElement("span");
