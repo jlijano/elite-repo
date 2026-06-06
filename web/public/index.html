@@ -142,6 +142,19 @@
         line-height: 1.3;
       }
 
+      .participant-label {
+        display: block;
+        margin-bottom: 4px;
+        color: var(--muted);
+        font-size: 0.72rem;
+        font-weight: 800;
+        line-height: 1.2;
+      }
+
+      .participant-label.shared {
+        color: var(--primary);
+      }
+
       @media (max-width: 900px) {
         .chat-header {
           min-height: 58px;
@@ -285,7 +298,7 @@
       </section>
     </main>
 
-    <script src="app.js?v=20260606-plus-menu"></script>
+    <script src="app.js?v=20260607-shared-live"></script>
     <script>
       (() => {
         const setNewChatLabel = () => {
@@ -309,11 +322,39 @@
         const takePhotoButton = document.getElementById("takePhotoButton");
         const attachFileButton = document.getElementById("attachFileButton");
         const voiceButton = document.getElementById("voiceMessageButton");
+        const sharedChatId = new URLSearchParams(window.location.search).get("chat");
+        const participantStorageKey = "switchboard-participant-id";
         let mediaRecorder = null;
         let voiceChunks = [];
+        let lastRenderedMessageSignature = "";
 
         function setStatusText(message) {
           if (status) status.textContent = message || "";
+        }
+
+        function chatOriginKey(chatId) {
+          return `switchboard-origin-chat-${chatId}`;
+        }
+
+        function participantId() {
+          let value = getStored(participantStorageKey);
+          if (!value) {
+            value = crypto?.randomUUID ? crypto.randomUUID() : `participant-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+            setStored(participantStorageKey, value);
+          }
+          return value;
+        }
+
+        function markOriginalChat(chatId) {
+          if (chatId) setStored(chatOriginKey(chatId), "true");
+        }
+
+        function participantType(chatId = currentChatId) {
+          return getStored(chatOriginKey(chatId)) === "true" ? "original" : "shared";
+        }
+
+        function participantLabel(type = participantType()) {
+          return type === "original" ? "Original" : "Shared link";
         }
 
         function closeMenu() {
@@ -327,6 +368,107 @@
           plusButton.setAttribute("aria-expanded", String(!nextHidden));
           if (!nextHidden) setStatusText("");
         }
+
+        const originalCreateChat = createChat;
+        createChat = async function patchedCreateChat(...args) {
+          await originalCreateChat.apply(this, args);
+          markOriginalChat(currentChatId);
+        };
+
+        const originalCreateMessageElement = createMessageElement;
+        createMessageElement = function patchedCreateMessageElement(role, content, options = {}) {
+          const article = originalCreateMessageElement(role, content, options);
+          const labelText = options.participantLabel;
+          if (role === "user" && labelText) {
+            const bubble = article.querySelector(".bubble");
+            const label = document.createElement("span");
+            label.className = `participant-label ${options.participantType === "shared" ? "shared" : "original"}`;
+            label.textContent = labelText;
+            bubble?.prepend(label);
+          }
+          return article;
+        };
+
+        renderMessages = function patchedRenderMessages(messages = []) {
+          messagesEl.innerHTML = "";
+          chatHistory = [];
+          const visibleMessages = messages.filter((message) => !isAutomaticAssistantMessage(message));
+          if (!visibleMessages.length) {
+            renderWelcome();
+            return;
+          }
+          for (const message of visibleMessages) {
+            const attachments = Array.isArray(message.context?.attachments) ? message.context.attachments : [];
+            const type = message.context?.participantType || "original";
+            const label = message.context?.participantLabel || (message.role === "user" ? participantLabel(type) : "");
+            messagesEl.appendChild(createMessageElement(message.role, message.content, {
+              createdAt: message.createdAt,
+              attachments,
+              participantType: type,
+              participantLabel: label
+            }));
+            if (message.role === "user" || message.role === "assistant") chatHistory.push({ role: message.role, content: message.content });
+          }
+          scrollToBottom();
+        };
+
+        async function loadSharedChat(chatId, options = {}) {
+          const data = await requestJson(`/api/chats/${encodeURIComponent(chatId)}`);
+          saveCurrentChat(data.chat.id);
+          currentChatTitle.textContent = data.chat.title || newChatTitle;
+          const signature = (data.chat.messages || []).map((message) => `${message.id}:${message.updatedAt || message.createdAt}`).join("|");
+          if (options.force || signature !== lastRenderedMessageSignature) {
+            lastRenderedMessageSignature = signature;
+            renderMessages(data.chat.messages || []);
+          }
+          await loadChats();
+        }
+
+        sendMessage = async function patchedSendMessage() {
+          const message = inputEl.value.trim();
+          const attachments = selectedAttachments.slice();
+          if ((!message && !attachments.length) || isSending) return;
+          if (!currentChatId) await createChat();
+
+          const type = participantType();
+          const displayMessage = message || `Uploaded ${attachments.length} file${attachments.length === 1 ? "" : "s"}: ${attachmentNames(attachments)}`;
+          addMessage("user", displayMessage, {
+            createdAt: new Date().toISOString(),
+            attachments,
+            participantType: type,
+            participantLabel: participantLabel(type)
+          });
+          inputEl.value = "";
+          selectedAttachments = [];
+          renderSelectedAttachments();
+          resizeInput();
+          setSending(true);
+
+          try {
+            const saved = await requestJson(`/api/chats/${encodeURIComponent(currentChatId)}/messages`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                role: "user",
+                content: displayMessage,
+                context: {
+                  source: "shared-chat",
+                  attachments,
+                  participantId: participantId(),
+                  participantType: type,
+                  participantLabel: participantLabel(type)
+                }
+              })
+            });
+            if (saved.message?.chatId) saveCurrentChat(saved.message.chatId);
+            await loadSharedChat(currentChatId, { force: true });
+          } catch (error) {
+            addMessage("assistant", error.message || "Something went wrong while saving the message.", { error: true, skipHistory: true });
+          } finally {
+            setSending(false);
+            inputEl.focus();
+          }
+        };
 
         plusButton.addEventListener("click", (event) => {
           event.preventDefault();
@@ -384,6 +526,7 @@
         shareButton.addEventListener("click", async () => {
           try {
             if (!currentChatId) await createChat();
+            markOriginalChat(currentChatId);
             const url = new URL(window.location.href);
             url.search = "";
             url.searchParams.set("chat", currentChatId);
@@ -430,12 +573,16 @@
         });
 
         window.addEventListener("load", () => {
-          const sharedChatId = new URLSearchParams(window.location.search).get("chat");
           if (!sharedChatId) return;
           setTimeout(() => {
-            loadChat(sharedChatId).catch(() => setStatusText("This shared chat could not be loaded."));
+            loadSharedChat(sharedChatId, { force: true }).catch(() => setStatusText("This shared chat could not be loaded."));
           }, 250);
         });
+
+        setInterval(() => {
+          if (!currentChatId || document.visibilityState !== "visible" || isSending) return;
+          loadSharedChat(currentChatId).catch(() => {});
+        }, 2000);
       })();
     </script>
   </body>
