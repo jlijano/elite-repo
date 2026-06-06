@@ -7,6 +7,7 @@
 - Added a chat header X close action that archives the current chat, starts a fresh `New chat`, and marks anonymous chats with a 30-day expiry for cleanup.
 - Removed automatic assistant reply bubbles from the chat UI, including the storage-only `saved for review` response.
 - Forced the chat landing page to clear the saved active chat, load the latest chat script, and show the composer title as `New chat` instead of an old chat name.
+- Expanded Playground task storage with a create/edit task modal, task detail drawer, real project/assignee/status/priority/due-date fields, comments, activity history, pagination, filters, and stable status keys.
 - Added database-backed Playground storage with dedicated task, project, and note records, protected admin Playground APIs, stored page loading, and New Task/New Project creation from the Playground header.
 - Changed the chat landing screen so it no longer auto-loads previous chat messages and instead shows a single `Start new chat` prompt.
 - Removed the admin header session status chip so the top-right header only shows the clock and profile menu.
