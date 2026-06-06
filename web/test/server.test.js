@@ -63,6 +63,16 @@ async function createReviewedMessage(message = "Review me") {
   return created.data.chat.id;
 }
 
+async function createUser(user) {
+  const created = await jsonFetch("/api/admin/users", {
+    method: "POST",
+    headers: { "x-admin-token": adminToken },
+    body: JSON.stringify(user)
+  });
+  assert.equal(created.response.status, 201);
+  return created.data.user;
+}
+
 before(async () => {
   const port = await getFreePort();
   baseUrl = `http://127.0.0.1:${port}`;
@@ -165,6 +175,31 @@ test("archives chats without deleting history", async () => {
   const loaded = await jsonFetch(`/api/chats/${chatId}`);
   assert.equal(loaded.response.status, 200);
   assert.equal(loaded.data.chat.messages.length, 1);
+});
+
+test("lists only same-scope active users for logged-in chat users", async () => {
+  const blocked = await jsonFetch("/api/users/available-chat-users");
+  assert.equal(blocked.response.status, 401);
+
+  await createUser({ name: "Current User", email: "current@example.com", company: "Acme", department: "Sales", group: "North", role: "member", status: "active", password: "CurrentPass123" });
+  await createUser({ name: "Company Match", email: "company@example.com", company: "Acme", department: "Ops", group: "East", role: "member", status: "active", password: "CompanyPass123" });
+  await createUser({ name: "Department Match", email: "department@example.com", company: "Globex", department: "Sales", group: "West", role: "member", status: "active", password: "DepartmentPass123" });
+  await createUser({ name: "Group Match", email: "group@example.com", company: "Globex", department: "Ops", group: "North", role: "member", status: "active", password: "GroupMatchPass123" });
+  await createUser({ name: "Outside User", email: "outside@example.com", company: "Globex", department: "Ops", group: "West", role: "member", status: "active", password: "OutsidePass123" });
+  await createUser({ name: "Disabled Match", email: "disabled@example.com", company: "Acme", department: "Sales", group: "North", role: "member", status: "disabled", password: "DisabledPass123" });
+
+  const login = await jsonFetch("/api/auth/login", {
+    method: "POST",
+    body: JSON.stringify({ email: "current@example.com", password: "CurrentPass123" })
+  });
+  assert.equal(login.response.status, 200);
+  assert.ok(login.data.sessionToken);
+
+  const available = await jsonFetch("/api/users/available-chat-users", { headers: { "x-session-token": login.data.sessionToken } });
+  assert.equal(available.response.status, 200);
+  const names = available.data.users.map((user) => user.name).sort();
+  assert.deepEqual(names, ["Company Match", "Department Match", "Group Match"]);
+  assert.deepEqual(available.data.users.find((user) => user.name === "Company Match").sharedScopes, ["company"]);
 });
 
 test("stores text attachments with chat messages", async () => {
