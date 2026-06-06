@@ -12,6 +12,7 @@
 
         try {
           storedTheme = localStorage.getItem(storageKey);
+          localStorage.removeItem("switchboard-current-chat");
         } catch (error) {
           storedTheme = null;
         }
@@ -162,7 +163,7 @@
         <form class="composer" id="chatForm">
           <div class="composer-agent-bar">
             <span class="brand-mark small" aria-hidden="true">★</span>
-            <strong id="currentChatTitle">Start new chat</strong>
+            <strong id="currentChatTitle">New chat</strong>
           </div>
           <div class="attachment-tray" id="attachmentTray" aria-live="polite"></div>
           <div class="composer-input-row">
@@ -188,6 +189,19 @@
       </section>
     </main>
 
-    <script src="app.js"></script>
+    <script src="app.js?v=20260606-new-chat-reset"></script>
+    <script>
+      (() => {
+        const setNewChatLabel = () => {
+          const title = document.getElementById("currentChatTitle");
+          const input = document.getElementById("messageInput");
+          if (title && title.textContent !== "New chat") title.textContent = "New chat";
+          if (input) input.placeholder = "Start new chat";
+        };
+        window.addEventListener("load", setNewChatLabel, { once: true });
+        requestAnimationFrame(setNewChatLabel);
+        setTimeout(setNewChatLabel, 300);
+      })();
+    </script>
   </body>
 </html>
