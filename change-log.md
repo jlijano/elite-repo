@@ -2,6 +2,7 @@
 
 ## [Unreleased]
 
+- Added sanitized `bubbleColor` support to chat participant metadata so future color selection can identify each participant's message bubbles safely.
 - Loaded the shared admin session bootstrap on `/playground.html` so Playground task/project APIs receive the logged-in owner/admin session instead of asking for an admin token.
 - Added shared-chat participant tracking with numbered share links, backend typing status endpoints, stored participant device/share metadata on messages, inline attachment previews, and extra message padding so chat content does not overlap the composer.
 - Fixed the Playground task modal Save action so it uses one submit path, shows saving progress, and displays backend errors in the modal instead of appearing inactive.
