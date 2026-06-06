@@ -2,6 +2,7 @@
 
 ## [Unreleased]
 
+- Added a mobile admin Menu button that opens the hidden admin navigation options as a dropdown on phone and small-screen views.
 - Fixed mobile admin navigation so the hidden desktop sidebar becomes a compact, scrollable top navigation strip on phones and small displays.
 - Improved admin mobile responsiveness across admin pages, fixing stacked toolbar input heights and adding compact small-screen rules for narrow or short displays such as Samsung Flip cover screens.
 - Added drag-and-drop and click-to-select profile photo upload support to the `/user.html` Add/Edit user modal, including preview, image type/size checks, and backend acceptance for small image Data URLs alongside hosted photo URLs.
