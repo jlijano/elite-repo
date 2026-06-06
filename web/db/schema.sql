@@ -196,3 +196,136 @@ CREATE TABLE IF NOT EXISTS review_runs (
   error TEXT,
   context JSONB NOT NULL DEFAULT '{}'::jsonb
 );
+
+CREATE TABLE IF NOT EXISTS playground_boards (
+  id UUID PRIMARY KEY,
+  title TEXT NOT NULL,
+  description TEXT,
+  status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'archived')),
+  sort_order INTEGER NOT NULL DEFAULT 0,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS playground_boards_status_updated_idx
+  ON playground_boards(status, updated_at DESC);
+
+CREATE TABLE IF NOT EXISTS playground_projects (
+  id UUID PRIMARY KEY,
+  board_id UUID REFERENCES playground_boards(id) ON DELETE SET NULL,
+  title TEXT NOT NULL,
+  description TEXT,
+  status TEXT NOT NULL DEFAULT 'planning' CHECK (status IN ('planning', 'active', 'in_progress', 'review', 'completed', 'archived')),
+  progress INTEGER NOT NULL DEFAULT 0 CHECK (progress >= 0 AND progress <= 100),
+  task_count INTEGER NOT NULL DEFAULT 0 CHECK (task_count >= 0),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+ALTER TABLE playground_projects
+  ADD COLUMN IF NOT EXISTS board_id UUID REFERENCES playground_boards(id) ON DELETE SET NULL;
+
+CREATE INDEX IF NOT EXISTS playground_projects_status_updated_idx
+  ON playground_projects(status, updated_at DESC);
+
+CREATE INDEX IF NOT EXISTS playground_projects_board_updated_idx
+  ON playground_projects(board_id, updated_at DESC);
+
+CREATE TABLE IF NOT EXISTS playground_tasks (
+  id UUID PRIMARY KEY,
+  board_id UUID REFERENCES playground_boards(id) ON DELETE SET NULL,
+  project_id UUID REFERENCES playground_projects(id) ON DELETE SET NULL,
+  title TEXT NOT NULL,
+  description TEXT,
+  status TEXT NOT NULL DEFAULT 'todo' CHECK (status IN ('backlog', 'todo', 'in_progress', 'review', 'done')),
+  record_status TEXT NOT NULL DEFAULT 'active' CHECK (record_status IN ('active', 'archived')),
+  category TEXT,
+  priority TEXT NOT NULL DEFAULT 'medium' CHECK (priority IN ('low', 'medium', 'high')),
+  due_label TEXT,
+  due_date DATE,
+  assignee_ids UUID[] NOT NULL DEFAULT '{}',
+  custom_fields JSONB NOT NULL DEFAULT '[]'::jsonb,
+  completed_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+ALTER TABLE playground_tasks
+  ADD COLUMN IF NOT EXISTS board_id UUID REFERENCES playground_boards(id) ON DELETE SET NULL,
+  ADD COLUMN IF NOT EXISTS project_id UUID REFERENCES playground_projects(id) ON DELETE SET NULL,
+  ADD COLUMN IF NOT EXISTS record_status TEXT NOT NULL DEFAULT 'active',
+  ADD COLUMN IF NOT EXISTS assignee_ids UUID[] NOT NULL DEFAULT '{}',
+  ADD COLUMN IF NOT EXISTS custom_fields JSONB NOT NULL DEFAULT '[]'::jsonb,
+  ADD COLUMN IF NOT EXISTS completed_at TIMESTAMPTZ;
+
+CREATE INDEX IF NOT EXISTS playground_tasks_status_updated_idx
+  ON playground_tasks(record_status, status, updated_at DESC);
+
+CREATE INDEX IF NOT EXISTS playground_tasks_board_updated_idx
+  ON playground_tasks(board_id, updated_at DESC);
+
+CREATE INDEX IF NOT EXISTS playground_tasks_project_updated_idx
+  ON playground_tasks(project_id, updated_at DESC);
+
+CREATE INDEX IF NOT EXISTS playground_tasks_assignee_ids_idx
+  ON playground_tasks USING GIN(assignee_ids);
+
+CREATE TABLE IF NOT EXISTS playground_task_updates (
+  id UUID PRIMARY KEY,
+  task_id UUID NOT NULL REFERENCES playground_tasks(id) ON DELETE CASCADE,
+  body TEXT NOT NULL,
+  created_by TEXT NOT NULL DEFAULT 'Admin',
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS playground_task_updates_task_created_idx
+  ON playground_task_updates(task_id, created_at DESC);
+
+CREATE TABLE IF NOT EXISTS playground_task_activity (
+  id UUID PRIMARY KEY,
+  task_id UUID NOT NULL REFERENCES playground_tasks(id) ON DELETE CASCADE,
+  action TEXT NOT NULL,
+  actor TEXT NOT NULL DEFAULT 'Admin',
+  details JSONB NOT NULL DEFAULT '{}'::jsonb,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS playground_task_activity_task_created_idx
+  ON playground_task_activity(task_id, created_at DESC);
+
+CREATE TABLE IF NOT EXISTS playground_notes (
+  id UUID PRIMARY KEY,
+  board_id UUID REFERENCES playground_boards(id) ON DELETE SET NULL,
+  project_id UUID REFERENCES playground_projects(id) ON DELETE SET NULL,
+  content TEXT NOT NULL,
+  label TEXT,
+  status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'archived')),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+ALTER TABLE playground_notes
+  ADD COLUMN IF NOT EXISTS board_id UUID REFERENCES playground_boards(id) ON DELETE SET NULL,
+  ADD COLUMN IF NOT EXISTS project_id UUID REFERENCES playground_projects(id) ON DELETE SET NULL,
+  ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'active';
+
+CREATE INDEX IF NOT EXISTS playground_notes_status_updated_idx
+  ON playground_notes(status, updated_at DESC);
+
+CREATE INDEX IF NOT EXISTS playground_notes_project_updated_idx
+  ON playground_notes(project_id, updated_at DESC);
+
+CREATE TABLE IF NOT EXISTS playground_automations (
+  id UUID PRIMARY KEY,
+  board_id UUID REFERENCES playground_boards(id) ON DELETE SET NULL,
+  title TEXT NOT NULL,
+  description TEXT,
+  trigger TEXT,
+  action TEXT NOT NULL DEFAULT 'suggest' CHECK (action IN ('suggest', 'move_task', 'assign_owner', 'create_note', 'notify_admin')),
+  status TEXT NOT NULL DEFAULT 'draft' CHECK (status IN ('draft', 'manual', 'active', 'paused', 'archived')),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS playground_automations_status_updated_idx
+  ON playground_automations(status, updated_at DESC);
