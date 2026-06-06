@@ -2,6 +2,7 @@
 
 ## [Unreleased]
 
+- Fixed the Playground task modal Save action so it uses one submit path, shows saving progress, and displays backend errors in the modal instead of appearing inactive.
 - Made shared chat links refresh the active conversation automatically and label messages as `Original` or `Shared link` so participants can tell where each message came from.
 - Added a composer plus menu with Share link, Attach image, Take a photo, Attach a file, and Send voice message actions; shared chat links open the same conversation for anyone with the link.
 - Stopped `/api/chat` from creating backend assistant auto-replies, so saved chat history now stores the user's message only.
