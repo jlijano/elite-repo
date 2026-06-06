@@ -186,6 +186,11 @@
     loadScriptOnce("userEntraSuggestionsScript", "/user-entra-suggestions.js");
   }
 
+  function loadPlaygroundCrud() {
+    if (!String(document.body?.dataset.adminPage || "").startsWith("playground")) return;
+    loadScriptOnce("playgroundCrudManagementScript", "/playground-management-ui.js");
+  }
+
   const nativeFetch = window.fetch.bind(window);
   initPlaygroundNav();
   initEntraNav();
@@ -219,8 +224,10 @@
     document.addEventListener("DOMContentLoaded", initPlaygroundNav, { once: true });
     document.addEventListener("DOMContentLoaded", initEntraNav, { once: true });
     document.addEventListener("DOMContentLoaded", loadUserOrgFields, { once: true });
+    document.addEventListener("DOMContentLoaded", loadPlaygroundCrud, { once: true });
   } else {
     bootstrapSession();
     loadUserOrgFields();
+    loadPlaygroundCrud();
   }
 })();
