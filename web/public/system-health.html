@@ -1,54 +1,18 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Switchboard Admin - System Health</title>
-    <script>
-      (() => {
-        const storageKey = "switchboard-theme";
-        const systemPrefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-        let storedTheme = null;
-        try { storedTheme = localStorage.getItem(storageKey); } catch (error) { storedTheme = null; }
-        document.documentElement.dataset.theme = storedTheme || (systemPrefersDark ? "dark" : "light");
-      })();
-    </script>
-    <link rel="stylesheet" href="style.css" />
-    <link rel="stylesheet" href="admin.css" />
-  </head>
+  <head><meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" /><title>Switchboard Admin - System Health</title><script>(() => { const storageKey = "switchboard-theme"; const systemPrefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches; let storedTheme = null; try { storedTheme = localStorage.getItem(storageKey); } catch (error) { storedTheme = null; } document.documentElement.dataset.theme = storedTheme || (systemPrefersDark ? "dark" : "light"); })();</script><link rel="stylesheet" href="style.css" /><link rel="stylesheet" href="admin.css" /></head>
   <body data-admin-page="system-health">
     <main class="app-shell admin-shell" aria-label="Switchboard Admin system health report page">
       <aside class="sidebar" aria-label="Admin navigation and status">
         <div class="sidebar-topbar"><a class="brand-lockup" href="/"><span class="brand-mark" aria-hidden="true">★</span><span>Switchboard</span></a></div>
         <nav class="primary-nav" aria-label="Admin navigation">
-          <a class="nav-item" href="/" aria-label="Back to chat"><span aria-hidden="true">←</span>Back to chat</a>
-          <a class="nav-item" href="/chat.html"><span aria-hidden="true">□</span>Chat</a>
-          <a class="nav-item" href="/knowledge.html"><span aria-hidden="true">◇</span>Knowledge base</a>
-          <a class="nav-item" href="/user.html"><span aria-hidden="true">◉</span>User</a>
-          <a class="nav-item" href="/playground.html"><span aria-hidden="true">▦</span>Playground</a>
-          <div class="admin-section-list reports-nav" aria-label="Reports navigation">
-            <h2 class="session-heading">Reports</h2>
-            <a class="nav-item" href="/reports.html"><span aria-hidden="true">▣</span>Overview</a>
-            <a class="nav-item" href="/logs.html"><span aria-hidden="true">≡</span>Logs</a>
-            <a class="nav-item" href="/review-runs.html"><span aria-hidden="true">↻</span>Review runs</a>
-            <a class="nav-item active" href="/system-health.html" aria-current="page"><span aria-hidden="true">✚</span>System health</a>
-            <a class="nav-item" href="/user-audit.html"><span aria-hidden="true">◎</span>User audit</a>
-          </div>
-          <a class="nav-item" href="/settings.html"><span aria-hidden="true">⚙</span>Settings</a>
+          <a class="nav-item" href="/" aria-label="Back to chat"><span aria-hidden="true">←</span>Back to chat</a><a class="nav-item" href="/chat.html"><span aria-hidden="true">□</span>Chat</a><a class="nav-item" href="/knowledge.html"><span aria-hidden="true">◇</span>Knowledge base</a><a class="nav-item" href="/user.html"><span aria-hidden="true">◉</span>User</a><a class="nav-item" href="/playground.html"><span aria-hidden="true">▦</span>Playground</a>
+          <details class="admin-section-list reports-nav" open><summary class="reports-summary"><span class="reports-summary-label">Reports</span><span class="reports-summary-chevron" aria-hidden="true">⌄</span></summary><div class="reports-nav-items" aria-label="Reports navigation"><a class="nav-item" href="/reports.html"><span aria-hidden="true">▣</span>Overview</a><a class="nav-item" href="/logs.html"><span aria-hidden="true">≡</span>Logs</a><a class="nav-item" href="/review-runs.html"><span aria-hidden="true">↻</span>Review runs</a><a class="nav-item active" href="/system-health.html" aria-current="page"><span aria-hidden="true">✚</span>System health</a><a class="nav-item" href="/user-audit.html"><span aria-hidden="true">◎</span>User audit</a><a class="nav-item" href="/settings.html"><span aria-hidden="true">⚙</span>Settings</a></div></details>
         </nav>
-        <section class="admin-section-list" aria-label="Admin workspace">
-          <h2 class="session-heading">Workspace</h2>
-          <div class="workspace-card"><strong>Switchboard Admin</strong><small>System status reporting.</small></div>
-        </section>
+        <section class="admin-section-list" aria-label="Admin workspace"><h2 class="session-heading">Workspace</h2><div class="workspace-card"><strong>Switchboard Admin</strong><small>System status reporting.</small></div></section>
         <div class="directory-card"><div class="status-row"><span class="status-dot online" aria-hidden="true"></span><span>System health</span></div><p>Directory, AI, storage, and admin-route status.</p></div>
       </aside>
-      <section class="admin-panel" aria-label="System health report">
-        <header class="chat-header admin-header">
-          <div class="admin-header-title"><h1>System health</h1><p>Monitor public status for the app and protected admin route availability.</p></div>
-          <div class="header-actions"><span class="admin-clock" id="menuClock" aria-live="polite"></span><div class="profile-menu"><button class="profile-settings" id="profileMenuButton" type="button" aria-label="Open profile menu" aria-haspopup="true" aria-expanded="false">👤</button><div class="profile-dropdown" id="profileDropdown" role="menu" hidden><a href="/update-profile.html" role="menuitem">Update Profile</a><button class="profile-logout" type="button" role="menuitem">Logout</button></div></div></div>
-        </header>
-        <div class="admin-scroll"><div class="admin-layout"><p class="admin-status" id="status">Loading system health...</p><section class="admin-card wide" id="systemHealthPage"><div class="card-head"><div><p class="section-kicker">Reports</p><h2>System health</h2><p class="card-subtitle">Public status from /api/status with clear protected-route context.</p></div></div><div class="health-grid" id="systemHealthReport">Loading system health...</div></section></div></div>
-      </section>
+      <section class="admin-panel" aria-label="System health report"><header class="chat-header admin-header"><div class="admin-header-title"><h1>System health</h1><p>Monitor public status for the app and protected admin route availability.</p></div><div class="header-actions"><span class="admin-clock" id="menuClock" aria-live="polite"></span><div class="profile-menu"><button class="profile-settings" id="profileMenuButton" type="button" aria-label="Open profile menu" aria-haspopup="true" aria-expanded="false">👤</button><div class="profile-dropdown" id="profileDropdown" role="menu" hidden><a href="/update-profile.html" role="menuitem">Update Profile</a><button class="profile-logout" type="button" role="menuitem">Logout</button></div></div></div></header><div class="admin-scroll"><div class="admin-layout"><p class="admin-status" id="status">Loading system health...</p><section class="admin-card wide" id="systemHealthPage"><div class="card-head"><div><p class="section-kicker">Reports</p><h2>System health</h2><p class="card-subtitle">Public status from /api/status with clear protected-route context.</p></div></div><div class="health-grid" id="systemHealthReport">Loading system health...</div></section></div></div></section>
     </main>
     <script src="reports.js"></script>
   </body>
