@@ -27,13 +27,20 @@ The `web/` directory contains a Render-ready Express app that serves a plain HTM
   - `/chat.html` for chat review and selected-chat attachments.
   - `/knowledge.html` for the Knowledge base.
   - `/user.html` for User management, profile settings, and the Manage users action.
+  - `/playground.html` for task, project, and board planning views.
   - `/settings.html` for Settings, Review runs, and System health.
+  - `/reports.html` for the Reports overview.
+  - `/logs.html` for combined review-run and user-audit logs.
+  - `/review-runs.html` for review workflow history.
+  - `/system-health.html` for system health reporting.
+  - `/user-audit.html` for user-management audit events.
   - `/update-profile.html` for the current user's backend-backed profile photo, name, email, and password form.
   - `/login.html` for email/password login and post-logout redirects.
   - `/admin.html` redirects to `/chat.html` for backward compatibility.
 - Real user login sessions are backed by `/api/auth/login`, `/api/auth/logout`, and `user_sessions` storage. Owner/admin sessions can access all `/api/admin/*` APIs; non-admin sessions can update only their own profile.
 - Profile updates are saved through `/api/profile` instead of browser-local profile storage. Password changes require the current password before the backend updates the password hash.
-- Admin navigation uses Back to chat, Chat, Knowledge base, User, and Settings. Admin logout is available from the top-header profile menu.
+- Admin navigation uses Back to chat, Chat, Knowledge base, User, Playground, a Reports section, and Settings. Admin logout is available from the top-header profile menu.
+- Admin Reports groups Overview, Logs, Review runs, System health, and User audit pages. Reports load public `/api/status` data and use protected admin summary, review-run, and user-audit routes when an owner/admin session or admin token is already available.
 - Admin pages share the chat UI shell, theme tokens, fixed desktop sidebar, independently scrolling right panel, and reload-safe theme behavior.
 - Admin Settings is organized into Preferences, Access and security, Review runs, System health, and Diagnostics sections with standardized `Ready`, `Loaded`, `Public view`, `Storage-only`, and `Error` status badges.
 - Admin Settings includes a Light / Dark / System theme preference control. Explicit Light and Dark choices are restored after reload, while System follows the visitor's device preference.
@@ -148,7 +155,7 @@ The review workflow is implemented as an idempotent backend route and optional b
 - Protected user-management routes, user creation/listing/loading/updating, duplicate email handling, disable/reactivate actions, and audit-event creation.
 - Real auth/profile behavior: failed and successful login, session profile reads, backend-backed profile updates, current-password verification for password changes, session-backed owner/admin access to all `/api/admin/*` routes, logout revocation, non-admin rejection from admin APIs, and new-password login.
 - User page controls for search, create/edit fields, role/status selection, password entry, audit events, and backend API wiring.
-- Admin navigation routes, page ownership for Chat, Knowledge base, User, Settings, nested Attachments, nested Review runs, nested System health, Settings section structure, standardized Settings status badges, Settings Light / Dark / System theme preference markup, persistence keys, reload restore behavior, System-mode handling, the profile dropdown, Update Profile form, Logout redirect, profile-menu-only admin logout, and the Mac-style clock wiring.
+- Admin navigation routes, page ownership for Chat, Knowledge base, User, Playground, Settings, Reports, Logs, Review runs, System health, and User audit, plus nested Attachments, Settings section structure, standardized Settings status badges, Settings Light / Dark / System theme preference markup, persistence keys, reload restore behavior, System-mode handling, the profile dropdown, Update Profile form, Logout redirect, profile-menu-only admin logout, and the Mac-style clock wiring.
 
 ## GitHub Actions / auto-deploy
 
