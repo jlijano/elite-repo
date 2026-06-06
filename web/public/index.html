@@ -48,7 +48,18 @@
       }
 
       .messages {
+        display: flex;
+        flex-direction: column;
         padding-inline: clamp(12px, 4vw, 24px);
+      }
+
+      .start-chat-empty {
+        margin: auto;
+        color: var(--text);
+        font-size: clamp(1.5rem, 4vw, 2.5rem);
+        font-weight: 800;
+        line-height: 1.1;
+        text-align: center;
       }
 
       .composer {
@@ -151,7 +162,7 @@
         <form class="composer" id="chatForm">
           <div class="composer-agent-bar">
             <span class="brand-mark small" aria-hidden="true">★</span>
-            <strong id="currentChatTitle">Switchboard Agent</strong>
+            <strong id="currentChatTitle">Start new chat</strong>
           </div>
           <div class="attachment-tray" id="attachmentTray" aria-live="polite"></div>
           <div class="composer-input-row">
@@ -168,7 +179,7 @@
               id="messageInput"
               name="message"
               rows="1"
-              placeholder="Message Switchboard_Agent"
+              placeholder="Start new chat"
               autocomplete="off"
             ></textarea>
             <button class="send-button" type="submit" id="sendButton" aria-label="Send message">↑</button>
