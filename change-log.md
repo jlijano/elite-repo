@@ -2,6 +2,7 @@
 
 ## [Unreleased]
 
+- Added an admin profile dropdown with Update Profile and Logout actions, plus dedicated `/update-profile.html` and `/login.html` pages.
 - Moved the admin light/dark mode control out of the top header and into the Settings page.
 - Split the admin dashboard into dedicated static pages for Chat, Knowledge base, User, and Settings, with `/admin.html` redirecting to `/chat.html`.
 - Moved Attachments into the Chat page and moved Review runs plus System health into Settings.
