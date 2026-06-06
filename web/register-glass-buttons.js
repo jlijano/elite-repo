@@ -4,13 +4,23 @@ const express = require("express");
 
 const originalStatic = express.static;
 const glassCssPath = path.join(__dirname, "public", "glass-buttons.css");
+const flatSidebarCssPath = path.join(__dirname, "public", "flat-sidebar.css");
 
-function readGlassCss() {
+function readCssFile(filePath) {
   try {
-    return fs.readFileSync(glassCssPath, "utf8");
+    return fs.readFileSync(filePath, "utf8");
   } catch (error) {
     return "";
   }
+}
+
+function readGlobalPolishCss() {
+  return [
+    "/* Global glass button polish */",
+    readCssFile(glassCssPath),
+    "/* Flat sidebar navigation */",
+    readCssFile(flatSidebarCssPath)
+  ].join("\n");
 }
 
 express.static = function patchedStatic(root, options) {
@@ -28,7 +38,7 @@ express.static = function patchedStatic(root, options) {
       if (error) return staticMiddleware(req, res, next);
       res.type("text/css");
       res.set("Cache-Control", "public, max-age=0, must-revalidate");
-      res.send(`${css}\n\n/* Global glass button polish */\n${readGlassCss()}`);
+      res.send(`${css}\n\n${readGlobalPolishCss()}`);
     });
   };
 };
