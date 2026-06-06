@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+- Linked the bootstrap account policy from README and documented that seeded users are bootstrap/demo-only until production hardening moves seeding behind an explicit path.
+- Extracted `/user.html` page-specific CSS and JavaScript into `web/public/user-page.css` and `web/public/user-page.js`, added syntax validation for the new script, and updated user-page contract coverage.
 - Added a visible X close state to the mobile admin navigation button so users can close the full-screen menu without leaving the current module.
 - Changed the mobile admin navigation to an icon-only burger button on the left that opens a full-screen navigation menu.
 - Added a mobile admin Menu button that opens the hidden admin navigation options as a dropdown on phone and small-screen views.
