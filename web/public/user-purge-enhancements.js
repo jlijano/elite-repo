@@ -87,6 +87,31 @@
         transform: scaleX(1);
       }
 
+      body[data-admin-page="user"] .users-table td:first-child .user-name-edit-trigger {
+        width: auto;
+        max-width: 100%;
+        min-height: 0;
+        display: inline-flex;
+        flex-direction: row;
+        align-items: center;
+        justify-content: flex-start;
+        gap: 0;
+        vertical-align: middle;
+        line-height: 1.35;
+      }
+
+      body[data-admin-page="user"] .users-table td:first-child .user-name-edit-trigger > span:first-child {
+        font-weight: 800;
+      }
+
+      body[data-admin-page="user"] .users-table td:first-child .user-name-edit-trigger:hover,
+      body[data-admin-page="user"] .users-table td:first-child .user-name-edit-trigger:focus,
+      body[data-admin-page="user"] .users-table td:first-child .user-name-edit-trigger:focus-visible {
+        background: transparent !important;
+        border: 0 !important;
+        box-shadow: none !important;
+      }
+
       .user-edit-action-hidden {
         display: none !important;
       }
