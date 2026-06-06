@@ -50,6 +50,7 @@ The `web/` directory contains a Render-ready Express app that serves a plain HTM
 - Profile updates are saved through `/api/profile` instead of browser-local profile storage. Password changes require the current password, must satisfy the stricter password policy, rotate the current session token, and revoke the old session token.
 - Login is rate-limited after repeated failures, and login, logout, user creation/update, and profile-change activity is written to user audit events.
 - Admin navigation uses Back to chat, Chat, Knowledge base, User, Playground, a Reports section, and Settings. The Playground submenu is ordered Board, Projects, Tasks, Notes, and Automation. Admin logout is available from the top-header profile menu.
+- Playground Projects includes a Kanban, List, and Calendar view switcher, with Kanban as the default view and List/Calendar placeholders staged for future data-backed views.
 - Admin Reports groups Overview, Logs, Review runs, System health, and User audit pages. Reports load public `/api/status` data and use protected admin summary, review-run, and user-audit routes when an owner/admin session or admin token is already available.
 - Admin pages share the chat UI shell, theme tokens, fixed desktop sidebar, independently scrolling right panel, and reload-safe theme behavior.
 - Admin Settings is organized into Preferences, Access and security, Review runs, System health, and Diagnostics sections with standardized `Ready`, `Loaded`, `Public view`, `Storage-only`, and `Error` status badges.
