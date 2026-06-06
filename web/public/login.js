@@ -80,10 +80,10 @@ function explainReason() {
     clearReason(reason);
     clearLoginStatus();
   }
-  if (reason === "github-user-missing") setLoginStatus("No active Switchboard user matches that GitHub email.", true);
+  if (reason === "github-access-denied") setLoginStatus("That GitHub-linked account is disabled. Contact an owner or admin for access.", true);
   if (reason === "github-email-missing") setLoginStatus("GitHub did not provide a verified email address.", true);
   if (reason === "github-failed") setLoginStatus("GitHub login could not be completed.", true);
-  if (reason === "google-user-missing") setLoginStatus("No active Switchboard user matches that Google email.", true);
+  if (reason === "google-access-denied") setLoginStatus("That Google-linked account is disabled. Contact an owner or admin for access.", true);
   if (reason === "google-email-missing") setLoginStatus("Google did not provide a verified email address.", true);
   if (reason === "google-failed") setLoginStatus("Google login could not be completed.", true);
 }
