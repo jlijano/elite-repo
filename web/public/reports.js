@@ -1,5 +1,48 @@
 const reportsAdminTokenStorageKey = "switchboard-admin-token";
 const reportsSessionTokenStorageKey = "switchboard-session-token";
+const reportsEntraPages = [
+  { href: "/company.html", label: "Company", icon: "▣" },
+  { href: "/department.html", label: "Department", icon: "◇" },
+  { href: "/group.html", label: "Group", icon: "▦" },
+  { href: "/user.html", label: "User", icon: "◉" }
+];
+
+function initReportsEntraNav() {
+  const nav = document.querySelector(".primary-nav");
+  const userLink = nav?.querySelector('a.nav-item[href="/user.html"]');
+  if (!nav || !userLink || nav.querySelector(".entra-nav")) return;
+
+  const path = window.location.pathname || "/";
+  const isEntraPage = reportsEntraPages.some((page) => page.href === path);
+  const details = document.createElement("details");
+  details.className = "admin-section-list reports-nav entra-nav";
+  details.open = true;
+
+  const summary = document.createElement("summary");
+  summary.className = `reports-summary${isEntraPage ? " active" : ""}`;
+  summary.innerHTML = '<span class="reports-summary-label"><span aria-hidden="true">◉</span>Entra</span><span class="reports-summary-chevron" aria-hidden="true">⌄</span>';
+
+  const items = document.createElement("div");
+  items.className = "reports-nav-items entra-nav-items";
+  items.setAttribute("aria-label", "Entra navigation");
+
+  for (const page of reportsEntraPages) {
+    const link = document.createElement("a");
+    link.className = `nav-item${page.href === path ? " active" : ""}`;
+    link.href = page.href;
+    if (page.href === path) link.setAttribute("aria-current", "page");
+    const icon = document.createElement("span");
+    icon.setAttribute("aria-hidden", "true");
+    icon.textContent = page.icon;
+    link.append(icon, page.label);
+    items.appendChild(link);
+  }
+
+  details.append(summary, items);
+  userLink.replaceWith(details);
+}
+
+initReportsEntraNav();
 
 const reportsEls = {
   status: document.getElementById("status"),
