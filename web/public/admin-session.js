@@ -11,6 +11,7 @@
     "/group.html",
     "/user.html",
     "/playground.html",
+    "/playground-tasks.html",
     "/reports.html",
     "/logs.html",
     "/review-runs.html",
