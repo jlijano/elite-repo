@@ -555,6 +555,8 @@ function attachUserManagementRoutes(app, options = {}) {
     try { res.json({ events: await store.listAuditEvents(req.query.targetUserId || "") }); }
     catch (error) { sendError(res, error, "Could not load user audit events."); }
   });
+
+  return store;
 }
 
 module.exports = { attachUserManagementRoutes, createUserManagementStore };
