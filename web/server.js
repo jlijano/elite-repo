@@ -19,7 +19,7 @@ const knowledgeFiles = ["agent-directory.md", "routing-rules.md", "memory-rules.
 const scheduledReviewIntervalMs = Number(process.env.REVIEW_RUN_INTERVAL_MS || 0);
 const minReviewIntervalMs = 60000;
 const maxAttachments = 4;
-const maxAttachmentChars = 50000;
+const maxAttachmentChars = 2000000;
 const maxAttachmentNameLength = 160;
 const anonymousChatRetentionDays = 30;
 const pendingReviewReply =
@@ -37,7 +37,7 @@ Missing skill or agent needed:
 Risk level:`;
 
 app.use(cors());
-app.use(express.json({ limit: "2mb" }));
+app.use(express.json({ limit: "4mb" }));
 app.use(express.static(publicDir));
 
 const db = createStore();
@@ -93,7 +93,7 @@ function cleanContext(context = {}) {
       .map(([key, value]) => {
         if (/secret|token|password|cookie|key/i.test(key)) return [key, "[REDACTED]"];
         if (key === "attachments") return [key, cleanAttachments(value)];
-        if (typeof value === "string") return [key, redact(value).slice(0, 2000)];
+        if (typeof value === "string") return [key, redact(value).slice(0, maxAttachmentChars)];
         if (typeof value === "number" || typeof value === "boolean" || value === null) return [key, value];
         return [key, "[unsupported]"];
       })
@@ -526,7 +526,7 @@ app.get("/api/status", async (req, res) => {
   const knowledge = readKnowledgeFiles();
   let storageAvailable = true;
   try { await db.health(); } catch { storageAvailable = false; }
-  res.json({ ok: true, directoryAvailable: knowledge.directoryAvailable, filesLoaded: knowledge.filesLoaded, aiAvailable: Boolean(process.env.OPENAI_API_KEY), storageAvailable, storageMode: db.mode });
+  res.json({ ok: true, directoryAvailable: knowledge.directoryAvailable, filesLoaded: knowledge.filesLoaded, aiAvailable: false, storageAvailable, storageMode: db.mode });
 });
 
 app.get("/api/users/available-chat-users", async (req, res) => {
@@ -594,7 +594,7 @@ app.post("/api/reviews/run", async (req, res) => {
 });
 
 app.get("/api/admin/summary", requireAdmin, async (req, res) => {
-  res.json({ summary: await db.getAdminSummary(), status: { aiAvailable: Boolean(process.env.OPENAI_API_KEY), storageMode: db.mode } });
+  res.json({ summary: await db.getAdminSummary(), status: { aiAvailable: false, storageMode: db.mode } });
 });
 app.get("/api/admin/chats", requireAdmin, async (req, res) => { res.json({ chats: await db.listChats({ includeArchived: true }) }); });
 app.get("/api/admin/chats/:chatId", requireAdmin, async (req, res) => {
@@ -627,31 +627,19 @@ app.post("/api/chat", async (req, res) => {
       if (existingChat.archivedAt) return res.status(409).json({ error: "Archived chats cannot receive new messages. Start a new chat and try again." });
     }
     savedUser = await db.saveMessage(chatId, "user", clean, { source: "api/chat", attachments });
-    if (!process.env.OPENAI_API_KEY) {
-      const assistant = await db.saveMessage(chatId, "assistant", pendingReviewReply, { aiAvailable: false, pendingReview: true });
-      return res.json({ chatId, reply: pendingReviewReply, pendingReview: true, messages: [savedUser, assistant], ...knowledge, aiAvailable: false, storageMode: db.mode });
-    }
-    const chat = await db.getChat(chatId);
-    const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-    const completion = await client.chat.completions.create({
-      model: process.env.OPENAI_MODEL || "gpt-4.1-mini",
-      temperature: 0.2,
-      messages: [
-        { role: "system", content: systemPrompt },
-        { role: "system", content: await aiContext(knowledge) },
-        ...historyForAi(chat?.messages?.filter((message) => message.id !== savedUser.id) || req.body.history),
-        { role: "user", content: userMessageForAi(clean, attachments) }
-      ]
-    });
-    const reply = completion.choices?.[0]?.message?.content?.trim();
-    if (!reply) throw new Error("The assistant returned an empty response.");
-    const assistant = await db.saveMessage(chatId, "assistant", reply, { aiAvailable: true, model: process.env.OPENAI_MODEL || "gpt-4.1-mini" });
-    res.json({ chatId, reply, pendingReview: false, messages: [savedUser, assistant], ...knowledge, aiAvailable: true, storageMode: db.mode });
+    return res.json({ chatId, reply: null, pendingReview: false, messageSaved: true, messages: [savedUser], ...knowledge, aiAvailable: false, storageMode: db.mode });
   } catch (error) {
-    const reply = savedUser ? "The Switchboard Agent could not generate an AI response right now. Your message was saved for review." : "The Switchboard Agent could not save your message right now. Please try again.";
-    if (chatId && savedUser) await db.saveMessage(chatId, "assistant", reply, { aiError: true, pendingReview: true }).catch(() => {});
     console.error("Chat request failed:", error.message);
-    res.status(savedUser ? 200 : 503).json({ chatId, reply, pendingReview: Boolean(savedUser), messageSaved: Boolean(savedUser), ...knowledge, aiAvailable: Boolean(process.env.OPENAI_API_KEY), storageMode: db.mode });
+    res.status(savedUser ? 200 : 503).json({
+      chatId,
+      reply: null,
+      pendingReview: false,
+      messageSaved: Boolean(savedUser),
+      messages: savedUser ? [savedUser] : [],
+      ...knowledge,
+      aiAvailable: false,
+      storageMode: db.mode
+    });
   }
 });
 
