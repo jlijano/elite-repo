@@ -112,6 +112,7 @@
           <button class="nav-item" data-target="attachmentsSection" type="button"><span aria-hidden="true">▤</span>Attachments</button>
           <button class="nav-item" data-target="adminAccessSection" type="button"><span aria-hidden="true">◉</span>Admin access</button>
           <button class="nav-item" data-target="systemHealthSection" type="button"><span aria-hidden="true">●</span>System health</button>
+          <button class="nav-item" data-target="userSection" type="button"><span aria-hidden="true">◉</span>User</button>
           <button class="nav-item" data-target="settingsSection" type="button"><span aria-hidden="true">⚙</span>Settings</button>
         </nav>
 
@@ -251,6 +252,21 @@
                 <div class="list compact-list" id="systemHealth">Loading system health...</div>
               </section>
 
+              <section class="dashboard-widget" id="userSection" data-widget="user" hidden>
+                <div class="widget-head">
+                  <div>
+                    <h2>User</h2>
+                    <p class="widget-subtitle">User-account status and management context.</p>
+                  </div>
+                </div>
+                <div class="list compact-list" id="userManagement">
+                  <article class="item">
+                    <div class="row"><span>User management API</span><small>Not configured</small></div>
+                    <p>No separate user-management API is configured yet. Admin access and protected route status remain available in the Admin Access widget.</p>
+                  </article>
+                </div>
+              </section>
+
               <section class="dashboard-widget wide" id="settingsSection" data-widget="settings">
                 <div class="widget-head">
                   <div>
@@ -315,6 +331,8 @@
         knowledge: document.getElementById("knowledge"),
         runs: document.getElementById("runs"),
         users: document.getElementById("users"),
+        userSection: document.getElementById("userSection"),
+        userManagement: document.getElementById("userManagement"),
         fileManagement: document.getElementById("fileManagement"),
         systemHealth: document.getElementById("systemHealth"),
         logoutButton: document.getElementById("logoutButton"),
@@ -418,6 +436,12 @@
         els.chatReviewSection.hidden = false;
         setActiveNav("chatReviewSection");
         els.chatReviewSection.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
+
+      function revealUserSection() {
+        els.userSection.hidden = false;
+        setActiveNav("userSection");
+        els.userSection.scrollIntoView({ behavior: "smooth", block: "start" });
       }
 
       async function fetchJson(url, options = {}, useAdminHeaders = false) {
@@ -606,6 +630,10 @@
           const targetId = button.dataset.target;
           if (targetId === "chatReviewSection") {
             revealChatReviewSection();
+            return;
+          }
+          if (targetId === "userSection") {
+            revealUserSection();
             return;
           }
           setActiveNav(targetId);
