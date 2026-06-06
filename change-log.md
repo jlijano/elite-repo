@@ -2,6 +2,7 @@
 
 ## [Unreleased]
 
+- Added shared-chat participant tracking with numbered share links, backend typing status endpoints, stored participant device/share metadata on messages, inline attachment previews, and extra message padding so chat content does not overlap the composer.
 - Fixed the Playground task modal Save action so it uses one submit path, shows saving progress, and displays backend errors in the modal instead of appearing inactive.
 - Made shared chat links refresh the active conversation automatically and label messages as `Original` or `Shared link` so participants can tell where each message came from.
 - Added a composer plus menu with Share link, Attach image, Take a photo, Attach a file, and Send voice message actions; shared chat links open the same conversation for anyone with the link.
