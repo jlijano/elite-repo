@@ -26,7 +26,8 @@
         <h1>Login</h1>
         <p class="admin-status" id="loginStatus" hidden>Ready to log in.</p>
         <form class="management-form" id="loginForm" autocomplete="on">
-          <a class="secondary-action" id="githubLogin" href="/api/auth/github">Continue with GitHub</a>
+          <a class="secondary-action" id="googleLogin" href="/api/auth/google" hidden>Continue with Google</a>
+          <a class="secondary-action" id="githubLogin" href="/api/auth/github" hidden>Continue with GitHub</a>
           <label>
             <span>Email address</span>
             <input id="loginEmail" name="email" type="email" autocomplete="email" required />
