@@ -2,6 +2,25 @@ const taskListSessionTokenKey = "switchboard-session-token";
 const taskListAdminTokenKey = "switchboard-admin-token";
 const taskListStatusLabels = { backlog: "Backlog", todo: "To Do", in_progress: "In Progress", review: "Review", done: "Done" };
 const taskListPriorityLabels = { low: "Low", medium: "Medium", high: "High" };
+const taskListCommonFieldTypes = [
+  ["status", "Status"],
+  ["priority", "Priority"],
+  ["assignee", "Assignee"],
+  ["due_date", "Due Date"],
+  ["date", "Date"],
+  ["timeline", "Timeline"],
+  ["text", "Text"],
+  ["number", "Number"],
+  ["currency", "Currency"],
+  ["link", "Link"],
+  ["email", "Email"],
+  ["phone", "Phone"],
+  ["checkbox", "Checkbox"],
+  ["dropdown", "Dropdown"],
+  ["files", "Files"],
+  ["tags", "Tags"],
+  ["progress", "Progress"]
+];
 
 const taskListState = {
   tasks: [],
@@ -57,6 +76,14 @@ function taskListAssignees(task) {
 
 function taskListOptions(items, selected, label) {
   return [`<option value="">${taskListHtml(label)}</option>`, ...items.map((item) => `<option value="${taskListHtml(item.id)}"${item.id === selected ? " selected" : ""}>${taskListHtml(item.title || item.name || item.email)}</option>`)].join("");
+}
+
+function commonFieldTypeOptions() {
+  return taskListCommonFieldTypes.map(([value, label]) => `<option value="${taskListHtml(value)}">${taskListHtml(label)}</option>`).join("");
+}
+
+function commonFieldLabel(value) {
+  return taskListCommonFieldTypes.find(([key]) => key === value)?.[1] || "Text";
 }
 
 function renderTaskListFilters() {
@@ -141,8 +168,12 @@ function injectTaskListModal() {
         </div>
         <details class="task-custom-field-panel" id="taskListCustomFieldPanel">
           <summary>Add custom fields</summary>
+          <div class="common-field-picker">
+            <label><span>Common field type</span><select id="taskListCommonFieldType">${commonFieldTypeOptions()}</select></label>
+            <button type="button" class="secondary-action" id="taskListAddCommonField">Add Selected</button>
+          </div>
           <div class="custom-field-builder" id="taskListCustomFields" aria-label="Custom fields"></div>
-          <button type="button" class="secondary-action" id="taskListAddCustomField">Add Field</button>
+          <button type="button" class="secondary-action" id="taskListAddCustomField">Add Blank Field</button>
         </details>
         <div class="playground-modal-actions"><button type="button" id="taskListTaskCancel">Cancel</button><button class="primary-action" id="taskListTaskSave" type="button">Create Task</button></div>
       </form>
@@ -151,6 +182,7 @@ function injectTaskListModal() {
   document.getElementById("taskListTaskModalClose")?.addEventListener("click", closeTaskListModal);
   document.getElementById("taskListTaskCancel")?.addEventListener("click", closeTaskListModal);
   document.getElementById("taskListTaskSave")?.addEventListener("click", () => document.getElementById("taskListTaskForm")?.requestSubmit());
+  document.getElementById("taskListAddCommonField")?.addEventListener("click", addTaskListCommonField);
   document.getElementById("taskListAddCustomField")?.addEventListener("click", () => addTaskListCustomField());
   document.getElementById("taskListTaskModal")?.addEventListener("click", (event) => {
     if (event.target.id === "taskListTaskModal") closeTaskListModal();
@@ -162,6 +194,11 @@ function injectTaskListModal() {
   }));
 }
 
+function addTaskListCommonField() {
+  const selected = document.getElementById("taskListCommonFieldType")?.value || "text";
+  addTaskListCustomField(commonFieldLabel(selected));
+}
+
 function addTaskListCustomField(name = "", value = "") {
   const container = document.getElementById("taskListCustomFields");
   if (!container) return;
@@ -170,7 +207,7 @@ function addTaskListCustomField(name = "", value = "") {
   row.innerHTML = `<label><span>Field</span><input data-custom-field-name maxlength="60" value="${taskListHtml(name)}" placeholder="Owner" /></label><label><span>Value</span><input data-custom-field-value maxlength="240" value="${taskListHtml(value)}" placeholder="Design" /></label><button type="button" class="icon-button" aria-label="Remove custom field">x</button>`;
   row.querySelector("button")?.addEventListener("click", () => row.remove());
   container.appendChild(row);
-  row.querySelector("input")?.focus();
+  row.querySelector("[data-custom-field-value]")?.focus();
 }
 
 function setTaskListModalMessage(message = "", error = false) {
@@ -184,7 +221,7 @@ function setTaskListModalMessage(message = "", error = false) {
 function setTaskListModalBusy(busy) {
   const form = document.getElementById("taskListTaskForm");
   const saveButton = document.getElementById("taskListTaskSave");
-  form?.querySelectorAll("input, button").forEach((field) => {
+  form?.querySelectorAll("input, select, button").forEach((field) => {
     if (["taskListTaskModalClose", "taskListTaskCancel"].includes(field.id)) return;
     field.disabled = busy;
   });
