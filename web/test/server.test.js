@@ -115,6 +115,9 @@ test("stores chat messages and returns the pending-review chat fallback", async 
   });
   assert.equal(created.response.status, 201);
   const chatId = created.data.chat.id;
+  assert.equal(created.data.chat.isAnonymous, true);
+  assert.ok(created.data.chat.expiresAt);
+  assert.ok(new Date(created.data.chat.expiresAt).getTime() > Date.now() + 29 * 24 * 60 * 60 * 1000);
 
   const saved = await jsonFetch(`/api/chats/${chatId}/messages`, {
     method: "POST",
@@ -200,6 +203,15 @@ test("lists only same-scope active users for logged-in chat users", async () => 
   const names = available.data.users.map((user) => user.name).sort();
   assert.deepEqual(names, ["Company Match", "Department Match", "Group Match"]);
   assert.deepEqual(available.data.users.find((user) => user.name === "Company Match").sharedScopes, ["company"]);
+
+  const loggedChat = await jsonFetch("/api/chats", {
+    method: "POST",
+    headers: { "x-session-token": login.data.sessionToken },
+    body: JSON.stringify({ title: "Logged-in chat" })
+  });
+  assert.equal(loggedChat.response.status, 201);
+  assert.equal(loggedChat.data.chat.isAnonymous, false);
+  assert.equal(loggedChat.data.chat.expiresAt, null);
 });
 
 test("stores text attachments with chat messages", async () => {
