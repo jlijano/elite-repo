@@ -31,7 +31,7 @@ The `web/` directory contains a Render-ready Express app that serves a plain HTM
   - `/admin.html` redirects to `/chat.html` for backward compatibility.
 - Admin navigation uses Back to chat, Chat, Knowledge base, User, Settings, and Logout. Attachments live inside Chat; Review runs and System health live inside Settings.
 - Admin pages share the chat UI shell, theme tokens, persistent light/dark mode behavior, fixed desktop sidebar, and independently scrolling right panel.
-- Admin top headers include a Mac-style current day/time display and a user profile settings send icon.
+- Admin top headers include a Mac-style current day/time display and a user profile settings person icon.
 - Admin pages no longer expose visible token-entry, Login, or Run Review controls; protected backend admin routes still require `ADMIN_TOKEN` for management-only data.
 - Knowledge base includes source-controlled project knowledge cards plus review-created backend knowledge when an admin session is available.
 - Chat and knowledge search controls filter cached management data, keep selected chats highlighted, and show clear loading and error states during admin actions.
