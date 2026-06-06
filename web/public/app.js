@@ -13,6 +13,8 @@ const themeToggleIcon = document.querySelector(".theme-toggle-icon");
 const newChatButton = document.getElementById("newChatButton");
 const mobileNewChatButton = document.getElementById("mobileNewChatButton");
 const chatList = document.getElementById("chatList");
+const availableUsersPanel = document.getElementById("availableUsersPanel");
+const availableUsersList = document.getElementById("availableUsersList");
 const currentChatTitle = document.getElementById("currentChatTitle");
 const filePickerButton = document.getElementById("filePickerButton");
 const fileInput = document.getElementById("fileInput");
@@ -20,6 +22,7 @@ const attachmentTray = document.getElementById("attachmentTray");
 
 const themeStorageKey = "switchboard-theme";
 const chatStorageKey = "switchboard-current-chat";
+const sessionTokenStorageKey = "switchboard-session-token";
 const refreshIntervalMs = 40000;
 const maxAttachmentFiles = 4;
 const maxAttachmentBytes = 180 * 1024;
@@ -49,12 +52,29 @@ function getStored(key) {
   }
 }
 
+function getSessionStored(key) {
+  try {
+    return sessionStorage.getItem(key);
+  } catch (error) {
+    return null;
+  }
+}
+
 function removeStored(key) {
   try {
     localStorage.removeItem(key);
   } catch (error) {
     return;
   }
+}
+
+function currentSessionToken() {
+  return getSessionStored(sessionTokenStorageKey) || "";
+}
+
+function authHeaders() {
+  const token = currentSessionToken();
+  return token ? { "x-session-token": token } : {};
 }
 
 function saveCurrentChat(chatId) {
@@ -110,6 +130,18 @@ function formatBytes(value) {
 
 function attachmentNames(attachments = []) {
   return attachments.map((attachment) => attachment.name).join(", ");
+}
+
+function initials(name = "") {
+  const words = String(name).trim().split(/\s+/).filter(Boolean).slice(0, 2);
+  return words.map((word) => word[0]?.toUpperCase() || "").join("") || "U";
+}
+
+function scopeLabel(scope) {
+  if (scope === "company") return "Company";
+  if (scope === "department") return "Department";
+  if (scope === "group") return "Group";
+  return scope;
 }
 
 function setStatus({ directoryAvailable, filesLoaded: loadedFiles, error, aiAvailable, storageAvailable, storageMode } = {}) {
@@ -318,6 +350,46 @@ function renderChatList(chats = []) {
   }
 }
 
+function renderAvailableUsers(users = []) {
+  if (!availableUsersPanel || !availableUsersList) return;
+  availableUsersPanel.hidden = false;
+  availableUsersList.innerHTML = "";
+  if (!users.length) {
+    availableUsersList.innerHTML = `<p class="chat-list-empty">No available users in your company, department, or group.</p>`;
+    return;
+  }
+  for (const user of users) {
+    const scopes = Array.isArray(user.sharedScopes) && user.sharedScopes.length
+      ? user.sharedScopes.map(scopeLabel).join(", ")
+      : "Shared access";
+    const row = document.createElement("div");
+    row.className = "agent-pill";
+    row.setAttribute("role", "listitem");
+    row.setAttribute("title", `${user.email || user.name} · ${scopes}`);
+    row.innerHTML = `<span class="brand-mark small" aria-hidden="true">${escapeHtml(initials(user.name))}</span><span>${escapeHtml(user.name || user.email || "User")} · ${escapeHtml(scopes)}</span>`;
+    availableUsersList.appendChild(row);
+  }
+}
+
+async function loadAvailableUsers() {
+  if (!availableUsersPanel || !availableUsersList) return [];
+  const token = currentSessionToken();
+  if (!token) {
+    availableUsersPanel.hidden = true;
+    availableUsersList.innerHTML = "";
+    return [];
+  }
+  try {
+    const data = await requestJson("/api/users/available-chat-users", { headers: authHeaders() });
+    renderAvailableUsers(data.users || []);
+    return data.users || [];
+  } catch (error) {
+    availableUsersPanel.hidden = false;
+    availableUsersList.innerHTML = `<p class="chat-list-empty">${escapeHtml(error.message)}</p>`;
+    return [];
+  }
+}
+
 async function loadStatus() {
   try {
     setStatus(await requestJson("/api/status"));
@@ -382,6 +454,7 @@ async function ensureChatSession() {
 
 async function refreshCurrentSession() {
   await loadStatus();
+  await loadAvailableUsers();
   const chats = await loadChats();
   const active = chats.find((chat) => chat.id === currentChatId);
   if (active) currentChatTitle.textContent = active.title || "New chat";
@@ -448,6 +521,7 @@ mobileNewChatButton.addEventListener("click", () => createChat().catch((error) =
 initializeThemeToggle();
 renderSelectedAttachments();
 loadStatus();
+loadAvailableUsers();
 ensureChatSession().catch((error) => {
   renderWelcome();
   addMessage("assistant", error.message, { error: true, skipHistory: true });
