@@ -110,6 +110,22 @@
     button.setAttribute("aria-hidden", "true");
   }
 
+  function openUserDialogFallback() {
+    const dialog = document.getElementById("userDialog");
+    if (dialog && !dialog.open) {
+      if (typeof dialog.showModal === "function") {
+        dialog.showModal();
+      } else {
+        dialog.setAttribute("open", "");
+      }
+    }
+
+    window.setTimeout(() => {
+      document.getElementById("userPhotoUrl")?.dispatchEvent(new Event("input", { bubbles: true }));
+      document.getElementById("userName")?.focus();
+    }, 0);
+  }
+
   function enhanceNameTrigger(row, editButton) {
     if (!editButton || row.querySelector(".user-name-edit-trigger")) return;
     const titleRow = row.querySelector(".row");
@@ -119,6 +135,7 @@
     const trigger = document.createElement("button");
     trigger.type = "button";
     trigger.className = "user-name-edit-trigger";
+    trigger.dataset.userEdit = editButton.dataset.userEdit || "";
     trigger.setAttribute("aria-label", `Edit ${name.textContent?.trim() || "user"}`);
 
     titleRow.replaceChild(trigger, name);
@@ -128,6 +145,7 @@
       event.preventDefault();
       event.stopPropagation();
       editButton.click();
+      window.setTimeout(openUserDialogFallback, 0);
     });
   }
 
