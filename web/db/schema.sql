@@ -102,6 +102,22 @@ CREATE INDEX IF NOT EXISTS user_audit_events_target_created_at_idx
 CREATE INDEX IF NOT EXISTS user_audit_events_actor_created_at_idx
   ON user_audit_events(actor_user_id, created_at DESC);
 
+CREATE TABLE IF NOT EXISTS user_verification_tokens (
+  id UUID PRIMARY KEY,
+  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  token_hash TEXT NOT NULL UNIQUE,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  expires_at TIMESTAMPTZ NOT NULL,
+  used_at TIMESTAMPTZ
+);
+
+CREATE INDEX IF NOT EXISTS user_verification_tokens_user_idx
+  ON user_verification_tokens(user_id, created_at DESC);
+
+CREATE INDEX IF NOT EXISTS user_verification_tokens_active_idx
+  ON user_verification_tokens(token_hash, expires_at)
+  WHERE used_at IS NULL;
+
 CREATE TABLE IF NOT EXISTS entra_companies (
   id UUID PRIMARY KEY,
   name TEXT NOT NULL,
