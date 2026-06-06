@@ -2,10 +2,11 @@
 
 ## [Unreleased]
 
+- Completed Phase 6-8 auth hardening: `server.js` now owns the shared admin authorization middleware, the user-management preloader is only a guarded compatibility fallback, admin sessions show logged-in user context with expired-session and non-admin redirects, login attempts are rate-limited, password policy is stricter, password changes rotate the active session, and login/logout/profile changes are audited.
 - Polished admin Settings Access and security with clearer browser-session and protected-route summaries, secret-handling reassurance, safe login/profile/audit links, responsive layout styling, README notes, and frontend contract tests.
 - Refactored the Phase 5 admin auth bridge so legacy `/api/admin/*` session checks validate directly against the shared user-management session store instead of self-calling `/api/profile`, and added static contract coverage for the cleaner auth path.
 - Added configurable admin Settings refresh cadence with Manual, 15 seconds, 40 seconds, 1 minute, and 5 minutes options, persisted browser preference, Refresh now wiring, timer cancellation, styling, README notes, and frontend contract tests.
-- Added the `/playground.html` admin workspace with Playground sidebar navigation, active-state coverage, summary metrics, a Kanban board, project progress cards, Today's Tasks, Workspace Notes, responsive Playground styling, and frontend contract tests.
+- Added the `/playground.html` admin workspace with Playground sidebar navigation, active-state coverage, summary metrics, a Kanban board, project progress cards, Today's Tasks, and Workspace Notes, responsive Playground styling, and frontend contract tests.
 - Added a Reports section to the admin sidebar with working Reports overview, Logs, Review runs, System health, and User audit pages.
 - Added Phase 5 admin auth hardening so legacy `/api/admin/*` routes accept active owner/admin user sessions as well as `ADMIN_TOKEN`, with tests for summary, chats, knowledge, review runs, logout revocation, and non-admin session rejection.
 - Added Phase 4 auth/profile hardening with real login sessions, backend-backed profile reads and updates, current-password verification for password changes, session logout, user-session storage, browser login/profile scripts, and auth/profile integration tests.
