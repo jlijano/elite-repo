@@ -11,7 +11,10 @@
     "/group.html",
     "/user.html",
     "/playground.html",
+    "/playground-projects.html",
     "/playground-tasks.html",
+    "/playground-notes.html",
+    "/playground-automation.html",
     "/reports.html",
     "/logs.html",
     "/review-runs.html",
@@ -27,7 +30,10 @@
   ];
   const playgroundPages = [
     { href: "/playground.html", label: "Board", icon: "▦" },
-    { href: "/playground-tasks.html", label: "Tasks", icon: "☑" }
+    { href: "/playground-projects.html", label: "Projects", icon: "▣" },
+    { href: "/playground-tasks.html", label: "Tasks", icon: "☑" },
+    { href: "/playground-notes.html", label: "Notes", icon: "✎" },
+    { href: "/playground-automation.html", label: "Automation", icon: "⚙" }
   ];
 
   function storedSessionToken() {
