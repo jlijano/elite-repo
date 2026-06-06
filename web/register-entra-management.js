@@ -62,10 +62,11 @@ async function requireAdmin(req, res, next) {
 
 express.application.listen = function patchedListen(...args) {
   if (!attachedApps.has(this)) {
+    const userStore = this.locals.userManagementStore || attachedUserStore || fallbackUserStore;
     if (!this.locals.accountVerificationAttached) {
       attachAccountVerificationRoutes(this, {
         requireAdmin,
-        userStore: this.locals.userManagementStore || attachedUserStore || fallbackUserStore,
+        userStore,
         databaseUrl: process.env.DATABASE_URL,
         databaseSsl: process.env.DATABASE_SSL,
         schemaPath,
@@ -87,6 +88,7 @@ express.application.listen = function patchedListen(...args) {
     if (!this.locals.playgroundAttached) {
       attachPlaygroundRoutes(this, {
         requireAdmin,
+        userStore,
         databaseUrl: process.env.DATABASE_URL,
         databaseSsl: process.env.DATABASE_SSL,
         makeId: () => crypto.randomUUID(),
