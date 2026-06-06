@@ -2,6 +2,7 @@
 
 ## [Unreleased]
 
+- Updated Company, Department, and Group management pages to match the Users UI/UX with table-based records, search plus Add actions in the card header, and create/edit forms in modals.
 - Moved the audit report out of `/user.html` and into `/user-audit.html`, where it now shows User, Update, and Timestamp columns, includes actor/target identity details when available, and exports the report as CSV.
 - Added a visible X close state to the mobile admin navigation button so users can close the full-screen menu without leaving the current module.
 - Changed the mobile admin navigation to an icon-only burger button on the left that opens a full-screen navigation menu.
