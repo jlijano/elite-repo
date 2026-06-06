@@ -88,11 +88,27 @@
               </section>
 
               <section class="admin-card wide settings-section-card" id="accessSecurityPage">
-                <div class="card-head"><div><p class="section-kicker">Access and security</p><h2>Admin state</h2><p class="card-subtitle">Protected management records stay behind backend admin routes.</p></div></div>
-                <div class="settings-list relaxed">
-                  <div class="settings-row">
-                    <div><strong>Protected admin data</strong><p>Review logs and management-only records require a valid admin session.</p></div>
-                    <span class="status-badge status-public" id="settingsAdminState">Public view</span>
+                <div class="card-head"><div><p class="section-kicker">Access and security</p><h2>Admin state</h2><p class="card-subtitle">Review the current browser session and protected-route behavior without exposing secrets.</p></div></div>
+                <div class="settings-list relaxed access-security-list">
+                  <div class="access-summary" id="settingsAccessSummary" aria-live="polite">Checking access state...</div>
+                  <div class="access-security-grid">
+                    <article class="item access-state-item">
+                      <div class="row"><span>Current session</span><small class="status-badge status-public" id="settingsSessionState">Public view</small></div>
+                      <p id="settingsSessionDetail">No owner/admin session is stored in this browser.</p>
+                    </article>
+                    <article class="item access-state-item">
+                      <div class="row"><span>Protected admin routes</span><small class="status-badge status-public" id="settingsProtectedRouteState">Public view</small></div>
+                      <p id="settingsProtectedRouteDetail">Review logs, user records, audit events, and management reports stay hidden until an admin session is available.</p>
+                    </article>
+                    <article class="item access-state-item">
+                      <div class="row"><span>Secret handling</span><small class="status-badge status-ready">Ready</small></div>
+                      <p>No passwords, tokens, deploy hooks, API keys, or session values are shown on this page.</p>
+                    </article>
+                  </div>
+                  <div class="access-actions" aria-label="Access and security actions">
+                    <a class="secondary-action" href="/login.html">Open login</a>
+                    <a class="secondary-action" href="/update-profile.html">Update profile</a>
+                    <a class="secondary-action" href="/user-audit.html">View user audit</a>
                   </div>
                 </div>
               </section>
