@@ -1,5 +1,8 @@
 (() => {
   const overlayId = "chatCameraOverlay";
+  const mentionMenuId = "chatMentionSuggestions";
+  const mentionNames = new Map();
+  let mentionIndex = 0;
 
   function setStatusText(message) {
     const status = document.getElementById("plusMenuStatus");
@@ -126,6 +129,266 @@
     }, { once: true });
   }
 
+  function cleanName(value) {
+    return String(value || "").trim().replace(/\s+/g, " ").slice(0, 40);
+  }
+
+  function mentionableName(value) {
+    const name = cleanName(value);
+    return name && !/^Original$|^Participant$|^Shared link/i.test(name) ? name : "";
+  }
+
+  function rememberMentionName(value) {
+    const name = mentionableName(value);
+    if (!name) return;
+    mentionNames.set(name.toLowerCase(), name);
+  }
+
+  function rememberFromMessages(messages = []) {
+    for (const message of Array.isArray(messages) ? messages : []) {
+      rememberMentionName(message.context?.participantLabel);
+      if (Array.isArray(message.readReceipts)) {
+        message.readReceipts.forEach((receipt) => rememberMentionName(receipt.participantLabel));
+      }
+    }
+  }
+
+  function rememberFromData(data = {}) {
+    const participants = Array.isArray(data.participants) ? data.participants : Array.isArray(data.chat?.participants) ? data.chat.participants : [];
+    participants.forEach((participant) => rememberMentionName(participant.participantLabel));
+    if (Array.isArray(data.chat?.messages)) rememberFromMessages(data.chat.messages);
+  }
+
+  function fileKind(attachment = {}) {
+    const name = String(attachment.name || "").toLowerCase();
+    const type = String(attachment.type || "").toLowerCase();
+    if (type.includes("pdf") || name.endsWith(".pdf")) return "PDF";
+    if (/word|document/.test(type) || /\.(doc|docx)$/.test(name)) return "DOC";
+    if (/excel|spreadsheet/.test(type) || /\.(xls|xlsx|csv)$/.test(name)) return name.endsWith(".csv") ? "CSV" : "XLS";
+    if (/powerpoint|presentation/.test(type) || /\.(ppt|pptx)$/.test(name)) return "PPT";
+    if (type.startsWith("image/") || /\.(png|jpe?g|gif|webp|heic)$/.test(name)) return "IMG";
+    if (type.startsWith("audio/") || /\.(mp3|wav|webm|m4a|ogg)$/.test(name)) return "AUD";
+    if (/zip|compressed/.test(type) || /\.(zip|rar|7z|tar|gz)$/.test(name)) return "ZIP";
+    if (type.startsWith("text/") || /\.(txt|md|log|json|xml|ya?ml)$/.test(name)) return "TXT";
+    return "FILE";
+  }
+
+  function isImageAttachment(attachment = {}) {
+    return fileKind(attachment) === "IMG" && /^data:image\//.test(String(attachment.content || ""));
+  }
+
+  function isAudioAttachment(attachment = {}) {
+    return fileKind(attachment) === "AUD" && /^data:audio\//.test(String(attachment.content || ""));
+  }
+
+  function isGeneratedUploadText(content = "") {
+    return /^Uploaded \d+ files?:/i.test(String(content || "").trim());
+  }
+
+  function removeGeneratedImageText(bubble, content, attachments) {
+    if (!bubble || !isGeneratedUploadText(content) || !attachments.length || !attachments.every(isImageAttachment)) return;
+    [...bubble.childNodes].forEach((node) => {
+      if (node.nodeType === Node.TEXT_NODE && node.textContent.trim().startsWith("Uploaded")) node.remove();
+    });
+  }
+
+  function ensurePreview(bubble, attachment) {
+    if (!bubble || (!isImageAttachment(attachment) && !isAudioAttachment(attachment))) return;
+    let wrapper = bubble.querySelector(".attachment-previews");
+    if (!wrapper) {
+      wrapper = document.createElement("div");
+      wrapper.className = "attachment-previews";
+      bubble.appendChild(wrapper);
+    }
+    const selector = isImageAttachment(attachment) ? ".attachment-preview-image" : ".attachment-preview-audio";
+    if ([...wrapper.querySelectorAll(selector)].some((item) => item.getAttribute("src") === attachment.content)) return;
+    if (isImageAttachment(attachment)) {
+      const image = document.createElement("img");
+      image.className = "attachment-preview-image";
+      image.src = attachment.content;
+      image.alt = attachment.name || "Attached image";
+      image.loading = "lazy";
+      image.addEventListener("load", () => requestAnimationFrame(scrollToBottom), { once: true });
+      wrapper.appendChild(image);
+      return;
+    }
+    const audio = document.createElement("audio");
+    audio.className = "attachment-preview-audio";
+    audio.controls = true;
+    audio.src = attachment.content;
+    audio.addEventListener("loadedmetadata", () => requestAnimationFrame(scrollToBottom), { once: true });
+    wrapper.appendChild(audio);
+  }
+
+  function renderFileAttachmentList(bubble, attachments = []) {
+    bubble.querySelectorAll(".message-attachments").forEach((list) => list.remove());
+    const fileAttachments = attachments.filter((attachment) => !isImageAttachment(attachment) && !isAudioAttachment(attachment));
+    if (!fileAttachments.length) return;
+    const list = document.createElement("div");
+    list.className = "message-attachments enhanced-attachments";
+    for (const attachment of fileAttachments) {
+      const kind = fileKind(attachment);
+      const item = document.createElement("span");
+      item.className = `message-attachment file-attachment kind-${kind.toLowerCase()}`;
+      item.innerHTML = `<span class="file-type-icon" aria-hidden="true">${kind}</span><span class="file-attachment-meta"><strong>${escapeHtml(attachment.name || "Attachment")}</strong><small>${attachment.size ? escapeHtml(formatBytes(Number(attachment.size))) : escapeHtml(attachment.type || "file")}</small></span>`;
+      list.appendChild(item);
+    }
+    bubble.appendChild(list);
+  }
+
+  function enhanceAttachmentDisplay(article, content, attachments = []) {
+    if (!attachments.length) return;
+    const bubble = article?.querySelector(".bubble");
+    if (!bubble) return;
+    removeGeneratedImageText(bubble, content, attachments);
+    attachments.forEach((attachment) => ensurePreview(bubble, attachment));
+    renderFileAttachmentList(bubble, attachments);
+  }
+
+  function decorateSelectedAttachmentTray() {
+    const chips = [...document.querySelectorAll("#attachmentTray .attachment-chip")];
+    chips.forEach((chip, index) => {
+      const attachment = selectedAttachments[index];
+      if (!attachment || chip.querySelector(".file-type-icon")) return;
+      const icon = document.createElement("span");
+      icon.className = `file-type-icon tray-file-icon kind-${fileKind(attachment).toLowerCase()}`;
+      icon.setAttribute("aria-hidden", "true");
+      icon.textContent = fileKind(attachment);
+      chip.prepend(icon);
+    });
+  }
+
+  function ensureEnhancementStyles() {
+    if (document.getElementById("chatMediaPolishStyles")) return;
+    const style = document.createElement("style");
+    style.id = "chatMediaPolishStyles";
+    style.textContent = `
+      .enhanced-attachments{display:grid;gap:8px;margin-top:10px}.file-attachment{display:grid;grid-template-columns:auto minmax(0,1fr);align-items:center;gap:8px;width:min(260px,100%);padding:8px;border-radius:12px;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.18)}.file-type-icon{display:inline-grid;place-items:center;min-width:36px;height:30px;padding:0 6px;border-radius:7px;background:rgba(255,255,255,.9);color:#111;font-size:.66rem;font-weight:950;line-height:1}.file-attachment-meta{min-width:0;display:grid;gap:2px}.file-attachment-meta strong{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:.8rem}.file-attachment-meta small{font-size:.72rem;opacity:.78}.attachment-chip .tray-file-icon{min-width:30px;height:24px;font-size:.58rem}.kind-pdf{background:#fee2e2;color:#991b1b}.kind-doc{background:#dbeafe;color:#1d4ed8}.kind-xls,.kind-csv{background:#dcfce7;color:#166534}.kind-ppt{background:#ffedd5;color:#c2410c}.kind-img{background:#e0f2fe;color:#0369a1}.kind-aud{background:#f5d0fe;color:#86198f}.kind-zip{background:#fef3c7;color:#92400e}.kind-txt,.kind-file{background:#e5e7eb;color:#111827}
+      .mention-suggestions{position:absolute;left:54px;right:54px;bottom:calc(100% + 8px);z-index:42;display:grid;gap:4px;max-height:190px;overflow:auto;padding:6px;border:1px solid var(--line);border-radius:12px;background:var(--composer);box-shadow:0 18px 44px rgba(0,0,0,.28)}.mention-suggestions[hidden]{display:none}.mention-suggestions button{min-height:34px;display:flex;align-items:center;gap:8px;padding:0 9px;border-radius:8px;background:transparent;color:var(--text);font-weight:800;text-align:left}.mention-suggestions button:hover,.mention-suggestions button.active{background:var(--panel-soft)}.mention-avatar{display:inline-grid;place-items:center;width:22px;height:22px;border-radius:50%;background:var(--primary);color:#fff;font-size:.72rem;font-weight:900}
+      @media (max-width:520px){.mention-suggestions{left:8px;right:8px;bottom:calc(100% + 6px)}.file-attachment{width:100%}}
+    `;
+    document.head.appendChild(style);
+  }
+
+  function mentionMenu() {
+    let menu = document.getElementById(mentionMenuId);
+    if (menu) return menu;
+    menu = document.createElement("div");
+    menu.id = mentionMenuId;
+    menu.className = "mention-suggestions";
+    menu.hidden = true;
+    menu.setAttribute("role", "listbox");
+    menu.setAttribute("aria-label", "Nickname suggestions");
+    document.getElementById("chatForm")?.appendChild(menu);
+    return menu;
+  }
+
+  function mentionToken() {
+    const cursor = inputEl.selectionStart || 0;
+    const before = inputEl.value.slice(0, cursor);
+    const match = before.match(/(^|\s)@([^@\s]*)$/);
+    if (!match) return null;
+    const start = cursor - match[2].length - 1;
+    return { start, end: cursor, query: match[2] || "" };
+  }
+
+  function filteredMentionNames(query = "") {
+    const normalized = query.toLowerCase();
+    return [...mentionNames.values()]
+      .filter((name) => !normalized || name.toLowerCase().startsWith(normalized))
+      .sort((a, b) => a.localeCompare(b))
+      .slice(0, 6);
+  }
+
+  function insertMention(name) {
+    const token = mentionToken();
+    if (!token) return;
+    const before = inputEl.value.slice(0, token.start);
+    const after = inputEl.value.slice(token.end);
+    inputEl.value = `${before}@${name} ${after}`;
+    const nextCursor = before.length + name.length + 2;
+    inputEl.setSelectionRange(nextCursor, nextCursor);
+    inputEl.focus();
+    resizeInput();
+    hideMentionSuggestions();
+  }
+
+  function renderMentionSuggestions() {
+    ensureEnhancementStyles();
+    const token = mentionToken();
+    const menu = mentionMenu();
+    if (!token) {
+      hideMentionSuggestions();
+      return;
+    }
+    const names = filteredMentionNames(token.query);
+    if (!names.length) {
+      hideMentionSuggestions();
+      return;
+    }
+    mentionIndex = Math.min(mentionIndex, names.length - 1);
+    menu.innerHTML = "";
+    names.forEach((name, index) => {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = index === mentionIndex ? "active" : "";
+      button.setAttribute("role", "option");
+      button.innerHTML = `<span class="mention-avatar" aria-hidden="true">${escapeHtml(name[0]?.toUpperCase() || "@")}</span><span>@${escapeHtml(name)}</span>`;
+      button.addEventListener("mousedown", (event) => {
+        event.preventDefault();
+        insertMention(name);
+      });
+      menu.appendChild(button);
+    });
+    menu.hidden = false;
+  }
+
+  function hideMentionSuggestions() {
+    const menu = document.getElementById(mentionMenuId);
+    if (menu) menu.hidden = true;
+  }
+
+  function selectedMentionName() {
+    const token = mentionToken();
+    if (!token) return "";
+    return filteredMentionNames(token.query)[mentionIndex] || "";
+  }
+
+  function wireMentions() {
+    if (!inputEl || inputEl.dataset.mentionsEnhanced === "true") return;
+    inputEl.dataset.mentionsEnhanced = "true";
+    inputEl.addEventListener("input", () => {
+      mentionIndex = 0;
+      renderMentionSuggestions();
+    });
+    inputEl.addEventListener("keydown", (event) => {
+      const menu = document.getElementById(mentionMenuId);
+      if (!menu || menu.hidden) return;
+      const count = menu.querySelectorAll("button").length;
+      if (event.key === "ArrowDown") {
+        event.preventDefault();
+        mentionIndex = Math.min(count - 1, mentionIndex + 1);
+        renderMentionSuggestions();
+      }
+      if (event.key === "ArrowUp") {
+        event.preventDefault();
+        mentionIndex = Math.max(0, mentionIndex - 1);
+        renderMentionSuggestions();
+      }
+      if (event.key === "Enter" || event.key === "Tab") {
+        const name = selectedMentionName();
+        if (!name) return;
+        event.preventDefault();
+        insertMention(name);
+      }
+      if (event.key === "Escape") hideMentionSuggestions();
+    });
+    document.addEventListener("click", (event) => {
+      if (event.target.closest(`#${mentionMenuId}`) || event.target === inputEl) return;
+      hideMentionSuggestions();
+    });
+  }
+
   function wireButton(id, handler) {
     const button = document.getElementById(id);
     if (!button) return;
@@ -136,6 +399,53 @@
     }, true);
   }
 
+  function installMessageEnhancements() {
+    ensureEnhancementStyles();
+    wireMentions();
+
+    if (typeof requestJson === "function" && requestJson.__mediaPolishEnhanced !== true) {
+      const originalRequestJson = requestJson;
+      requestJson = async function mediaPolishRequestJson(url, options = {}) {
+        const data = await originalRequestJson(url, options);
+        rememberFromData(data);
+        return data;
+      };
+      requestJson.__mediaPolishEnhanced = true;
+    }
+
+    if (typeof renderMessages === "function" && renderMessages.__mediaPolishEnhanced !== true) {
+      const originalRenderMessages = renderMessages;
+      renderMessages = function mediaPolishRenderMessages(messages = []) {
+        rememberFromMessages(messages);
+        originalRenderMessages(messages);
+      };
+      renderMessages.__mediaPolishEnhanced = true;
+    }
+
+    if (typeof createMessageElement === "function" && createMessageElement.__mediaPolishEnhanced !== true) {
+      const originalCreateMessageElement = createMessageElement;
+      createMessageElement = function mediaPolishCreateMessageElement(role, content, options = {}) {
+        const article = originalCreateMessageElement(role, content, options);
+        enhanceAttachmentDisplay(article, content, options.attachments || []);
+        return article;
+      };
+      createMessageElement.__mediaPolishEnhanced = true;
+    }
+
+    if (typeof renderSelectedAttachments === "function" && renderSelectedAttachments.__mediaPolishEnhanced !== true) {
+      const originalRenderSelectedAttachments = renderSelectedAttachments;
+      renderSelectedAttachments = function mediaPolishRenderSelectedAttachments(...args) {
+        originalRenderSelectedAttachments.apply(this, args);
+        decorateSelectedAttachmentTray();
+      };
+      renderSelectedAttachments.__mediaPolishEnhanced = true;
+    }
+
+    document.querySelectorAll(".participant-label").forEach((label) => rememberMentionName(label.textContent));
+    renderMentionSuggestions();
+  }
+
   wireButton("attachImageButton", () => fallbackPicker({ capture: false, kind: "Image" }));
   wireButton("takePhotoButton", openCamera);
+  installMessageEnhancements();
 })();
