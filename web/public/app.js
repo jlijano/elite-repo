@@ -26,6 +26,7 @@ const sessionTokenStorageKey = "switchboard-session-token";
 const refreshIntervalMs = 40000;
 const maxAttachmentFiles = 4;
 const maxAttachmentBytes = 180 * 1024;
+const startChatLabel = "Start new chat";
 let currentChatId = null;
 let chatHistory = [];
 let selectedAttachments = [];
@@ -181,6 +182,10 @@ function scrollToBottom() {
   messagesEl.scrollTop = messagesEl.scrollHeight;
 }
 
+function clearStartPrompt() {
+  messagesEl.querySelector(".start-chat-empty")?.remove();
+}
+
 function appendAttachmentList(parent, attachments = []) {
   if (!attachments.length) return;
   const list = document.createElement("div");
@@ -222,12 +227,21 @@ function createMessageElement(role, content, options = {}) {
 
 function renderWelcome() {
   messagesEl.innerHTML = "";
-  messagesEl.appendChild(createMessageElement("assistant", "Hi. Send me a request and I will classify it, check the Agent Directory, route it to an active match, or recommend what is missing."));
+  chatHistory = [];
+  currentChatTitle.textContent = startChatLabel;
+  const emptyState = document.createElement("div");
+  emptyState.className = "start-chat-empty";
+  emptyState.textContent = startChatLabel;
+  messagesEl.appendChild(emptyState);
 }
 
 function renderMessages(messages = []) {
-  renderWelcome();
+  messagesEl.innerHTML = "";
   chatHistory = [];
+  if (!messages.length) {
+    renderWelcome();
+    return;
+  }
   for (const message of messages) {
     const attachments = Array.isArray(message.context?.attachments) ? message.context.attachments : [];
     messagesEl.appendChild(createMessageElement(message.role, message.content, { createdAt: message.createdAt, attachments }));
@@ -237,12 +251,14 @@ function renderMessages(messages = []) {
 }
 
 function addMessage(role, content, options = {}) {
+  clearStartPrompt();
   messagesEl.appendChild(createMessageElement(role, content, options));
   if (!options.skipHistory && !options.error) chatHistory.push({ role, content });
   scrollToBottom();
 }
 
 function showTyping() {
+  clearStartPrompt();
   typingEl = document.createElement("article");
   typingEl.className = "message assistant typing";
   typingEl.innerHTML = `<div class="avatar" aria-hidden="true">★</div><div class="bubble" aria-label="Switchboard Agent is typing"><span class="typing-dot"></span><span class="typing-dot"></span><span class="typing-dot"></span></div>`;
@@ -413,10 +429,10 @@ async function createChat() {
   const data = await requestJson("/api/chats", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ title: "New chat" })
+    body: JSON.stringify({ title: startChatLabel })
   });
   saveCurrentChat(data.chat.id);
-  currentChatTitle.textContent = data.chat.title;
+  currentChatTitle.textContent = data.chat.title || startChatLabel;
   renderMessages([]);
   await loadChats();
 }
@@ -439,17 +455,16 @@ async function archiveChat(chatId) {
 async function loadChat(chatId) {
   const data = await requestJson(`/api/chats/${encodeURIComponent(chatId)}`);
   saveCurrentChat(data.chat.id);
-  currentChatTitle.textContent = data.chat.title || "New chat";
+  currentChatTitle.textContent = data.chat.title || startChatLabel;
   renderMessages(data.chat.messages || []);
   await loadChats();
 }
 
 async function ensureChatSession() {
-  const chats = await loadChats();
-  const saved = chats.find((chat) => chat.id === getStored(chatStorageKey));
-  if (saved) return loadChat(saved.id);
-  if (chats[0]) return loadChat(chats[0].id);
-  return createChat();
+  removeStored(chatStorageKey);
+  currentChatId = null;
+  renderWelcome();
+  return [];
 }
 
 async function refreshCurrentSession() {
@@ -457,7 +472,7 @@ async function refreshCurrentSession() {
   await loadAvailableUsers();
   const chats = await loadChats();
   const active = chats.find((chat) => chat.id === currentChatId);
-  if (active) currentChatTitle.textContent = active.title || "New chat";
+  if (active) currentChatTitle.textContent = active.title || startChatLabel;
   if (currentChatId && !isSending && !inputEl.value.trim() && !selectedAttachments.length && document.visibilityState === "visible") {
     const data = await requestJson(`/api/chats/${encodeURIComponent(currentChatId)}`);
     renderMessages(data.chat.messages || []);
@@ -492,7 +507,7 @@ async function sendMessage() {
     addMessage("assistant", data.reply || "I could not produce a response.", { createdAt: assistantMessage?.createdAt });
     const chats = await loadChats();
     const active = chats.find((chat) => chat.id === currentChatId);
-    if (active) currentChatTitle.textContent = active.title || "New chat";
+    if (active) currentChatTitle.textContent = active.title || startChatLabel;
   } catch (error) {
     hideTyping();
     addMessage("assistant", error.message || "Something went wrong while contacting the Switchboard Agent.", { error: true, skipHistory: true });
