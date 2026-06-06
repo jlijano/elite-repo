@@ -27,7 +27,7 @@ The `web/` directory contains a Render-ready Express app that serves a plain HTM
   - `/chat.html` for chat review and selected-chat attachments.
   - `/knowledge.html` for the Knowledge base.
   - `/user.html` for User management, profile settings, and the Manage users action.
-  - `/playground.html` for task, project, and board planning views.
+  - `/playground.html` for task, project, and board planning views, including summary metrics, a Kanban board, project progress cards, Today's Tasks, and Workspace Notes.
   - `/settings.html` for Settings, Review runs, and System health.
   - `/reports.html` for the Reports overview.
   - `/logs.html` for combined review-run and user-audit logs.
@@ -157,7 +157,7 @@ The review workflow is implemented as an idempotent backend route and optional b
 - Protected user-management routes, user creation/listing/loading/updating, duplicate email handling, disable/reactivate actions, and audit-event creation.
 - Real auth/profile behavior: failed and successful login, session profile reads, backend-backed profile updates, current-password verification for password changes, session-backed owner/admin access to all `/api/admin/*` routes, logout revocation, non-admin rejection from admin APIs, and new-password login.
 - User page controls for search, create/edit fields, role/status selection, password entry, audit events, and backend API wiring.
-- Admin navigation routes, page ownership for Chat, Knowledge base, User, Playground, Settings, Reports, Logs, Review runs, System health, and User audit, plus nested Attachments, Settings section structure, standardized Settings status badges, Settings Light / Dark / System theme preference markup, theme persistence keys, reload restore behavior, System-mode handling, Settings refresh cadence markup, refresh persistence key, manual refresh timer cancellation, Refresh now wiring, the profile dropdown, Update Profile form, Logout redirect, profile-menu-only admin logout, and the Mac-style clock wiring.
+- Admin navigation routes, page ownership for Chat, Knowledge base, User, Playground, Settings, Reports, Logs, Review runs, System health, and User audit, plus nested Attachments, Settings section structure, standardized Settings status badges, Settings Light / Dark / System theme preference markup, theme persistence keys, reload restore behavior, System-mode handling, Settings refresh cadence markup, refresh persistence key, manual refresh timer cancellation, Refresh now wiring, Playground required workspace sections, the profile dropdown, Update Profile form, Logout redirect, profile-menu-only admin logout, and the Mac-style clock wiring.
 
 ## GitHub Actions / auto-deploy
 
