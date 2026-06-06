@@ -42,6 +42,8 @@
 .playground-modal-head, .playground-drawer-head { display: flex; align-items: start; justify-content: space-between; gap: 12px; }
 .playground-modal h2, .playground-drawer-head h2, .drawer-section h3 { margin: 0; color: var(--text); }
 .icon-button { width: 38px; padding: 0; font-size: 1.2rem; line-height: 1; }
+.playground-form-message { margin: 0; padding: 10px 12px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel-soft); color: var(--muted); font-size: 0.84rem; font-weight: 850; line-height: 1.35; }
+.playground-form-message.error { color: var(--error); background: var(--error-bg); border-color: var(--error-line); }
 .playground-form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
 .playground-form-grid label { min-width: 0; display: grid; gap: 6px; color: var(--muted); font-size: 0.78rem; font-weight: 900; text-transform: uppercase; }
 .playground-form-grid .wide-field { grid-column: 1 / -1; }
