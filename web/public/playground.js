@@ -254,7 +254,7 @@ function injectTaskSurfaces() {
           <label>Category<input id="playgroundTaskCategory" name="category" maxlength="80" placeholder="Tasks" /></label>
           <label class="wide-field">Description<textarea id="playgroundTaskDescription" name="description" rows="4" maxlength="1200"></textarea></label>
         </div>
-        <div class="playground-modal-actions"><button type="button" id="playgroundTaskCancel">Cancel</button><button class="primary-action" id="playgroundTaskSave" type="submit">Save Task</button></div>
+        <div class="playground-modal-actions"><button type="button" id="playgroundTaskCancel">Cancel</button><button class="primary-action" id="playgroundTaskSave" type="button">Save Task</button></div>
       </form>
     </div>
     <aside class="playground-task-drawer" id="playgroundTaskDrawer" aria-label="Task details" hidden>
