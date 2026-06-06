@@ -31,7 +31,7 @@
           <h2 class="session-heading">Workspace</h2>
           <div class="workspace-card"><strong>Switchboard Admin</strong><small>Update the current user profile.</small></div>
         </section>
-        <div class="directory-card"><div class="status-row"><span class="status-dot online" aria-hidden="true"></span><span>Update profile</span></div><p>Current-user profile preferences.</p></div>
+        <div class="directory-card"><div class="status-row"><span class="status-dot online" aria-hidden="true"></span><span>Update profile</span></div><p>Backend-backed current-user profile.</p></div>
       </aside>
       <section class="admin-panel" aria-label="Update profile controls">
         <header class="chat-header admin-header">
@@ -52,7 +52,7 @@
             <p class="admin-status" id="status">Loading profile...</p>
             <section class="admin-card wide" id="updateProfilePage">
               <div class="card-head">
-                <div><h2>Profile details</h2><p class="card-subtitle">Changes apply to the currently logged-in browser session.</p></div>
+                <div><h2>Profile details</h2><p class="card-subtitle">Changes are saved to your account and require your current password when changing password.</p></div>
               </div>
               <form class="profile-form" id="profileForm" autocomplete="on">
                 <div class="profile-photo-preview" id="profilePhotoPreview" aria-hidden="true">👤</div>
@@ -90,6 +90,6 @@
         </div>
       </section>
     </main>
-    <script src="admin.js"></script>
+    <script src="profile.js"></script>
   </body>
 </html>
