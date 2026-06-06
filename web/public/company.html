@@ -38,23 +38,31 @@
             </div>
           </details>
         </nav>
-        <section class="admin-section-list" aria-label="Admin workspace">
-          <h2 class="session-heading">Workspace</h2>
-          <div class="workspace-card"><strong>Switchboard Admin</strong><small>Entra company structure.</small></div>
-        </section>
-        <div class="directory-card"><div class="status-row"><span class="status-dot online" aria-hidden="true"></span><span>Company</span></div><p>Prepare company-level access grouping.</p></div>
+        <section class="admin-section-list" aria-label="Admin workspace"><h2 class="session-heading">Workspace</h2><div class="workspace-card"><strong>Switchboard Admin</strong><small>Entra company structure.</small></div></section>
+        <div class="directory-card"><div class="status-row"><span class="status-dot online" aria-hidden="true"></span><span>Company</span></div><p>Company records anchor departments, groups, and user access.</p></div>
       </aside>
       <section class="admin-panel" aria-label="Company controls">
         <header class="chat-header admin-header">
-          <div class="admin-header-title"><h1>Company</h1><p>Manage the top level of the Entra hierarchy.</p></div>
+          <div class="admin-header-title"><h1>Company</h1><p>Create and manage the top level of the Entra hierarchy.</p></div>
           <div class="header-actions"><span class="admin-clock" id="menuClock" aria-live="polite"></span><div class="profile-menu"><button class="profile-settings" id="profileMenuButton" type="button" aria-label="Open profile menu" aria-haspopup="true" aria-expanded="false">👤</button><div class="profile-dropdown" id="profileDropdown" role="menu" hidden><a href="/update-profile.html" role="menuitem">Update Profile</a><button class="profile-logout" type="button" role="menuitem">Logout</button></div></div></div>
         </header>
         <div class="admin-scroll">
           <div class="admin-layout">
-            <p class="admin-status" id="status">Company directory ready.</p>
+            <p class="admin-status" id="status">Loading companies...</p>
             <section class="admin-card wide" id="companyPage" data-dashboard-panel="company">
-              <div class="card-head"><div><h2>Company</h2><p class="card-subtitle">Company records will anchor department, group, user, and future playground access rules.</p></div></div>
-              <div class="list"><div class="empty"><strong>Company management coming soon.</strong><p>Create and assign company records here when the Entra access model is expanded.</p></div></div>
+              <div class="card-head"><div><h2>Company management</h2><p class="card-subtitle">Create, edit, archive, and reactivate companies for future access rules.</p></div><div class="card-actions entra-toolbar"><label class="sr-only" for="entraSearch">Search companies</label><input id="entraSearch" type="search" placeholder="Search companies" autocomplete="off" /></div></div>
+              <div class="entra-management-grid">
+                <section class="list entra-list" id="entraList" aria-label="Company records">Loading company records...</section>
+                <section class="entra-form-panel" aria-label="Company form">
+                  <form class="management-form" id="entraForm" autocomplete="off">
+                    <div class="form-heading"><h3 id="entraFormTitle">Create Company</h3><button id="cancelEntraEditButton" type="button" hidden>Cancel edit</button></div>
+                    <label><span>Name</span><input id="entraName" name="name" type="text" required placeholder="Company name" /></label>
+                    <label><span>Description</span><input id="entraDescription" name="description" type="text" placeholder="Optional company notes" /></label>
+                    <label><span>Status</span><select id="entraStatus" name="status"><option value="active">Active</option><option value="archived">Archived</option></select></label>
+                    <div class="form-actions"><button id="saveEntraButton" type="submit">Create Company</button></div>
+                  </form>
+                </section>
+              </div>
             </section>
           </div>
         </div>
@@ -62,5 +70,6 @@
     </main>
     <script src="admin-session.js"></script>
     <script src="admin.js"></script>
+    <script src="entra-management.js"></script>
   </body>
 </html>
