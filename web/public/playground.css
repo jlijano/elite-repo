@@ -6,14 +6,24 @@
 .metric-card strong { color: var(--text); font-size: 1.75rem; line-height: 1; }
 .metric-card p { margin: 0; color: var(--muted); font-size: 0.82rem; line-height: 1.35; }
 .playground-board-card { min-height: auto; }
+.playground-task-controls { display: grid; grid-template-columns: minmax(180px, 1.2fr) repeat(4, minmax(140px, 1fr)) auto; gap: 10px; align-items: end; padding: 12px 14px; border-top: 1px solid var(--line); }
+.playground-task-controls label { min-width: 0; display: grid; gap: 5px; color: var(--muted); font-size: 0.74rem; font-weight: 900; text-transform: uppercase; }
+.playground-task-controls input, .playground-task-controls select, .playground-modal input, .playground-modal select, .playground-modal textarea, .drawer-update-form textarea { width: 100%; min-width: 0; min-height: 38px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel); color: var(--text); font: inherit; padding: 8px 10px; }
+.playground-task-controls input:focus, .playground-task-controls select:focus, .playground-modal input:focus, .playground-modal select:focus, .playground-modal textarea:focus, .drawer-update-form textarea:focus { outline: 3px solid var(--focus-ring); outline-offset: 1px; border-color: var(--primary); }
+.playground-page-actions { display: flex; gap: 8px; align-items: center; }
+.playground-page-actions button, .task-actions button, .playground-modal-actions button, .icon-button { min-height: 36px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel-soft); color: var(--text); font: inherit; font-weight: 900; cursor: pointer; padding: 0 10px; }
+.playground-page-actions button:disabled { cursor: not-allowed; opacity: 0.45; }
 .kanban-board { display: grid; grid-template-columns: repeat(5, minmax(190px, 1fr)); gap: 12px; padding: 14px; overflow-x: auto; }
 .kanban-column { min-width: 0; display: grid; align-content: start; gap: 10px; padding: 10px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel-soft); }
 .kanban-column header { min-width: 0; display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .kanban-column h3 { margin: 0; color: var(--text); font-size: 0.9rem; line-height: 1.25; }
 .task-card, .project-card { min-width: 0; display: grid; gap: 10px; padding: 12px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel); }
 .task-card p, .project-card p { margin: 0; color: var(--muted); font-size: 0.82rem; line-height: 1.45; overflow-wrap: anywhere; }
-.task-meta, .project-meta { min-width: 0; display: flex; align-items: center; justify-content: space-between; gap: 8px; color: var(--muted); font-size: 0.78rem; }
-.priority { display: inline-flex; align-items: center; justify-content: center; width: fit-content; min-height: 24px; padding: 0 8px; border-radius: 999px; font-size: 0.72rem; font-weight: 900; line-height: 1; white-space: nowrap; }
+.task-meta, .project-meta, .task-extra, .task-actions { min-width: 0; display: flex; align-items: center; justify-content: space-between; gap: 8px; color: var(--muted); font-size: 0.78rem; }
+.task-extra { align-items: flex-start; flex-wrap: wrap; }
+.task-extra span { min-width: 0; overflow-wrap: anywhere; }
+.task-actions { justify-content: flex-start; }
+.priority { display: inline-flex; align-items: center; justify-content: center; width: fit-content; min-height: 24px; padding: 0 8px; border-radius: 999px; font-size: 0.72rem; font-weight: 900; line-height: 1; white-space: nowrap; text-transform: capitalize; }
 .priority.high { color: var(--error); background: var(--error-bg); border: 1px solid var(--error-line); }
 .priority.medium { color: var(--warning); background: rgba(242, 166, 13, 0.14); border: 1px solid rgba(242, 166, 13, 0.3); }
 .priority.low { color: var(--muted); background: var(--panel-soft); border: 1px solid var(--line); }
@@ -26,5 +36,29 @@
 .todo-item input { width: 18px; min-height: 18px; height: 18px; accent-color: var(--primary); }
 .todo-item span { min-width: 0; overflow-wrap: anywhere; }
 .todo-item small { color: var(--muted); font-weight: 800; white-space: nowrap; }
-@media (max-width: 1180px) { .playground-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); } .kanban-board { grid-template-columns: repeat(5, minmax(220px, 1fr)); } .playground-lower-grid { grid-template-columns: 1fr; } }
-@media (max-width: 760px) { .playground-header .header-actions { width: 100%; justify-content: flex-start; } .playground-metrics { grid-template-columns: 1fr; } .kanban-board { grid-template-columns: 1fr; overflow-x: visible; } .todo-item { grid-template-columns: auto minmax(0, 1fr); } .todo-item small, .todo-item .priority { justify-self: start; grid-column: 2; } }
+.playground-modal-backdrop { position: fixed; inset: 0; z-index: 80; display: grid; place-items: center; padding: 20px; background: rgba(0, 0, 0, 0.58); }
+.playground-modal-backdrop[hidden], .playground-task-drawer[hidden] { display: none; }
+.playground-modal { width: min(760px, 100%); max-height: min(88vh, 760px); overflow: auto; display: grid; gap: 14px; padding: 16px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel); color: var(--text); box-shadow: 0 28px 80px rgba(0, 0, 0, 0.42); }
+.playground-modal-head, .playground-drawer-head { display: flex; align-items: start; justify-content: space-between; gap: 12px; }
+.playground-modal h2, .playground-drawer-head h2, .drawer-section h3 { margin: 0; color: var(--text); }
+.icon-button { width: 38px; padding: 0; font-size: 1.2rem; line-height: 1; }
+.playground-form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.playground-form-grid label { min-width: 0; display: grid; gap: 6px; color: var(--muted); font-size: 0.78rem; font-weight: 900; text-transform: uppercase; }
+.playground-form-grid .wide-field { grid-column: 1 / -1; }
+.playground-modal textarea { resize: vertical; min-height: 96px; }
+.playground-modal select[multiple] { min-height: 110px; }
+.playground-modal-actions { display: flex; justify-content: flex-end; gap: 10px; }
+.playground-task-drawer { position: fixed; top: 0; right: 0; bottom: 0; z-index: 70; width: min(460px, 100vw); display: grid; grid-template-rows: auto minmax(0, 1fr); border-left: 1px solid var(--line); background: var(--panel); color: var(--text); box-shadow: -24px 0 70px rgba(0, 0, 0, 0.35); }
+.playground-drawer-head { padding: 16px; border-bottom: 1px solid var(--line); }
+.playground-drawer-body { min-height: 0; overflow: auto; display: grid; align-content: start; gap: 14px; padding: 14px; }
+.drawer-section { display: grid; gap: 10px; padding: 12px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel-soft); }
+.drawer-task-summary { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.task-detail-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin: 0; }
+.task-detail-grid div { min-width: 0; display: grid; gap: 3px; }
+.task-detail-grid dt { color: var(--muted); font-size: 0.72rem; font-weight: 900; text-transform: uppercase; }
+.task-detail-grid dd { min-width: 0; margin: 0; color: var(--text); overflow-wrap: anywhere; }
+.drawer-update-form { display: grid; gap: 8px; }
+.drawer-list { display: grid; gap: 8px; }
+.activity-change-list { margin: 0; padding-left: 18px; color: var(--muted); font-size: 0.8rem; line-height: 1.45; }
+@media (max-width: 1180px) { .playground-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); } .playground-task-controls { grid-template-columns: repeat(3, minmax(0, 1fr)); } .kanban-board { grid-template-columns: repeat(5, minmax(220px, 1fr)); } .playground-lower-grid { grid-template-columns: 1fr; } }
+@media (max-width: 760px) { .playground-header .header-actions { width: 100%; justify-content: flex-start; } .playground-metrics, .playground-task-controls, .playground-form-grid { grid-template-columns: 1fr; } .kanban-board { grid-template-columns: 1fr; overflow-x: visible; } .todo-item { grid-template-columns: auto minmax(0, 1fr); } .todo-item small, .todo-item .priority { justify-self: start; grid-column: 2; } .playground-task-drawer { width: 100vw; } .task-detail-grid { grid-template-columns: 1fr; } }
