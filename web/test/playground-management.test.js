@@ -137,7 +137,7 @@ test("shared admin navigation nests Tasks under Playground", () => {
   assert.ok(script.includes("tasksLink?.remove()"));
 });
 
-test("playground tasks script creates saved tasks with optional custom fields", () => {
+test("playground tasks script creates saved tasks with common optional custom fields", () => {
   const script = fs.readFileSync(path.join(__dirname, "..", "public", "playground-tasks.js"), "utf8");
 
   assert.ok(script.includes("/api/admin/playground?"));
@@ -146,7 +146,11 @@ test("playground tasks script creates saved tasks with optional custom fields", 
   assert.ok(script.includes("taskListProject"));
   assert.ok(script.includes("taskListTaskModal"));
   assert.ok(script.includes("taskListTaskTitle"));
-  assert.ok(script.includes("taskListAddCustomField"));
+  assert.ok(script.includes("taskListCommonFieldTypes"));
+  assert.ok(script.includes("taskListCommonFieldType"));
+  assert.ok(script.includes("taskListAddCommonField"));
+  assert.ok(script.includes("Due Date"));
+  assert.ok(script.includes("Dropdown"));
   assert.ok(script.includes("customFields"));
   assert.ok(script.includes("/api/admin/playground/tasks"));
   assert.ok(script.includes("Loaded ${total} saved task"));
