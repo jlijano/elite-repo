@@ -12,6 +12,7 @@ const originalRouteMethods = {
 };
 const attachedApps = new WeakSet();
 let wrapAdminRoutes = true;
+let userManagementStore;
 
 function suppliedToken(req, headerName) {
   return req.get(headerName) || req.get("authorization")?.replace(/^Bearer\s+/i, "");
@@ -33,17 +34,13 @@ function adminTokenSupplied(req) {
 
 async function sessionAdminOk(req) {
   const token = req.get("x-session-token");
-  if (!token) return false;
-  const port = req.socket?.localPort || process.env.PORT || 3000;
-  const response = await fetch(`http://127.0.0.1:${port}/api/profile`, { headers: { "x-session-token": token } });
-  if (!response.ok) return false;
-  const data = await response.json().catch(() => ({}));
-  return ["owner", "admin"].includes(data.user?.role);
+  if (!token || !userManagementStore) return false;
+  const session = await userManagementStore.getSessionUser(token);
+  return ["owner", "admin"].includes(session?.user?.role);
 }
 
-function ensureAdminTokenForLegacyHandler(req) {
-  if (!process.env.ADMIN_TOKEN) process.env.ADMIN_TOKEN = `session-admin-${Date.now().toString(36)}`;
-  req.headers["x-admin-token"] = process.env.ADMIN_TOKEN;
+function markLegacyHandlerAuthorized(req) {
+  if (process.env.ADMIN_TOKEN) req.headers["x-admin-token"] = process.env.ADMIN_TOKEN;
 }
 
 function wrapAdminHandler(handler) {
@@ -52,7 +49,7 @@ function wrapAdminHandler(handler) {
     try {
       if (adminTokenSupplied(req)) return handler(req, res, next);
       if (await sessionAdminOk(req)) {
-        ensureAdminTokenForLegacyHandler(req);
+        markLegacyHandlerAuthorized(req);
         return handler(req, res, next);
       }
       return tokenOk(req, res, "ADMIN_TOKEN", "x-admin-token");
@@ -80,7 +77,7 @@ function adminTokenOk(req, res) {
 express.application.listen = function patchedListen(...args) {
   if (!attachedApps.has(this)) {
     wrapAdminRoutes = false;
-    attachUserManagementRoutes(this, {
+    userManagementStore = attachUserManagementRoutes(this, {
       adminTokenOk,
       databaseUrl: process.env.DATABASE_URL,
       databaseSsl: process.env.DATABASE_SSL,
