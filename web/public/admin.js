@@ -40,6 +40,7 @@ const els = {
   manageUsersButton: $("manageUsersButton"),
   runs: $("runs"),
   systemHealth: $("systemHealth"),
+  diagnostics: $("diagnosticsList"),
   logoutButton: $("logoutButton"),
   profileMenuButton: $("profileMenuButton"),
   profileDropdown: $("profileDropdown"),
@@ -389,16 +390,38 @@ function renderKnowledge() {
   els.knowledge.querySelectorAll("[data-id]").forEach((button) => button.addEventListener("click", () => updateKnowledge(button.dataset.id, button.dataset.status)));
 }
 
+function renderMetricCard(label, value, detail, state = "Ready") {
+  return `<article class="metric-card"><div class="row"><span>${html(label)}</span>${statusBadge(state)}</div><strong>${html(value)}</strong><p>${html(detail)}</p></article>`;
+}
+
 function renderRuns(runs = []) {
   if (!els.runs) return;
   if (!hasAdminAccess()) {
     els.runs.innerHTML = `<div class="empty action-empty"><strong>Review logs are protected.</strong><p>Start or restore a valid admin session to inspect run history, counts, and errors. Public view keeps review records hidden.</p></div>`;
     return;
   }
-  els.runs.innerHTML = runs.length ? runs.map((run) => {
+
+  const latestRun = runs[0];
+  const failedRuns = runs.filter((run) => run.status === "failed").length;
+  const messagesReviewed = runs.reduce((total, run) => total + Number(run.messagesReviewed || 0), 0);
+  const knowledgeCreated = runs.reduce((total, run) => total + Number(run.knowledgeEntriesCreated || 0), 0);
+  const summary = `<div class="review-run-summary">${[
+    renderMetricCard("Last run", latestRun ? time(latestRun.startedAt) || "Recent" : "None", latestRun ? `Status: ${latestRun.status || "unknown"}` : "No backend review run has been recorded yet.", latestRun?.status === "failed" ? "Error" : latestRun ? "Loaded" : "Public view"),
+    renderMetricCard("Messages reviewed", messagesReviewed, `${runs.length} run${runs.length === 1 ? "" : "s"} loaded from protected history.`, "Loaded"),
+    renderMetricCard("Knowledge entries", knowledgeCreated, "Created as pending review knowledge during runs.", "Ready"),
+    renderMetricCard("Failures", failedRuns, failedRuns ? "Open failed runs below for the backend error." : "No failed runs in the loaded history.", failedRuns ? "Error" : "Ready")
+  ].join("")}</div>`;
+
+  if (!runs.length) {
+    els.runs.innerHTML = `${summary}<div class="empty action-empty"><strong>No review runs yet.</strong><p>Review history will appear here after the backend records a completed run.</p></div>`;
+    return;
+  }
+
+  const history = runs.map((run) => {
     const state = run.status === "failed" ? "Error" : run.status === "running" ? "Loaded" : "Ready";
-    return `<article class="item"><div class="row"><span>${html(run.status)}</span>${statusBadge(state)}</div><p>${html(run.messagesReviewed)} messages reviewed, ${html(run.knowledgeEntriesCreated)} KB entries created.</p><p>Started ${html(time(run.startedAt))}${run.finishedAt ? `; finished ${html(time(run.finishedAt))}` : ""}.</p>${run.error ? `<p>${html(run.error)}</p>` : ""}</article>`;
-  }).join("") : `<div class="empty action-empty"><strong>No review runs yet.</strong><p>Review history will appear here after the backend records a completed run.</p></div>`;
+    return `<article class="item review-run-item"><div class="row"><span>${html(run.status || "unknown")}</span>${statusBadge(state)}</div><p>${html(run.messagesReviewed || 0)} messages reviewed, ${html(run.knowledgeEntriesCreated || 0)} knowledge entries created.</p><p>Started ${html(time(run.startedAt))}${run.finishedAt ? `; finished ${html(time(run.finishedAt))}` : "; still running or waiting for completion"}.</p>${run.error ? `<p class="error-note">${html(run.error)}</p>` : ""}</article>`;
+  }).join("");
+  els.runs.innerHTML = `${summary}<div class="review-run-list">${history}</div>`;
 }
 
 function setUserFormEnabled(enabled) {
@@ -476,12 +499,26 @@ function renderSystemHealth(status = lastStatus || {}) {
   if (!els.systemHealth) return;
   const accessAvailable = hasAdminAccess();
   const rows = [
-    ["Storage", status.storageAvailable === false ? "Error" : "Ready", status.storageMode || "unknown"],
-    ["AI availability", status.aiAvailable ? "Ready" : "Storage-only", status.aiAvailable ? "Responses enabled" : "Messages are saved for review"],
-    ["Directory loaded", status.directoryAvailable ? "Loaded" : "Error", Array.isArray(status.filesLoaded) ? `${status.filesLoaded.length} files loaded` : "No file count"],
-    ["Protected route status", accessAvailable ? "Ready" : "Public view", accessAvailable ? "Admin access is available in this browser session" : "Protected management routes remain hidden in public view"]
+    { label: "Storage", state: status.storageAvailable === false ? "Error" : "Ready", detail: status.storageMode || "unknown", hint: status.storageAvailable === false ? "Check database configuration and storage startup logs." : "Storage is available for chat, review, and account records." },
+    { label: "AI availability", state: status.aiAvailable ? "Ready" : "Storage-only", detail: status.aiAvailable ? "Responses enabled" : "Messages are saved for review", hint: status.aiAvailable ? "AI responses can be generated when requests arrive." : "Set OPENAI_API_KEY in the server environment to enable AI responses." },
+    { label: "Directory loaded", state: status.directoryAvailable ? "Loaded" : "Error", detail: Array.isArray(status.filesLoaded) ? `${status.filesLoaded.length} files loaded` : "No file count", hint: status.directoryAvailable ? "Agent directory files are available to the app." : "Check repository files and directory loading during startup." },
+    { label: "Protected route status", state: accessAvailable ? "Ready" : "Public view", detail: accessAvailable ? "Admin requests can be attempted from this browser" : "Protected management routes remain hidden", hint: accessAvailable ? "The backend still validates owner/admin authorization for every protected request." : "Log in with an owner/admin account to load review history and management data." }
   ];
-  els.systemHealth.innerHTML = rows.map(([label, state, detail]) => `<article class="item health-item"><div class="row"><span>${html(label)}</span>${statusBadge(state)}</div><p>${html(detail)}</p></article>`).join("");
+  els.systemHealth.innerHTML = rows.map(({ label, state, detail, hint }) => `<article class="item health-item"><div class="row"><span>${html(label)}</span>${statusBadge(state)}</div><p class="health-detail">${html(detail)}</p><p class="health-hint">${html(hint)}</p></article>`).join("");
+}
+
+function renderDiagnostics(status = lastStatus || {}) {
+  if (!els.diagnostics) return;
+  const cadence = refreshCadenceOptions[getStoredRefreshCadence()] || refreshCadenceOptions[defaultRefreshCadence];
+  const theme = getStoredThemePreference();
+  const diagnostics = [
+    ["Status source", "Loaded", `System health reads /api/status${status.storageMode ? ` in ${status.storageMode} mode` : ""}.`],
+    ["Refresh cadence", cadence.ms > 0 ? "Ready" : "Public view", `${cadence.label}: ${cadence.summary}`],
+    ["Theme mode", "Ready", theme === "system" ? `System mode is active and currently resolves to ${resolveThemeChoice("system")}.` : `${theme} mode is explicitly stored for reloads.`],
+    ["Protected route policy", hasAdminAccess() ? "Ready" : "Public view", hasAdminAccess() ? "Protected route requests use the hidden browser session or compatibility token; secret values are not displayed." : "Public view keeps review history, user records, and audit events hidden."],
+    ["Secret display guard", "Ready", "Settings does not render passwords, API keys, deploy hooks, session tokens, or admin token values."]
+  ];
+  els.diagnostics.innerHTML = diagnostics.map(([label, state, detail]) => `<article class="item diagnostics-item"><div class="row"><span>${html(label)}</span>${statusBadge(state)}</div><p>${html(detail)}</p></article>`).join("");
 }
 
 async function loadChat(chatId) {
@@ -603,6 +640,7 @@ async function loadSettingsPage() {
   const status = await fetchJson("/api/status");
   lastStatus = status;
   renderSystemHealth(status);
+  renderDiagnostics(status);
   if (hasAdminAccess()) {
     const runs = await fetchJson("/api/admin/review-runs", {}, true);
     renderRuns(runs.runs || []);
@@ -634,6 +672,7 @@ async function loadPage() {
     renderRuns();
     renderUsers();
     renderSystemHealth(lastStatus || {});
+    renderDiagnostics(lastStatus || {});
   }
 }
 
