@@ -571,3 +571,9 @@ ensureChatSession().catch((error) => {
 });
 setInterval(() => refreshCurrentSession().catch(() => {}), refreshIntervalMs);
 resizeInput();
+
+window.addEventListener("load", () => {
+  const script = document.createElement("script");
+  script.src = "bubble-color.js?v=20260607-bubble-picker";
+  document.body.appendChild(script);
+});
