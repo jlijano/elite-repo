@@ -23,6 +23,7 @@ const maxAttachmentChars = 2000000;
 const maxAttachmentNameLength = 160;
 const anonymousChatRetentionDays = 30;
 const typingTimeoutMs = 6000;
+const defaultBubbleColor = "#2f2f2f";
 const chatParticipants = new Map();
 const pendingReviewReply =
   "I saved your message for Switchboard review. The AI responder is unavailable right now, so this chat is in storage-only mode and can be reviewed later.";
@@ -64,6 +65,12 @@ function redact(value) {
     .replace(/\bBearer\s+[A-Za-z0-9._~+/=-]{16,}/gi, "Bearer [REDACTED]");
 }
 
+function cleanBubbleColor(value) {
+  if (typeof value !== "string") return defaultBubbleColor;
+  const color = value.trim().toLowerCase();
+  return /^#[0-9a-f]{6}$/.test(color) ? color : defaultBubbleColor;
+}
+
 function cleanAttachment(attachment = {}) {
   const name = typeof attachment.name === "string" && attachment.name.trim()
     ? attachment.name.trim().slice(0, maxAttachmentNameLength)
@@ -97,7 +104,8 @@ function cleanParticipantContext(context = {}) {
     : fallbackLabel;
   const deviceType = ["desktop", "mobile", "tablet"].includes(context.deviceType) ? context.deviceType : "desktop";
   const shareCount = Number.isFinite(Number(context.shareCount)) ? Math.max(0, Math.min(9999, Number(context.shareCount))) : 0;
-  return { participantId, participantType, participantLabel, deviceType, shareCount };
+  const bubbleColor = cleanBubbleColor(context.bubbleColor);
+  return { participantId, participantType, participantLabel, deviceType, shareCount, bubbleColor };
 }
 
 function participantBucket(chatId) {
@@ -112,6 +120,7 @@ function participantPublicRecord(record = {}) {
     participantLabel: record.participantLabel,
     deviceType: record.deviceType,
     shareCount: Number(record.shareCount || 0),
+    bubbleColor: cleanBubbleColor(record.bubbleColor),
     isTyping: Boolean(record.isTyping),
     lastSeenAt: record.lastSeenAt,
     lastTypingAt: record.lastTypingAt || null
@@ -126,6 +135,7 @@ function upsertChatParticipant(chatId, context = {}) {
   const record = {
     ...existing,
     ...participant,
+    bubbleColor: participant.bubbleColor || existing.bubbleColor || defaultBubbleColor,
     shareCount: Math.max(Number(existing.shareCount || 0), participant.shareCount),
     isTyping: Boolean(existing.isTyping),
     lastTypingAt: existing.lastTypingAt || null,
@@ -177,6 +187,7 @@ function cleanContext(context = {}) {
         if (key === "participantType") return [key, value === "original" ? "original" : "shared"];
         if (key === "deviceType") return [key, ["desktop", "mobile", "tablet"].includes(value) ? value : "desktop"];
         if (key === "shareCount") return [key, Number.isFinite(Number(value)) ? Math.max(0, Math.min(9999, Number(value))) : 0];
+        if (key === "bubbleColor") return [key, cleanBubbleColor(value)];
         if (typeof value === "string") return [key, redact(value).slice(0, maxAttachmentChars)];
         if (typeof value === "number" || typeof value === "boolean" || value === null) return [key, value];
         return [key, "[unsupported]"];
