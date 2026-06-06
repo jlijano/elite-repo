@@ -1,6 +1,19 @@
 const sessionTokenStorageKey = "switchboard-session-token";
 const adminTokenStorageKey = "switchboard-admin-token";
 const legacyProfileStorageKey = "switchboard-user-profile";
+const sessionUserStorageKey = "switchboard-session-user";
+const adminPaths = new Set([
+  "/chat.html",
+  "/knowledge.html",
+  "/user.html",
+  "/playground.html",
+  "/reports.html",
+  "/logs.html",
+  "/review-runs.html",
+  "/system-health.html",
+  "/user-audit.html",
+  "/settings.html"
+]);
 
 const form = document.getElementById("loginForm");
 const email = document.getElementById("loginEmail");
@@ -14,11 +27,34 @@ function setLoginStatus(message, error = false) {
   status.classList.toggle("error", error);
 }
 
+function isAdminRole(role) {
+  return role === "owner" || role === "admin";
+}
+
+function safeRequestedPath(value) {
+  if (!value || !value.startsWith("/") || value.startsWith("//")) return "";
+  try {
+    return new URL(value, window.location.origin).pathname;
+  } catch {
+    return "";
+  }
+}
+
 function redirectTarget(user) {
   const params = new URLSearchParams(window.location.search);
   const requested = params.get("redirect");
-  if (requested && requested.startsWith("/") && !requested.startsWith("//")) return requested;
-  return ["owner", "admin"].includes(user?.role) ? "/user.html" : "/update-profile.html";
+  const requestedPath = safeRequestedPath(requested);
+  if (requested && requestedPath) {
+    if (!adminPaths.has(requestedPath) || isAdminRole(user?.role)) return requested;
+  }
+  return isAdminRole(user?.role) ? "/user.html" : "/update-profile.html?reason=not-admin";
+}
+
+function explainReason() {
+  const reason = new URLSearchParams(window.location.search).get("reason");
+  if (reason === "expired") setLoginStatus("Your session expired. Please sign in again.", true);
+  if (reason === "required") setLoginStatus("Please sign in to continue.", true);
+  if (reason === "not-admin") setLoginStatus("That area requires an admin account. Sign in with an admin user to continue.", true);
 }
 
 form?.addEventListener("submit", async (event) => {
@@ -33,8 +69,9 @@ form?.addEventListener("submit", async (event) => {
     const data = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(data.error || "Could not log in.");
     sessionStorage.setItem(sessionTokenStorageKey, data.sessionToken);
+    sessionStorage.setItem(sessionUserStorageKey, JSON.stringify({ id: data.user?.id, name: data.user?.name, email: data.user?.email, role: data.user?.role }));
     localStorage.removeItem(legacyProfileStorageKey);
-    if (["owner", "admin"].includes(data.user?.role)) {
+    if (isAdminRole(data.user?.role)) {
       sessionStorage.setItem(adminTokenStorageKey, data.sessionToken);
     } else {
       sessionStorage.removeItem(adminTokenStorageKey);
@@ -44,3 +81,5 @@ form?.addEventListener("submit", async (event) => {
     setLoginStatus(error.message, true);
   }
 });
+
+explainReason();
