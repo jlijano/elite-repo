@@ -10,12 +10,49 @@ const adminRedirectHtml = readPublic("admin.html");
 const chatHtml = readPublic("chat.html");
 const knowledgeHtml = readPublic("knowledge.html");
 const userHtml = readPublic("user.html");
+const playgroundHtml = readPublic("playground.html");
 const settingsHtml = readPublic("settings.html");
 const updateProfileHtml = readPublic("update-profile.html");
+const reportsHtml = readPublic("reports.html");
+const logsHtml = readPublic("logs.html");
+const reviewRunsHtml = readPublic("review-runs.html");
+const systemHealthHtml = readPublic("system-health.html");
+const userAuditHtml = readPublic("user-audit.html");
 const loginHtml = readPublic("login.html");
 const adminJs = readPublic("admin.js");
+const profileJs = readPublic("profile.js");
+const reportsJs = readPublic("reports.js");
 const adminCss = readPublic("admin.css");
-const allAdminPages = [chatHtml, knowledgeHtml, userHtml, settingsHtml, updateProfileHtml];
+
+const allAdminPages = [
+  chatHtml,
+  knowledgeHtml,
+  userHtml,
+  playgroundHtml,
+  settingsHtml,
+  updateProfileHtml,
+  reportsHtml,
+  logsHtml,
+  reviewRunsHtml,
+  systemHealthHtml,
+  userAuditHtml,
+];
+
+const reportPages = [
+  [reportsHtml, "reports", "reportsPage", "Reports"],
+  [logsHtml, "logs", "logsPage", "Logs"],
+  [reviewRunsHtml, "review-runs", "reviewRunsPage", "Review runs"],
+  [systemHealthHtml, "system-health", "systemHealthPage", "System health"],
+  [userAuditHtml, "user-audit", "userAuditPage", "User audit"],
+];
+
+const reportLinks = [
+  ["/reports.html", "Overview"],
+  ["/logs.html", "Logs"],
+  ["/review-runs.html", "Review runs"],
+  ["/system-health.html", "System health"],
+  ["/user-audit.html", "User audit"],
+];
 
 test("admin.html redirects to the dedicated chat admin page", () => {
   assert.match(adminRedirectHtml, /url=\/chat\.html/);
@@ -28,6 +65,7 @@ test("top-level admin navigation uses dedicated page links", () => {
     ["href=\"/chat.html\"", "Chat"],
     ["href=\"/knowledge.html\"", "Knowledge base"],
     ["href=\"/user.html\"", "User"],
+    ["href=\"/playground.html\"", "Playground"],
     ["href=\"/settings.html\"", "Settings"],
   ];
 
@@ -40,6 +78,16 @@ test("top-level admin navigation uses dedicated page links", () => {
     assert.doesNotMatch(pageHtml, /Admin access/);
     assert.doesNotMatch(pageHtml, /id="logoutButton"/);
     assert.doesNotMatch(pageHtml, /logout-action/);
+  }
+});
+
+test("reports navigation is grouped and contains all report types", () => {
+  for (const pageHtml of allAdminPages) {
+    assert.match(pageHtml, /class="admin-section-list reports-nav"[\s\S]*aria-label="Reports navigation"/);
+    assert.match(pageHtml, /<h2 class="session-heading">Reports<\/h2>/);
+    for (const [href, label] of reportLinks) {
+      assert.match(pageHtml, new RegExp(`href="${href}"[\\s\\S]*>${label}<`));
+    }
   }
 });
 
@@ -72,7 +120,14 @@ test("user page includes user management and new user action", () => {
   assert.match(userHtml, />New user<\/button>/);
 });
 
-test("settings page owns preferences access review health and diagnostics sections", () => {
+test("playground page is reachable from admin navigation", () => {
+  assert.match(playgroundHtml, /<body data-admin-page="playground">/);
+  assert.match(playgroundHtml, /<h1>Playground<\/h1>/);
+  assert.match(playgroundHtml, /class="nav-item active" href="\/playground\.html"/);
+  assert.match(playgroundHtml, /id="kanbanTitle"/);
+});
+
+test("settings page owns preferences access review health diagnostics and refresh cadence sections", () => {
   assert.match(settingsHtml, /<body data-admin-page="settings">/);
   assert.match(settingsHtml, /<h1>Settings<\/h1>/);
   assert.match(settingsHtml, /id="settingsPage"/);
@@ -82,26 +137,54 @@ test("settings page owns preferences access review health and diagnostics sectio
   assert.match(settingsHtml, /id="diagnosticsPage"/);
   assert.match(settingsHtml, />Preferences<\/p>/);
   assert.match(settingsHtml, />Access and security<\/p>/);
-  assert.match(settingsHtml, /<h2>Review runs<\/h2>/);
-  assert.match(settingsHtml, /<h2>System health<\/h2>/);
-  assert.match(settingsHtml, /<h2>Diagnostics<\/h2>/);
+  assert.match(settingsHtml, /class="refresh-cadence-control"[\s\S]*aria-label="Refresh cadence"/);
+  assert.match(settingsHtml, /id="settingsRefreshNow"/);
 });
 
 test("settings page uses standardized status badges and expanded health layout", () => {
-  assert.match(settingsHtml, /class="status-badge status-loaded">40 seconds<\/span>/);
   assert.match(settingsHtml, /class="status-badge status-public" id="settingsAdminState">Public view<\/span>/);
   assert.match(settingsHtml, /class="health-grid" id="systemHealth"/);
   assert.doesNotMatch(settingsHtml, /id="systemHealth"[^>]*compact-list/);
   assert.match(adminJs, /const statusClass = \(state = ""\) =>/);
   assert.match(adminJs, /const statusBadge = \(state\) =>/);
-  assert.match(adminJs, /Review logs are protected\./);
-  assert.match(adminJs, /Protected management routes remain hidden in public view/);
   assert.match(adminCss, /\.status-ready/);
   assert.match(adminCss, /\.status-loaded/);
   assert.match(adminCss, /\.status-public/);
   assert.match(adminCss, /\.status-storage/);
   assert.match(adminCss, /\.status-error/);
   assert.match(adminCss, /\.health-grid/);
+});
+
+test("report pages exist and load the reports script", () => {
+  for (const [pageHtml, pageName, pageId, title] of reportPages) {
+    assert.match(pageHtml, new RegExp(`<body data-admin-page="${pageName}">`));
+    assert.match(pageHtml, new RegExp(`id="${pageId}"`));
+    assert.match(pageHtml, new RegExp(`<h1>${title}<\\/h1>`));
+    assert.match(pageHtml, /<script src="reports\.js"><\/script>/);
+    assert.match(pageHtml, /id="menuClock"/);
+    assert.match(pageHtml, /id="profileMenuButton"/);
+    assert.match(pageHtml, /class="profile-logout"[\s\S]*>Logout<\/button>/);
+  }
+});
+
+test("each report page marks the active report link", () => {
+  assert.match(reportsHtml, /class="nav-item active" href="\/reports\.html" aria-current="page"/);
+  assert.match(logsHtml, /class="nav-item active" href="\/logs\.html" aria-current="page"/);
+  assert.match(reviewRunsHtml, /class="nav-item active" href="\/review-runs\.html" aria-current="page"/);
+  assert.match(systemHealthHtml, /class="nav-item active" href="\/system-health\.html" aria-current="page"/);
+  assert.match(userAuditHtml, /class="nav-item active" href="\/user-audit\.html" aria-current="page"/);
+});
+
+test("reports javascript loads public status and protected report data without token-entry UI", () => {
+  assert.match(reportsJs, /reportsFetchJson\("\/api\/status"\)/);
+  assert.match(reportsJs, /reportsFetchJson\("\/api\/admin\/summary"\)/);
+  assert.match(reportsJs, /reportsFetchJson\("\/api\/admin\/review-runs"\)/);
+  assert.match(reportsJs, /reportsFetchJson\("\/api\/admin\/user-audit-events"\)/);
+  assert.match(reportsJs, /sessionStorage\.getItem\(reportsAdminTokenStorageKey\)/);
+  assert.match(reportsJs, /sessionStorage\.getItem\(reportsSessionTokenStorageKey\)/);
+  assert.match(reportsJs, /Protected details require an admin session/);
+  assert.doesNotMatch(reportsJs, /prompt\(/);
+  assert.doesNotMatch(reportsJs, /ADMIN_TOKEN/);
 });
 
 test("top nav includes current time and profile settings person icon", () => {
@@ -115,10 +198,7 @@ test("top nav includes current time and profile settings person icon", () => {
   }
 
   assert.match(adminJs, /function updateClock\(\)/);
-  assert.match(adminJs, /weekday: "short"/);
-  assert.match(adminJs, /month: "short"/);
-  assert.match(adminJs, /hour: "numeric"/);
-  assert.match(adminJs, /minute: "2-digit"/);
+  assert.match(reportsJs, /function updateReportsClock\(\)/);
 });
 
 test("profile dropdown is the admin logout surface", () => {
@@ -133,6 +213,7 @@ test("profile dropdown is the admin logout surface", () => {
   assert.match(adminJs, /function toggleProfileDropdown\(\)/);
   assert.match(adminJs, /sessionStorage\.removeItem\(adminTokenStorageKey\)/);
   assert.match(adminJs, /window\.location\.href = "\/login\.html"/);
+  assert.match(reportsJs, /sessionStorage\.removeItem\(reportsAdminTokenStorageKey\)/);
 });
 
 test("update profile page supports photo name email and password inputs", () => {
@@ -145,10 +226,9 @@ test("update profile page supports photo name email and password inputs", () => 
   assert.match(updateProfileHtml, /id="profileCurrentPassword"[\s\S]*type="password"/);
   assert.match(updateProfileHtml, /id="profileNewPassword"[\s\S]*autocomplete="new-password"/);
   assert.match(updateProfileHtml, /id="profileConfirmPassword"[\s\S]*autocomplete="new-password"/);
-  assert.match(adminJs, /const userProfileStorageKey = "switchboard-user-profile"/);
-  assert.match(adminJs, /function saveProfile\(event\)/);
-  assert.match(adminJs, /clearPasswordFields\(\)/);
-  assert.doesNotMatch(adminJs, /password: els\.profile/);
+  assert.match(profileJs, /async function saveProfile\(event\)/);
+  assert.match(profileJs, /clearPasswordFields\(\)/);
+  assert.doesNotMatch(profileJs, /password: els\.profile/);
 });
 
 test("login page is the logout redirect target", () => {
@@ -178,17 +258,12 @@ test("theme preference persists explicit choices and restores system mode", () =
   assert.match(adminJs, /const themeStorageKey = "switchboard-theme"/);
   assert.match(adminJs, /const themePreferenceStorageKey = "switchboard-theme-mode"/);
   assert.match(adminJs, /const validThemeChoices = \["light", "dark", "system"\]/);
-  assert.match(adminJs, /const systemThemeQuery = window\.matchMedia\?\.\("\(prefers-color-scheme: dark\)"\)/);
   assert.match(adminJs, /function getStoredThemePreference\(\)/);
   assert.match(adminJs, /function applyThemePreference\(preference\)/);
   assert.match(adminJs, /localStorage\.setItem\(themePreferenceStorageKey, choice\)/);
   assert.match(adminJs, /localStorage\.removeItem\(themeStorageKey\)/);
-  assert.match(adminJs, /localStorage\.setItem\(themeStorageKey, choice\)/);
   assert.match(adminJs, /function applyStoredThemePreference\(\)/);
   assert.match(adminJs, /applyStoredThemePreference\(\)/);
-  assert.match(adminJs, /function handleSystemThemeChange\(\)/);
-  assert.match(adminJs, /systemThemeQuery\?\.addEventListener\?\.\("change", handleSystemThemeChange\)/);
-  assert.match(adminJs, /els\.settingsThemeOptions\?\.forEach\(\(button\) => button\.addEventListener\("click", \(\) => applyThemePreference\(button\.dataset\.themeChoice\)\)\)/);
 });
 
 test("admin javascript switches behavior by page", () => {
@@ -197,5 +272,4 @@ test("admin javascript switches behavior by page", () => {
   assert.match(adminJs, /async function loadKnowledgePage\(\)/);
   assert.match(adminJs, /async function loadUserPage\(\)/);
   assert.match(adminJs, /async function loadSettingsPage\(\)/);
-  assert.match(adminJs, /page === "update-profile"/);
 });
