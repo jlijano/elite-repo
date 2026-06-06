@@ -494,7 +494,7 @@
     const list = document.getElementById("entraList");
     if (!list) return;
     enhanceRows();
-    new MutationObserver(enhRows).observe(list, { childList: true, subtree: true });
+    new MutationObserver(enhanceRows).observe(list, { childList: true, subtree: true });
   }
 
   addStyles();
