@@ -174,7 +174,7 @@
   }
 
   function rowUserId(row) {
-    return row.querySelector("[data-user-edit]")?.dataset.userEdit ||
+    return row.querySelector("[data-user-edit]:not(.user-name-edit-trigger)")?.dataset.userEdit ||
       row.querySelector("[data-user-disable]")?.dataset.userDisable ||
       row.querySelector("[data-user-reactivate]")?.dataset.userReactivate ||
       row.querySelector("[data-user-purge]")?.dataset.userPurge ||
@@ -182,6 +182,7 @@
   }
 
   function hideEditButton(button) {
+    if (button?.classList.contains("user-name-edit-trigger")) return;
     if (!button || button.classList.contains("user-edit-action-hidden")) return;
     button.classList.add("user-edit-action-hidden");
     button.hidden = true;
@@ -272,7 +273,7 @@
     if (!list) return;
     hideListOnlyFields();
     list.querySelectorAll("tr, .user-card, li, article").forEach((row) => {
-      const editButton = row.querySelector("[data-user-edit]");
+      const editButton = row.querySelector("[data-user-edit]:not(.user-name-edit-trigger)");
       const userId = rowUserId(row);
       const actions = row.querySelector(".actions, .user-actions, td:last-child") || row;
 
