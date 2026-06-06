@@ -1,5 +1,5 @@
 const reportsAdminTokenStorageKey = "switchboard-admin-token";
-const reportsSessionTokenStorageKey = "switchboard-user-session-token";
+const reportsSessionTokenStorageKey = "switchboard-session-token";
 
 const reportsEls = {
   status: document.getElementById("status"),
