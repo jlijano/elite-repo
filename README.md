@@ -25,13 +25,15 @@ The `web/` directory contains a Render-ready Express app that serves a plain HTM
 - Durable knowledge entries produced by review runs as `pending_review` entries and reused in future AI context only after approval.
 - Backend management dashboard at `/admin.html` for inspecting chats, reviewing knowledge entries, and checking review history.
 - Admin dashboard styling shares the chat UI shell, theme tokens, and persistent light/dark mode behavior for a consistent management experience.
-- Admin dashboard navigation includes Chat Review, User Management, File Management, Knowledge, Logs, Files Management, and Logout sections.
+- Admin dashboard navigation uses clarified sections for Chat Review, Admin Access, Chat Attachments, Knowledge, Review Logs, File Library, Settings, and Logout.
+- Admin dashboard highlights the active navigation section and presents Switchboard Admin as the current workspace rather than as a generic tool.
+- Admin dashboard includes a Settings section for application-wide preferences, including theme control, refresh cadence, dashboard customization status, and protected admin-data state.
 - Admin dashboard keeps the left sidebar fixed on desktop while the right dashboard panel scrolls independently so lower sections remain reachable.
 - Admin dashboard keeps the Chat Review and Chat Detail cards hidden until the Chat review navigation item is selected.
 - Admin dashboard no longer exposes visible token-entry, Login, or Run Review controls; Chat Review loads recent chats into the highlighted review section, while protected backend admin routes still require `ADMIN_TOKEN` for management-only data.
 - Admin dashboard Knowledge includes source-controlled project knowledge cards from the current build conversation, plus review-created backend knowledge when an admin session is available.
 - Admin dashboard chat and knowledge search controls filter cached management data, keep selected chats highlighted, and show clear loading and error states during admin actions.
-- User and broader file management sections currently show honest status placeholders until dedicated backend endpoints are added.
+- Admin Access and File Library sections currently show honest status placeholders until dedicated backend endpoints are added.
 - Chat failure responses distinguish between saved messages awaiting review and storage failures that could not save the message.
 - Agent Directory status indicator backed by the `/api/status` endpoint.
 - Render health check support through `/health`.
