@@ -26,15 +26,17 @@
           <a class="nav-item" href="/knowledge.html"><span aria-hidden="true">◇</span>Knowledge base</a>
           <a class="nav-item" href="/user.html"><span aria-hidden="true">◉</span>User</a>
           <a class="nav-item" href="/playground.html"><span aria-hidden="true">▦</span>Playground</a>
-          <div class="admin-section-list reports-nav" aria-label="Reports navigation">
-            <h2 class="session-heading">Reports</h2>
-            <a class="nav-item" href="/reports.html"><span aria-hidden="true">▣</span>Overview</a>
-            <a class="nav-item" href="/logs.html"><span aria-hidden="true">≡</span>Logs</a>
-            <a class="nav-item" href="/review-runs.html"><span aria-hidden="true">↻</span>Review runs</a>
-            <a class="nav-item" href="/system-health.html"><span aria-hidden="true">✚</span>System health</a>
-            <a class="nav-item" href="/user-audit.html"><span aria-hidden="true">◎</span>User audit</a>
-          </div>
-          <a class="nav-item active" href="/settings.html" aria-current="page"><span aria-hidden="true">⚙</span>Settings</a>
+          <details class="admin-section-list reports-nav" open>
+            <summary class="reports-summary"><span class="reports-summary-label">Reports</span><span class="reports-summary-chevron" aria-hidden="true">⌄</span></summary>
+            <div class="reports-nav-items" aria-label="Reports navigation">
+              <a class="nav-item" href="/reports.html"><span aria-hidden="true">▣</span>Overview</a>
+              <a class="nav-item" href="/logs.html"><span aria-hidden="true">≡</span>Logs</a>
+              <a class="nav-item" href="/review-runs.html"><span aria-hidden="true">↻</span>Review runs</a>
+              <a class="nav-item" href="/system-health.html"><span aria-hidden="true">✚</span>System health</a>
+              <a class="nav-item" href="/user-audit.html"><span aria-hidden="true">◎</span>User audit</a>
+              <a class="nav-item active" href="/settings.html" aria-current="page"><span aria-hidden="true">⚙</span>Settings</a>
+            </div>
+          </details>
         </nav>
         <section class="admin-section-list" aria-label="Admin workspace">
           <h2 class="session-heading">Workspace</h2>
@@ -86,50 +88,10 @@
                   </div>
                 </div>
               </section>
-
-              <section class="admin-card wide settings-section-card" id="accessSecurityPage">
-                <div class="card-head"><div><p class="section-kicker">Access and security</p><h2>Admin state</h2><p class="card-subtitle">Review the current browser session and protected-route behavior without exposing secrets.</p></div></div>
-                <div class="settings-list relaxed access-security-list">
-                  <div class="access-summary" id="settingsAccessSummary" aria-live="polite">Checking access state...</div>
-                  <div class="access-security-grid">
-                    <article class="item access-state-item">
-                      <div class="row"><span>Current session</span><small class="status-badge status-public" id="settingsSessionState">Public view</small></div>
-                      <p id="settingsSessionDetail">No owner/admin session is stored in this browser.</p>
-                    </article>
-                    <article class="item access-state-item">
-                      <div class="row"><span>Protected admin routes</span><small class="status-badge status-public" id="settingsProtectedRouteState">Public view</small></div>
-                      <p id="settingsProtectedRouteDetail">Review logs, user records, audit events, and management reports stay hidden until an admin session is available.</p>
-                    </article>
-                    <article class="item access-state-item">
-                      <div class="row"><span>Secret handling</span><small class="status-badge status-ready">Ready</small></div>
-                      <p>No passwords, tokens, deploy hooks, API keys, or session values are shown on this page.</p>
-                    </article>
-                  </div>
-                  <div class="access-actions" aria-label="Access and security actions">
-                    <a class="secondary-action" href="/login.html">Open login</a>
-                    <a class="secondary-action" href="/update-profile.html">Update profile</a>
-                    <a class="secondary-action" href="/user-audit.html">View user audit</a>
-                  </div>
-                </div>
-              </section>
-
-              <section class="admin-card" id="reviewRunsPage">
-                <div class="card-head"><div><p class="section-kicker">Review runs</p><h2>Review runs</h2><p class="card-subtitle">Review history, run counts, and errors.</p></div></div>
-                <div class="list compact-list" id="runs">Protected review logs require an admin session.</div>
-              </section>
-
-              <section class="admin-card wide" id="systemHealthPage">
-                <div class="card-head"><div><p class="section-kicker">System health</p><h2>System health</h2><p class="card-subtitle">Storage, AI, directory, and protected route status.</p></div></div>
-                <div class="health-grid" id="systemHealth">Loading system health...</div>
-              </section>
-
-              <section class="admin-card" id="diagnosticsPage">
-                <div class="card-head"><div><p class="section-kicker">Diagnostics</p><h2>Diagnostics</h2><p class="card-subtitle">Operational notes for the current Settings build.</p></div></div>
-                <div class="list diagnostics-list">
-                  <article class="item"><div class="row"><span>Status source</span><small class="status-badge status-loaded">Loaded</small></div><p>System health comes from <code>/api/status</code>; protected review history loads only through admin routes.</p></article>
-                  <article class="item"><div class="row"><span>Protected route policy</span><small class="status-badge status-public">Public view</small></div><p>The page never asks for secrets. Admin authorization remains backend-managed through protected routes.</p></article>
-                </div>
-              </section>
+              <section class="admin-card wide settings-section-card" id="accessSecurityPage"><div class="card-head"><div><p class="section-kicker">Access and security</p><h2>Admin state</h2><p class="card-subtitle">Review the current browser session and protected-route behavior without exposing secrets.</p></div></div><div class="settings-list relaxed access-security-list"><div class="access-summary" id="settingsAccessSummary" aria-live="polite">Checking access state...</div><div class="access-security-grid"><article class="item access-state-item"><div class="row"><span>Current session</span><small class="status-badge status-public" id="settingsSessionState">Public view</small></div><p id="settingsSessionDetail">No owner/admin session is stored in this browser.</p></article><article class="item access-state-item"><div class="row"><span>Protected admin routes</span><small class="status-badge status-public" id="settingsProtectedRouteState">Public view</small></div><p id="settingsProtectedRouteDetail">Review logs, user records, audit events, and management reports stay hidden until an admin session is available.</p></article><article class="item access-state-item"><div class="row"><span>Secret handling</span><small class="status-badge status-ready">Ready</small></div><p>No passwords, tokens, deploy hooks, API keys, or session values are shown on this page.</p></article></div><div class="access-actions" aria-label="Access and security actions"><a class="secondary-action" href="/login.html">Open login</a><a class="secondary-action" href="/update-profile.html">Update profile</a><a class="secondary-action" href="/user-audit.html">View user audit</a></div></div></section>
+              <section class="admin-card" id="reviewRunsPage"><div class="card-head"><div><p class="section-kicker">Review runs</p><h2>Review runs</h2><p class="card-subtitle">Review history, run counts, and errors.</p></div></div><div class="list compact-list" id="runs">Protected review logs require an admin session.</div></section>
+              <section class="admin-card wide" id="systemHealthPage"><div class="card-head"><div><p class="section-kicker">System health</p><h2>System health</h2><p class="card-subtitle">Storage, AI, directory, and protected route status.</p></div></div><div class="health-grid" id="systemHealth">Loading system health...</div></section>
+              <section class="admin-card" id="diagnosticsPage"><div class="card-head"><div><p class="section-kicker">Diagnostics</p><h2>Diagnostics</h2><p class="card-subtitle">Operational notes for the current Settings build.</p></div></div><div class="list diagnostics-list"><article class="item"><div class="row"><span>Status source</span><small class="status-badge status-loaded">Loaded</small></div><p>System health comes from <code>/api/status</code>; protected review history loads only through admin routes.</p></article><article class="item"><div class="row"><span>Protected route policy</span><small class="status-badge status-public">Public view</small></div><p>The page never asks for secrets. Admin authorization remains backend-managed through protected routes.</p></article></div></section>
             </div>
           </div>
         </div>
