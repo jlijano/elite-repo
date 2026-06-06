@@ -2,6 +2,7 @@
 
 ## [Unreleased]
 
+- Forced the chat landing page to clear the saved active chat, load the latest chat script, and show the composer title as `New chat` instead of an old chat name.
 - Changed the chat landing screen so it no longer auto-loads previous chat messages and instead shows a single `Start new chat` prompt.
 - Removed the admin header session status chip so the top-right header only shows the clock and profile menu.
 - Added a logged-in chat sidebar Users section backed by `/api/users/available-chat-users`, showing only active users who share the current user's company, department, or group.
