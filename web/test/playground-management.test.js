@@ -91,9 +91,31 @@ test("playground page loads the storage-backed script after admin session bootst
   const adminIndex = html.indexOf('<script src="admin.js"></script>');
   const playgroundIndex = html.indexOf('<script src="playground.js"></script>');
 
+  assert.ok(html.includes('href="/playground-tasks.html"'));
   assert.ok(adminSessionIndex > -1);
   assert.ok(adminIndex > adminSessionIndex);
   assert.ok(playgroundIndex > adminIndex);
+});
+
+test("playground tasks page loads session bootstrap and task list script", () => {
+  const html = fs.readFileSync(path.join(__dirname, "..", "public", "playground-tasks.html"), "utf8");
+  const adminSessionIndex = html.indexOf('<script src="admin-session.js"></script>');
+  const taskListIndex = html.indexOf('<script src="playground-tasks.js"></script>');
+
+  assert.ok(html.includes('data-admin-page="playground-tasks"'));
+  assert.ok(html.includes('id="taskListBody"'));
+  assert.ok(adminSessionIndex > -1);
+  assert.ok(taskListIndex > adminSessionIndex);
+});
+
+test("playground tasks script lists saved tasks through the Playground API", () => {
+  const script = fs.readFileSync(path.join(__dirname, "..", "public", "playground-tasks.js"), "utf8");
+
+  assert.ok(script.includes("/api/admin/playground?"));
+  assert.ok(script.includes("taskListBody"));
+  assert.ok(script.includes("taskListSearch"));
+  assert.ok(script.includes("taskListProject"));
+  assert.ok(script.includes("Loaded ${total} saved task"));
 });
 
 test("playground script includes task modal, filters, drawer, and stable status keys", () => {
