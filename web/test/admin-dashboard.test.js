@@ -56,7 +56,9 @@ test("active nav state updates when sections change", () => {
 
 test("chat review section stays hidden until the user opens it", () => {
   assert.match(adminHtml, /<section[^>]+id="chatReviewSection"[^>]+hidden>/);
+  assert.match(adminHtml, /\["chat-review", "Chat review", false\]/);
   assert.match(adminHtml, /function revealChatReviewSection\(\)/);
+  assert.match(adminHtml, /showWidget\("chat-review"\)/);
   assert.match(adminHtml, /els\.chatReviewSection\.hidden = false/);
   assert.match(adminHtml, /targetId === "chatReviewSection"/);
 });
@@ -85,6 +87,7 @@ test("admin sections remain configurable after dashboard cleanup", () => {
   assert.match(adminHtml, /const widgetStorageKey = "switchboard-admin-widgets"/);
   assert.match(adminHtml, /function renderWidgetToggles\(\)/);
   assert.match(adminHtml, /function applyWidgetPrefs\(\)/);
+  assert.match(adminHtml, /function showWidget\(widgetId\)/);
   assert.match(adminHtml, /loading/i);
   assert.match(adminHtml, /empty/i);
 });
