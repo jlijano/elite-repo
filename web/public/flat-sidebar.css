@@ -1,0 +1,73 @@
+.sidebar .nav-item,
+.sidebar .agent-pill,
+.sidebar .chat-list-item {
+  border-color: transparent;
+  background: transparent;
+  box-shadow: none;
+  color: var(--sidebar-text);
+  font-weight: 400;
+  transform: none;
+}
+
+.sidebar .nav-item,
+.sidebar .agent-pill {
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
+.sidebar .nav-item span,
+.sidebar .agent-pill span:first-child {
+  color: var(--sidebar-muted);
+}
+
+.sidebar .nav-item:hover,
+.sidebar .nav-item:focus-visible,
+.sidebar .agent-pill:hover,
+.sidebar .agent-pill:focus-visible,
+.sidebar .chat-list-row:hover .chat-list-item,
+.sidebar .chat-list-row:focus-within .chat-list-item {
+  border-color: transparent;
+  background: var(--sidebar-card);
+  box-shadow: none;
+  color: var(--sidebar-text);
+  transform: none;
+}
+
+.sidebar .nav-item.active,
+.sidebar .agent-pill.active,
+.sidebar .chat-list-row.active .chat-list-item {
+  border-color: transparent;
+  background: rgba(16, 163, 127, 0.12);
+  box-shadow: inset 3px 0 0 var(--primary);
+  color: var(--sidebar-text);
+  font-weight: 400;
+  transform: none;
+}
+
+.sidebar .nav-item.active span,
+.sidebar .agent-pill.active span:first-child {
+  color: var(--primary);
+}
+
+.sidebar .reports-summary,
+.sidebar details > summary,
+.sidebar .session-heading,
+.sidebar .agents-panel h2 {
+  background: transparent;
+  box-shadow: none;
+  font-weight: 800;
+  transform: none;
+}
+
+.sidebar .reports-summary:hover,
+.sidebar .reports-summary:focus-visible,
+.sidebar details > summary:hover,
+.sidebar details > summary:focus-visible {
+  background: var(--sidebar-card);
+  box-shadow: none;
+}
+
+.sidebar .workspace-card,
+.sidebar .directory-card {
+  box-shadow: none;
+}
