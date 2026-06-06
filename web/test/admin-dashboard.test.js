@@ -64,12 +64,12 @@ test("knowledge base is its own page", () => {
   assert.match(knowledgeHtml, /id="knowledgeStatus"/);
 });
 
-test("user page includes user management and manage users action", () => {
+test("user page includes user management and new user action", () => {
   assert.match(userHtml, /<body data-admin-page="user">/);
   assert.match(userHtml, /<h1>User<\/h1>/);
   assert.match(userHtml, /id="userManagementPage"/);
   assert.match(userHtml, /id="manageUsersButton"/);
-  assert.match(userHtml, />Manage users<\/button>/);
+  assert.match(userHtml, />New user<\/button>/);
 });
 
 test("settings page owns preferences access review health and diagnostics sections", () => {
