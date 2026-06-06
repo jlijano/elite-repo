@@ -2,6 +2,7 @@
 
 ## [Unreleased]
 
+- Cleaned the admin dashboard navigation labels, clarified the file-related sections, relabeled the workspace identity area, added active navigation states, and introduced a Settings section for application-wide preferences.
 - Changed the admin dashboard so the Chat Review and Chat Detail cards stay hidden until the Chat review navigation item is selected.
 - Fixed the admin dashboard layout so the left sidebar stays fixed on desktop and the right dashboard panel scrolls independently to reveal lower sections.
 - Refined the admin navigation so section links sit in a compact top nav bar and Logout renders as a normal-sized sidebar option.
