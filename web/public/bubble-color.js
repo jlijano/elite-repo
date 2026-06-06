@@ -116,12 +116,21 @@
     return label && !/^Original$|^Shared link/i.test(label) ? label : "";
   }
 
+  function messageChatId(message = {}) {
+    return message.chatId || currentChatId || sharedChatId || "";
+  }
+
+  function isOwnMessageContext(messageContext = {}, chatId = currentChatId || sharedChatId || "") {
+    return Boolean(messageContext.participantId && messageContext.participantId === currentParticipantId(chatId));
+  }
+
   function displayLabel(message = {}) {
     const senderId = message.context?.participantId || "";
     const sender = participantById(senderId);
+    const chatId = messageChatId(message);
     return preferredLabel(sender?.participantLabel)
       || preferredLabel(message.context?.participantLabel)
-      || (senderId === currentParticipantId() && selectedNickname ? selectedNickname : "")
+      || (senderId === currentParticipantId(chatId) && selectedNickname ? selectedNickname : "")
       || fallbackLabel();
   }
 
@@ -177,14 +186,22 @@
       .bubble-color-card h2{margin:0 0 6px;font-size:1.05rem;line-height:1.2}.bubble-color-card p{margin:0 0 14px;color:var(--muted);font-size:.9rem;line-height:1.4}
       .bubble-nickname-label{display:grid;gap:6px;margin:0 0 14px;color:var(--text);font-size:.82rem;font-weight:800}.bubble-nickname-input{width:100%;min-height:42px;padding:0 12px;border:1px solid var(--line);border-radius:12px;background:var(--panel-soft);color:var(--text);font:inherit}
       .bubble-color-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}.bubble-color-option{min-height:46px;border:2px solid transparent;border-radius:14px;background:var(--bubble-choice);box-shadow:inset 0 0 0 1px rgba(255,255,255,.22)}
-      .bubble-color-option[aria-pressed="true"]{border-color:var(--text);box-shadow:0 0 0 3px rgba(37,99,235,.22),inset 0 0 0 1px rgba(255,255,255,.3)}.bubble-color-option:disabled{cursor:not-allowed;opacity:.32;filter:grayscale(.5)}
+      .bubble-color-option[aria-pressed="true"]{border-color:#fff;box-shadow:0 0 0 3px rgba(37,99,235,.42),inset 0 0 0 2px rgba(0,0,0,.18)}.bubble-color-option:disabled{cursor:not-allowed;opacity:.32;filter:grayscale(.5)}
       .bubble-color-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:14px}.bubble-color-confirm{width:auto;min-width:108px;min-height:42px;display:inline-flex;align-items:center;justify-content:center;padding:0 16px;border-radius:999px;background:var(--primary);color:#fff;font-weight:800;line-height:1;white-space:nowrap}
-      .message.user .bubble.participant-bubble{background:var(--bubble-color);border-color:transparent;color:#fff}.participant-label{display:block;margin-bottom:5px;font-size:.72rem;font-weight:900;line-height:1.2;color:inherit;opacity:.88}
+      .message.user.own-participant{justify-content:flex-end}.message.user.other-participant{justify-content:flex-start}.message.user.other-participant .bubble.participant-bubble{background:var(--bubble-color);color:#fff}.message.user .bubble.participant-bubble{background:var(--bubble-color);border-color:transparent;color:#fff}.participant-label{display:block;margin-bottom:5px;font-size:.72rem;font-weight:900;line-height:1.2;color:inherit;opacity:.88}
       .message.user .bubble.participant-bubble time,.message.user .bubble.participant-bubble .message-attachment{color:rgba(255,255,255,.86)}.message-status{display:block;margin-top:6px;color:var(--muted);font-size:.7rem;font-weight:800;line-height:1.2;text-align:right}.message-status.failed{color:#ffb4b4}.message.user .bubble.participant-bubble .message-status{color:rgba(255,255,255,.78)}.message.user .bubble.participant-bubble .message-status.failed{color:#ffe1e1}
       .quick-replies{display:flex;flex-wrap:wrap;gap:8px;margin:-2px 8px 10px}.quick-replies button{min-height:34px;padding:0 12px;border:1px solid var(--line);border-radius:999px;background:var(--panel-soft);color:var(--text);font-weight:760}.quick-replies button:hover,.quick-replies button:focus-visible{border-color:var(--composer-border);background:var(--composer)}
       @media (max-width:420px){.bubble-color-card{padding:16px;border-radius:16px}.bubble-color-grid{gap:8px}.bubble-color-option{min-height:42px}.quick-replies{gap:6px}.quick-replies button{min-height:32px;padding:0 10px}}
     `;
     document.head.appendChild(style);
+  }
+
+  function selectPendingColor(color) {
+    const normalized = normalizeColor(color);
+    if (!normalized || colorTaken(normalized)) return;
+    pendingColor = normalized;
+    modal?.querySelector("#bubbleColorStatus") && (modal.querySelector("#bubbleColorStatus").textContent = "");
+    renderColors();
   }
 
   function ensureModal() {
@@ -203,11 +220,16 @@
         <div class="bubble-color-actions"><button class="bubble-color-confirm" id="bubbleColorConfirm" type="button">Start chat</button></div>
       </section>`;
     document.body.appendChild(modal);
+    modal.querySelector("#bubbleColorGrid").addEventListener("pointerdown", (event) => {
+      const button = event.target.closest("[data-color-choice]");
+      if (button && !button.disabled) selectPendingColor(button.dataset.colorChoice);
+    });
     modal.querySelector("#bubbleColorConfirm").addEventListener("click", () => {
       const nicknameInput = modal.querySelector("#bubbleNicknameInput");
       const status = modal.querySelector("#bubbleColorStatus");
       const nickname = cleanNickname(nicknameInput.value);
-      const color = normalizeColor(pendingColor);
+      const pressedColor = modal.querySelector(".bubble-color-option[aria-pressed='true']")?.dataset.colorChoice;
+      const color = normalizeColor(pendingColor || pressedColor);
       if (!nickname) { status.textContent = "Add a nickname to continue."; nicknameInput.focus(); return; }
       if (!color) { status.textContent = "Pick a color to continue."; return; }
       if (colorTaken(color)) { status.textContent = "That color is already taken in this chat."; renderColors(); return; }
@@ -231,11 +253,12 @@
       const button = document.createElement("button");
       button.type = "button";
       button.className = "bubble-color-option";
+      button.dataset.colorChoice = color;
       button.style.setProperty("--bubble-choice", color);
       button.setAttribute("aria-label", taken.has(color) ? `${color} taken` : color);
       button.setAttribute("aria-pressed", String(normalizeColor(pendingColor) === color));
       button.disabled = taken.has(color);
-      button.addEventListener("click", () => { pendingColor = color; status.textContent = ""; renderColors(); });
+      button.addEventListener("click", () => selectPendingColor(color));
       grid.appendChild(button);
     }
     if (taken.size >= colors.length) status.textContent = "All colors are taken in this chat.";
@@ -389,15 +412,20 @@
       const article = originalCreateMessageElement(role, content, options);
       const bubble = article.querySelector(".bubble");
       if (role === "user" && bubble) {
+        const messageContext = options.context && typeof options.context === "object" ? options.context : {};
+        const chatId = options.chatId || messageContext.chatId || currentChatId || sharedChatId || "";
+        const isOwn = isOwnMessageContext(messageContext, chatId) || (!messageContext.participantId && selectedNickname && options.participantLabel === selectedNickname);
+        article.classList.remove("shared-participant", "original-participant", "own-participant", "other-participant");
+        article.classList.add(isOwn ? "own-participant" : "other-participant");
         bubble.querySelectorAll(".participant-label").forEach((label) => label.remove());
-        const label = cleanNickname(options.participantLabel || "");
+        const label = cleanNickname(options.participantLabel || messageContext.participantLabel || "");
         if (label) {
           const labelEl = document.createElement("span");
           labelEl.className = "participant-label";
           labelEl.textContent = label;
           bubble.insertBefore(labelEl, bubble.firstChild);
         }
-        const color = normalizeColor(options.bubbleColor || options.context?.bubbleColor || "");
+        const color = normalizeColor(options.bubbleColor || messageContext.bubbleColor || "");
         if (color) {
           bubble.classList.add("participant-bubble");
           bubble.style.setProperty("--bubble-color", color);
@@ -418,7 +446,10 @@
         const article = createMessageElement(message.role, message.content, {
           createdAt: message.createdAt,
           attachments: Array.isArray(messageContext.attachments) ? messageContext.attachments : [],
-          participantLabel: displayLabel(message),
+          context: messageContext,
+          chatId: message.chatId,
+          participantType: messageContext.participantType,
+          participantLabel: message.role === "user" ? displayLabel(message) : "",
           bubbleColor: messageContext.bubbleColor
         });
         if (message.role === "user") appendStatus(article, statusText(message));
@@ -432,7 +463,14 @@
   if (typeof addMessage === "function") {
     const originalAddMessage = addMessage;
     addMessage = function identityAddMessage(role, content, options = {}) {
-      originalAddMessage(role, content, role === "user" ? { ...options, bubbleColor: options.bubbleColor || selectedColor, participantLabel: options.participantLabel || ownLabel() } : options);
+      const ownContext = role === "user" ? context(options.context || {}) : {};
+      originalAddMessage(role, content, role === "user" ? {
+        ...options,
+        context: ownContext,
+        bubbleColor: options.bubbleColor || ownContext.bubbleColor || selectedColor,
+        participantType: options.participantType || ownContext.participantType,
+        participantLabel: options.participantLabel || ownContext.participantLabel || ownLabel()
+      } : options);
       if (role === "user") appendStatus(messagesEl.lastElementChild, "Sending...", "pending");
     };
   }
