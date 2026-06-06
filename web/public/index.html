@@ -87,6 +87,59 @@
       .composer {
         left: max(12px, calc((100vw - 960px) / 2 + 12px));
         right: max(12px, calc((100vw - 960px) / 2 + 12px));
+        overflow: visible;
+      }
+
+      .plus-menu {
+        position: absolute;
+        left: 10px;
+        bottom: calc(100% + 10px);
+        z-index: 30;
+        min-width: min(260px, calc(100vw - 32px));
+        display: grid;
+        gap: 4px;
+        padding: 8px;
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        background: var(--composer);
+        color: var(--text);
+        box-shadow: 0 18px 45px rgba(0, 0, 0, 0.28);
+      }
+
+      .plus-menu[hidden] {
+        display: none;
+      }
+
+      .plus-menu button {
+        width: 100%;
+        min-height: 42px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 0 10px;
+        border-radius: 10px;
+        background: transparent;
+        color: var(--text);
+        text-align: left;
+        font-weight: 720;
+      }
+
+      .plus-menu button:hover:not(:disabled),
+      .plus-menu button:focus-visible:not(:disabled) {
+        background: var(--panel-soft);
+      }
+
+      .plus-menu span[aria-hidden="true"] {
+        width: 24px;
+        text-align: center;
+      }
+
+      .plus-menu-status {
+        min-height: 18px;
+        padding: 2px 10px 4px;
+        color: var(--muted);
+        font-size: 0.78rem;
+        line-height: 1.3;
       }
 
       @media (max-width: 900px) {
@@ -116,6 +169,12 @@
         .theme-toggle {
           min-width: 44px;
           max-width: 100%;
+        }
+
+        .plus-menu {
+          left: 0;
+          right: 0;
+          min-width: 0;
         }
       }
     </style>
@@ -196,7 +255,15 @@
           </div>
           <div class="attachment-tray" id="attachmentTray" aria-live="polite"></div>
           <div class="composer-input-row">
-            <button class="composer-tool" id="filePickerButton" type="button" aria-label="Upload files">+</button>
+            <button class="composer-tool" id="filePickerButton" type="button" aria-label="Open chat actions" aria-expanded="false" aria-controls="plusMenu">+</button>
+            <div class="plus-menu" id="plusMenu" role="menu" aria-label="Chat actions" hidden>
+              <button type="button" id="shareChatButton" role="menuitem"><span aria-hidden="true">↗</span>Share link</button>
+              <button type="button" id="attachImageButton" role="menuitem"><span aria-hidden="true">▧</span>Attach image</button>
+              <button type="button" id="takePhotoButton" role="menuitem"><span aria-hidden="true">◎</span>Take a photo</button>
+              <button type="button" id="attachFileButton" role="menuitem"><span aria-hidden="true">＋</span>Attach a file</button>
+              <button type="button" id="voiceMessageButton" role="menuitem"><span aria-hidden="true">●</span>Send voice message</button>
+              <div class="plus-menu-status" id="plusMenuStatus" aria-live="polite"></div>
+            </div>
             <input
               class="visually-hidden"
               id="fileInput"
@@ -218,7 +285,7 @@
       </section>
     </main>
 
-    <script src="app.js?v=20260606-close-chat"></script>
+    <script src="app.js?v=20260606-plus-menu"></script>
     <script>
       (() => {
         const setNewChatLabel = () => {
@@ -230,6 +297,145 @@
         window.addEventListener("load", setNewChatLabel, { once: true });
         requestAnimationFrame(setNewChatLabel);
         setTimeout(setNewChatLabel, 300);
+      })();
+
+      (() => {
+        const plusButton = document.getElementById("filePickerButton");
+        const menu = document.getElementById("plusMenu");
+        const status = document.getElementById("plusMenuStatus");
+        const fileInput = document.getElementById("fileInput");
+        const shareButton = document.getElementById("shareChatButton");
+        const attachImageButton = document.getElementById("attachImageButton");
+        const takePhotoButton = document.getElementById("takePhotoButton");
+        const attachFileButton = document.getElementById("attachFileButton");
+        const voiceButton = document.getElementById("voiceMessageButton");
+        let mediaRecorder = null;
+        let voiceChunks = [];
+
+        function setStatusText(message) {
+          if (status) status.textContent = message || "";
+        }
+
+        function closeMenu() {
+          menu.hidden = true;
+          plusButton.setAttribute("aria-expanded", "false");
+        }
+
+        function toggleMenu() {
+          const nextHidden = !menu.hidden;
+          menu.hidden = nextHidden;
+          plusButton.setAttribute("aria-expanded", String(!nextHidden));
+          if (!nextHidden) setStatusText("");
+        }
+
+        plusButton.addEventListener("click", (event) => {
+          event.preventDefault();
+          event.stopImmediatePropagation();
+          toggleMenu();
+        }, true);
+
+        document.addEventListener("click", (event) => {
+          if (menu.hidden || menu.contains(event.target) || plusButton.contains(event.target)) return;
+          closeMenu();
+        });
+
+        document.addEventListener("keydown", (event) => {
+          if (event.key === "Escape") closeMenu();
+        });
+
+        attachFileButton.addEventListener("click", () => {
+          closeMenu();
+          fileInput.click();
+        });
+
+        async function attachDataFiles(files, kind) {
+          for (const file of files) {
+            if (file.size > maxAttachmentBytes) {
+              setStatusText(`${file.name} is too large.`);
+              continue;
+            }
+            const content = await new Promise((resolve, reject) => {
+              const reader = new FileReader();
+              reader.onload = () => resolve(String(reader.result || ""));
+              reader.onerror = () => reject(new Error(`${file.name} could not be read.`));
+              reader.readAsDataURL(file);
+            });
+            selectedAttachments.push({ name: file.name || kind, type: file.type, size: file.size, content });
+          }
+          renderSelectedAttachments();
+        }
+
+        function openPicker({ accept, capture, kind }) {
+          const input = document.createElement("input");
+          input.type = "file";
+          input.accept = accept;
+          input.multiple = !capture;
+          if (capture) input.setAttribute("capture", capture);
+          input.addEventListener("change", () => {
+            attachDataFiles([...input.files], kind).catch((error) => setStatusText(error.message));
+          }, { once: true });
+          input.click();
+          closeMenu();
+        }
+
+        attachImageButton.addEventListener("click", () => openPicker({ accept: "image/*", kind: "Image" }));
+        takePhotoButton.addEventListener("click", () => openPicker({ accept: "image/*", capture: "environment", kind: "Photo" }));
+
+        shareButton.addEventListener("click", async () => {
+          try {
+            if (!currentChatId) await createChat();
+            const url = new URL(window.location.href);
+            url.search = "";
+            url.searchParams.set("chat", currentChatId);
+            await navigator.clipboard.writeText(url.toString());
+            setStatusText("Share link copied. Anyone with it can join this chat.");
+          } catch (error) {
+            const url = new URL(window.location.href);
+            url.search = "";
+            if (currentChatId) url.searchParams.set("chat", currentChatId);
+            setStatusText(currentChatId ? url.toString() : "Start the chat first, then share it.");
+          }
+        });
+
+        voiceButton.addEventListener("click", async () => {
+          if (mediaRecorder && mediaRecorder.state === "recording") {
+            mediaRecorder.stop();
+            voiceButton.innerHTML = `<span aria-hidden="true">●</span>Send voice message`;
+            setStatusText("Voice message attached.");
+            return;
+          }
+          if (!navigator.mediaDevices?.getUserMedia || !window.MediaRecorder) {
+            setStatusText("Voice recording is not available in this browser.");
+            return;
+          }
+          try {
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            voiceChunks = [];
+            mediaRecorder = new MediaRecorder(stream);
+            mediaRecorder.addEventListener("dataavailable", (event) => {
+              if (event.data.size) voiceChunks.push(event.data);
+            });
+            mediaRecorder.addEventListener("stop", async () => {
+              stream.getTracks().forEach((track) => track.stop());
+              const blob = new Blob(voiceChunks, { type: mediaRecorder.mimeType || "audio/webm" });
+              const file = new File([blob], `voice-${Date.now()}.webm`, { type: blob.type });
+              await attachDataFiles([file], "Voice message").catch((error) => setStatusText(error.message));
+            }, { once: true });
+            mediaRecorder.start();
+            voiceButton.innerHTML = `<span aria-hidden="true">■</span>Stop recording`;
+            setStatusText("Recording voice message...");
+          } catch (error) {
+            setStatusText("Microphone access was not allowed.");
+          }
+        });
+
+        window.addEventListener("load", () => {
+          const sharedChatId = new URLSearchParams(window.location.search).get("chat");
+          if (!sharedChatId) return;
+          setTimeout(() => {
+            loadChat(sharedChatId).catch(() => setStatusText("This shared chat could not be loaded."));
+          }, 250);
+        });
       })();
     </script>
   </body>
