@@ -24,12 +24,24 @@
           <span>Switchboard</span>
         </a>
         <h1>Login</h1>
-        <p>You have been logged out. Start a new chat or return to an admin page when your session is ready.</p>
-        <div class="form-actions">
-          <a class="secondary-action" href="/">Back to chat</a>
-          <a class="primary-action" href="/chat.html">Admin chat</a>
-        </div>
+        <p>Sign in with a user account created by an owner or admin.</p>
+        <p class="admin-status" id="loginStatus" hidden>Ready to log in.</p>
+        <form class="management-form" id="loginForm" autocomplete="on">
+          <label>
+            <span>Email address</span>
+            <input id="loginEmail" name="email" type="email" autocomplete="email" required />
+          </label>
+          <label>
+            <span>Password</span>
+            <input id="loginPassword" name="password" type="password" autocomplete="current-password" required />
+          </label>
+          <div class="form-actions">
+            <a class="secondary-action" href="/">Back to chat</a>
+            <button type="submit">Log in</button>
+          </div>
+        </form>
       </section>
     </main>
+    <script src="login.js"></script>
   </body>
 </html>
