@@ -16,13 +16,15 @@ The `web/` directory contains a Render-ready Express app that serves a plain HTM
 - ChatGPT-inspired full-height chat UI with a dark sidebar, centered conversation stream, rounded bottom composer, and responsive mobile layout.
 - Focused navigation for New Chat, saved chat sessions, chat archiving, agent status, theme switching, text file uploads, and message sending.
 - Separate chat sessions with New Chat behavior so conversations do not overlap.
+- The simplified chat header includes an X close control that archives the current chat and immediately starts a fresh `New chat` state.
 - Logged-in chat users see a sidebar Users section populated by active users who share the current user's company, department, or group.
 - Non-destructive chat archiving with active chat lists hiding archived chats while admin chat review can still load all chats.
+- Anonymous chats created without a logged-in user session are marked with a 30-day expiry and cleaned up from storage after expiry.
 - Text file attachments in the composer, stored in sanitized message context and included in AI context for the current message.
 - Automatic 40-second refresh for status, chat list, available users, and active chat history when the user is not composing a message or attaching files.
 - Persistent message storage with `chat_id`, `role`, `content`, sanitized `context`, review state, and timestamps.
 - Optional PostgreSQL support through `DATABASE_URL`; the app uses storage-only in-memory mode when no database URL is configured.
-- Storage-only chat behavior when `OPENAI_API_KEY` is missing, including a friendly pending-review assistant response.
+- Storage-only chat behavior when `OPENAI_API_KEY` is missing, including a pending-review API response for saved messages.
 - Durable knowledge entries produced by review runs as `pending_review` entries and reused in future AI context only after approval.
 - Backend management area split into dedicated admin pages instead of one scrolling static dashboard:
   - `/chat.html` for chat review and selected-chat attachments.
@@ -95,7 +97,7 @@ For persistent PostgreSQL storage, set `DATABASE_URL`. The server creates these 
 
 The `users`, `user_sessions`, and `user_audit_events` tables back login, profile updates, protected user-management CRUD APIs, the `/user.html` admin UI, and the `/user-audit.html` report page. They provide account identity fields, role and status constraints, case-insensitive email uniqueness, password hash storage, session token hashes, login/profile timestamps, and audit-event relationships.
 
-Existing PostgreSQL databases are updated additively with `chats.archived_at` and user-management/auth foundation tables so archived chats can be hidden without deleting chat history and account records can be stored without replacing existing chat data.
+Existing PostgreSQL databases are updated additively with `chats.archived_at`, `chats.created_by_user_id`, `chats.is_anonymous`, `chats.expires_at`, and user-management/auth foundation tables so archived chats can be hidden without deleting chat history, logged-in chats can be identified, anonymous chats can expire after 30 days, and account records can be stored without replacing existing chat data.
 
 Without `DATABASE_URL`, the app starts in in-memory storage mode for local testing and storage-only operation.
 
@@ -115,13 +117,13 @@ Do not commit secrets, API keys, deploy hooks, database URLs, passwords, session
 
 - `GET /health`: Render-compatible health check.
 - `GET /api/status`: returns directory, AI, and storage availability.
-- `POST /api/chats`: creates a chat session.
+- `POST /api/chats`: creates a chat session. Calls without `x-session-token` create anonymous chats that expire after 30 days; calls with a valid user session create non-expiring logged-in chats.
 - `GET /api/chats`: lists recent unarchived chat sessions.
 - `GET /api/chats?includeArchived=true`: lists recent chat sessions including archived chats.
 - `GET /api/chats/:chatId`: loads a chat and its message history.
 - `POST /api/chats/:chatId/archive`: archives or unarchives a chat with `{ "archived": true }` or `{ "archived": false }`.
 - `POST /api/chats/:chatId/messages`: stores a message for a chat.
-- `POST /api/chat`: stores a user message and optional text attachments, attempts an AI response when available, stores the assistant response when possible, and returns a storage failure status if the user message could not be saved.
+- `POST /api/chat`: stores a user message and optional text attachments, attempts an AI response when available, stores the assistant response when possible, and returns a storage failure status if the user message could not be saved. When it must create a chat, it follows the same anonymous/logged-in retention rules as `POST /api/chats`.
 - `GET /api/knowledge?status=approved`: reads durable knowledge entries.
 - `POST /api/reviews/run`: records a review run, reads unreviewed messages, creates pending-review knowledge entries, and marks messages reviewed.
 - `POST /api/auth/login`: logs in an active user with email and password, returning a session token and public user record. Repeated failed attempts are rate-limited and successful logins are audited.
@@ -160,7 +162,7 @@ The review workflow is implemented as an idempotent backend route and optional b
 `npm test` runs focused backend integration tests against the Express app in in-memory storage mode and frontend contract tests against the admin page markup. The tests cover:
 
 - `/health` and `/api/status`.
-- Chat creation, message storage, sanitized context, and chat history loading.
+- Chat creation, anonymous-chat expiry metadata, logged-in non-expiring chat metadata, message storage, sanitized context, and chat history loading.
 - `/api/chat` storage-only fallback when `OPENAI_API_KEY` is missing.
 - Chat archiving, hidden archived chats, and archived-chat write protection.
 - Available chat-user filtering by logged-in session, active user status, and shared company, department, or group.
