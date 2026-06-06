@@ -91,11 +91,75 @@
         display: none !important;
       }
 
+      .user-transfer-menu {
+        position: relative;
+        flex: 0 0 auto;
+        display: inline-flex;
+        align-items: center;
+      }
+
+      .user-transfer-toggle {
+        width: 40px;
+        min-width: 40px !important;
+        min-height: 38px;
+        padding: 0 !important;
+        display: inline-grid;
+        place-items: center;
+        font-size: 1rem;
+        line-height: 1;
+      }
+
+      .user-transfer-menu-list {
+        position: absolute;
+        top: calc(100% + 8px);
+        right: 0;
+        z-index: 30;
+        min-width: 180px;
+        display: grid;
+        gap: 4px;
+        padding: 6px;
+        border: 1px solid var(--line);
+        border-radius: var(--radius);
+        background: var(--panel);
+        box-shadow: 0 18px 44px rgba(0, 0, 0, 0.18);
+      }
+
+      .user-transfer-menu-list[hidden] {
+        display: none;
+      }
+
+      .user-transfer-menu-list button {
+        width: 100%;
+        justify-content: flex-start;
+        text-align: left;
+        background: transparent !important;
+        border-color: transparent !important;
+      }
+
+      .user-transfer-menu-list button:hover,
+      .user-transfer-menu-list button:focus-visible {
+        background: var(--panel-soft) !important;
+        border-color: var(--line) !important;
+      }
+
       body[data-admin-page="user"] .users-table.user-list-compact {
         min-width: 620px;
       }
 
       @media (max-width: 520px) {
+        .user-transfer-menu {
+          width: 100%;
+        }
+
+        .user-transfer-toggle {
+          width: 100%;
+        }
+
+        .user-transfer-menu-list {
+          left: 0;
+          right: 0;
+        }
+
         body[data-admin-page="user"] .users-table.user-list-compact td:nth-child(5) {
           display: block;
           padding-top: 8px;
@@ -227,6 +291,73 @@
     });
   }
 
+  function isTransferButton(button) {
+    const label = (button.textContent || button.getAttribute("aria-label") || "").trim().toLowerCase();
+    return /\b(import|export)\b/.test(label) && /\buser/.test(label);
+  }
+
+  function enhanceTransferMenu() {
+    const toolbar = document.querySelector(".user-toolbar");
+    if (!toolbar || toolbar.querySelector(".user-transfer-menu")) return;
+    const transferButtons = Array.from(toolbar.querySelectorAll("button")).filter((button) => {
+      if (button.id === "manageUsersButton") return false;
+      return isTransferButton(button);
+    });
+    if (transferButtons.length < 2) return;
+
+    const menu = document.createElement("div");
+    menu.className = "user-transfer-menu";
+
+    const toggle = document.createElement("button");
+    toggle.type = "button";
+    toggle.className = "user-transfer-toggle";
+    toggle.setAttribute("aria-label", "Open user import and export menu");
+    toggle.setAttribute("aria-haspopup", "true");
+    toggle.setAttribute("aria-expanded", "false");
+    toggle.textContent = "⇅";
+
+    const list = document.createElement("div");
+    list.className = "user-transfer-menu-list";
+    list.hidden = true;
+    list.setAttribute("role", "menu");
+
+    transferButtons.forEach((button) => {
+      button.setAttribute("role", "menuitem");
+      list.appendChild(button);
+    });
+
+    toggle.addEventListener("click", (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      list.hidden = !list.hidden;
+      toggle.setAttribute("aria-expanded", String(!list.hidden));
+    });
+
+    list.addEventListener("click", () => {
+      list.hidden = true;
+      toggle.setAttribute("aria-expanded", "false");
+    });
+
+    document.addEventListener("click", (event) => {
+      if (list.hidden || menu.contains(event.target)) return;
+      list.hidden = true;
+      toggle.setAttribute("aria-expanded", "false");
+    });
+
+    document.addEventListener("keydown", (event) => {
+      if (event.key !== "Escape" || list.hidden) return;
+      list.hidden = true;
+      toggle.setAttribute("aria-expanded", "false");
+      toggle.focus();
+    });
+
+    menu.appendChild(toggle);
+    menu.appendChild(list);
+    const addButton = document.getElementById("manageUsersButton");
+    if (addButton?.parentElement === toolbar) addButton.insertAdjacentElement("afterend", menu);
+    else toolbar.appendChild(menu);
+  }
+
   async function deleteUser(userId) {
     const confirmed = window.confirm("Permanently delete this user? This cannot be undone.");
     if (!confirmed) return;
@@ -260,9 +391,13 @@
 
   function observeUsers() {
     const list = document.getElementById("users");
-    if (!list) return;
-    enhanceRows();
-    new MutationObserver(enhanceRows).observe(list, { childList: true, subtree: true });
+    enhanceTransferMenu();
+    if (list) {
+      enhanceRows();
+      new MutationObserver(enhanceRows).observe(list, { childList: true, subtree: true });
+    }
+    const toolbar = document.querySelector(".user-toolbar");
+    if (toolbar) new MutationObserver(enhanceTransferMenu).observe(toolbar, { childList: true, subtree: true });
   }
 
   addStyles();
