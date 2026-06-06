@@ -23,7 +23,7 @@ test("user page exposes account management controls", () => {
   ].forEach((id) => assert.match(userHtml, new RegExp(`id=\"${id}\"`)));
 
   assert.match(userHtml, /Create user/);
-  assert.match(userHtml, /Recent audit events/);
+  assert.match(userHtml, /User audit/);
   assert.match(userHtml, /Search users/);
 });
 
