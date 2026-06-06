@@ -73,6 +73,25 @@
         display: flex;
         flex-direction: column;
         padding-inline: clamp(12px, 4vw, 24px);
+        padding-bottom: max(260px, calc(220px + env(safe-area-inset-bottom)));
+      }
+
+      .message:last-child {
+        margin-bottom: 24px;
+      }
+
+      .message.user.shared-participant {
+        justify-content: flex-start;
+      }
+
+      .message.user.shared-participant .bubble {
+        background: var(--panel-soft);
+        border: 1px solid var(--line);
+        color: var(--text);
+      }
+
+      .message.user.original-participant {
+        justify-content: flex-end;
       }
 
       .start-chat-empty {
@@ -88,6 +107,19 @@
         left: max(12px, calc((100vw - 960px) / 2 + 12px));
         right: max(12px, calc((100vw - 960px) / 2 + 12px));
         overflow: visible;
+      }
+
+      .typing-status {
+        min-height: 20px;
+        margin: -2px 8px 8px;
+        color: var(--muted);
+        font-size: 0.82rem;
+        font-weight: 700;
+        line-height: 1.35;
+      }
+
+      .typing-status:empty {
+        display: none;
       }
 
       .plus-menu {
@@ -155,6 +187,29 @@
         color: var(--primary);
       }
 
+      .attachment-previews {
+        display: grid;
+        gap: 8px;
+        margin-top: 10px;
+      }
+
+      .attachment-preview-image,
+      .attachment-preview-audio {
+        max-width: min(280px, 72vw);
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        background: var(--panel-soft);
+      }
+
+      .attachment-preview-image {
+        max-height: 220px;
+        object-fit: contain;
+      }
+
+      .attachment-preview-audio {
+        width: min(280px, 72vw);
+      }
+
       @media (max-width: 900px) {
         .chat-header {
           min-height: 58px;
@@ -165,6 +220,10 @@
           height: 38px;
           min-height: 38px;
           font-size: 1.25rem;
+        }
+
+        .messages {
+          padding-bottom: max(240px, calc(210px + env(safe-area-inset-bottom)));
         }
 
         .composer {
@@ -267,6 +326,7 @@
             <strong id="currentChatTitle">New chat</strong>
           </div>
           <div class="attachment-tray" id="attachmentTray" aria-live="polite"></div>
+          <div class="typing-status" id="typingStatus" aria-live="polite"></div>
           <div class="composer-input-row">
             <button class="composer-tool" id="filePickerButton" type="button" aria-label="Open chat actions" aria-expanded="false" aria-controls="plusMenu">+</button>
             <div class="plus-menu" id="plusMenu" role="menu" aria-label="Chat actions" hidden>
@@ -298,7 +358,7 @@
       </section>
     </main>
 
-    <script src="app.js?v=20260607-shared-live"></script>
+    <script src="app.js?v=20260607-participants"></script>
     <script>
       (() => {
         const setNewChatLabel = () => {
@@ -322,11 +382,16 @@
         const takePhotoButton = document.getElementById("takePhotoButton");
         const attachFileButton = document.getElementById("attachFileButton");
         const voiceButton = document.getElementById("voiceMessageButton");
-        const sharedChatId = new URLSearchParams(window.location.search).get("chat");
+        const typingStatus = document.getElementById("typingStatus");
+        const queryParams = new URLSearchParams(window.location.search);
+        const sharedChatId = queryParams.get("chat");
+        const sharedLinkNumber = Math.max(1, Number(queryParams.get("share") || 1));
         const participantStorageKey = "switchboard-participant-id";
         let mediaRecorder = null;
         let voiceChunks = [];
         let lastRenderedMessageSignature = "";
+        let typingIdleTimer = null;
+        let lastTypingState = false;
 
         function setStatusText(message) {
           if (status) status.textContent = message || "";
@@ -334,6 +399,10 @@
 
         function chatOriginKey(chatId) {
           return `switchboard-origin-chat-${chatId}`;
+        }
+
+        function shareCountKey(chatId) {
+          return `switchboard-share-count-${chatId}`;
         }
 
         function participantId() {
@@ -345,6 +414,13 @@
           return value;
         }
 
+        function deviceType() {
+          const ua = navigator.userAgent.toLowerCase();
+          if (/ipad|tablet/.test(ua) || (navigator.maxTouchPoints > 1 && /macintosh/.test(ua))) return "tablet";
+          if (/mobi|android|iphone|ipod/.test(ua)) return "mobile";
+          return "desktop";
+        }
+
         function markOriginalChat(chatId) {
           if (chatId) setStored(chatOriginKey(chatId), "true");
         }
@@ -353,8 +429,26 @@
           return getStored(chatOriginKey(chatId)) === "true" ? "original" : "shared";
         }
 
-        function participantLabel(type = participantType()) {
-          return type === "original" ? "Original" : "Shared link";
+        function currentShareCount(chatId = currentChatId) {
+          if (!chatId) return sharedChatId ? sharedLinkNumber : 0;
+          const stored = Number(getStored(shareCountKey(chatId)) || 0);
+          return Math.max(stored, sharedChatId === chatId ? sharedLinkNumber : 0);
+        }
+
+        function participantLabel(type = participantType(), chatId = currentChatId) {
+          if (type === "original") return "Original";
+          return `Shared link #${Math.max(1, currentShareCount(chatId) || sharedLinkNumber)}`;
+        }
+
+        function participantContext(chatId = currentChatId) {
+          const type = participantType(chatId);
+          return {
+            participantId: participantId(),
+            participantType: type,
+            participantLabel: participantLabel(type, chatId),
+            deviceType: deviceType(),
+            shareCount: currentShareCount(chatId)
+          };
         }
 
         function closeMenu() {
@@ -369,10 +463,82 @@
           if (!nextHidden) setStatusText("");
         }
 
+        function updateTypingDisplay(participants = []) {
+          if (!typingStatus) return;
+          const labels = participants.map((participant) => participant.participantLabel).filter(Boolean);
+          if (!labels.length) {
+            typingStatus.textContent = "";
+            return;
+          }
+          const label = labels.length === 1 ? labels[0] : `${labels.slice(0, 2).join(" and ")}${labels.length > 2 ? " and others" : ""}`;
+          typingStatus.textContent = `${label} ${labels.length === 1 ? "is" : "are"} typing...`;
+        }
+
+        async function registerParticipant(chatId = currentChatId) {
+          if (!chatId) return;
+          await requestJson(`/api/chats/${encodeURIComponent(chatId)}/participants`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ context: participantContext(chatId) })
+          }).catch(() => {});
+        }
+
+        async function sendTypingState(isTyping) {
+          if (!currentChatId || lastTypingState === isTyping) return;
+          lastTypingState = isTyping;
+          await requestJson(`/api/chats/${encodeURIComponent(currentChatId)}/typing`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ isTyping, context: participantContext() })
+          }).then((data) => updateTypingDisplay(data.typingParticipants || [])).catch(() => {});
+        }
+
+        function scheduleTyping() {
+          if (!inputEl.value.trim()) {
+            clearTimeout(typingIdleTimer);
+            sendTypingState(false);
+            return;
+          }
+          sendTypingState(true);
+          clearTimeout(typingIdleTimer);
+          typingIdleTimer = setTimeout(() => sendTypingState(false), 1200);
+        }
+
+        function appendAttachmentPreviews(article, attachments = []) {
+          const previewable = attachments.filter((attachment) => {
+            const type = attachment.type || "";
+            return (type.startsWith("image/") && /^data:image\//.test(attachment.content || "")) ||
+              (type.startsWith("audio/") && /^data:audio\//.test(attachment.content || ""));
+          });
+          if (!previewable.length) return;
+          const bubble = article.querySelector(".bubble");
+          if (!bubble) return;
+          const wrapper = document.createElement("div");
+          wrapper.className = "attachment-previews";
+          for (const attachment of previewable) {
+            if ((attachment.type || "").startsWith("image/")) {
+              const image = document.createElement("img");
+              image.className = "attachment-preview-image";
+              image.src = attachment.content;
+              image.alt = attachment.name || "Attached image";
+              image.loading = "lazy";
+              wrapper.appendChild(image);
+            } else {
+              const audio = document.createElement("audio");
+              audio.className = "attachment-preview-audio";
+              audio.controls = true;
+              audio.src = attachment.content;
+              wrapper.appendChild(audio);
+            }
+          }
+          bubble.appendChild(wrapper);
+        }
+
         const originalCreateChat = createChat;
         createChat = async function patchedCreateChat(...args) {
           await originalCreateChat.apply(this, args);
           markOriginalChat(currentChatId);
+          await registerParticipant(currentChatId);
         };
 
         const originalCreateMessageElement = createMessageElement;
@@ -380,12 +546,14 @@
           const article = originalCreateMessageElement(role, content, options);
           const labelText = options.participantLabel;
           if (role === "user" && labelText) {
+            article.classList.add(options.participantType === "shared" ? "shared-participant" : "original-participant");
             const bubble = article.querySelector(".bubble");
             const label = document.createElement("span");
             label.className = `participant-label ${options.participantType === "shared" ? "shared" : "original"}`;
             label.textContent = labelText;
             bubble?.prepend(label);
           }
+          appendAttachmentPreviews(article, options.attachments || []);
           return article;
         };
 
@@ -413,9 +581,10 @@
         };
 
         async function loadSharedChat(chatId, options = {}) {
-          const data = await requestJson(`/api/chats/${encodeURIComponent(chatId)}`);
+          const data = await requestJson(`/api/chats/${encodeURIComponent(chatId)}?participantId=${encodeURIComponent(participantId())}`);
           saveCurrentChat(data.chat.id);
           currentChatTitle.textContent = data.chat.title || newChatTitle;
+          updateTypingDisplay(data.chat.typingParticipants || []);
           const signature = (data.chat.messages || []).map((message) => `${message.id}:${message.updatedAt || message.createdAt}`).join("|");
           if (options.force || signature !== lastRenderedMessageSignature) {
             lastRenderedMessageSignature = signature;
@@ -430,19 +599,20 @@
           if ((!message && !attachments.length) || isSending) return;
           if (!currentChatId) await createChat();
 
-          const type = participantType();
+          const context = participantContext();
           const displayMessage = message || `Uploaded ${attachments.length} file${attachments.length === 1 ? "" : "s"}: ${attachmentNames(attachments)}`;
           addMessage("user", displayMessage, {
             createdAt: new Date().toISOString(),
             attachments,
-            participantType: type,
-            participantLabel: participantLabel(type)
+            participantType: context.participantType,
+            participantLabel: context.participantLabel
           });
           inputEl.value = "";
           selectedAttachments = [];
           renderSelectedAttachments();
           resizeInput();
           setSending(true);
+          await sendTypingState(false);
 
           try {
             const saved = await requestJson(`/api/chats/${encodeURIComponent(currentChatId)}/messages`, {
@@ -454,9 +624,7 @@
                 context: {
                   source: "shared-chat",
                   attachments,
-                  participantId: participantId(),
-                  participantType: type,
-                  participantLabel: participantLabel(type)
+                  ...context
                 }
               })
             });
@@ -475,6 +643,13 @@
           event.stopImmediatePropagation();
           toggleMenu();
         }, true);
+
+        inputEl.addEventListener("input", scheduleTyping);
+        window.addEventListener("beforeunload", () => {
+          if (currentChatId) {
+            navigator.sendBeacon?.(`/api/chats/${encodeURIComponent(currentChatId)}/typing`, new Blob([JSON.stringify({ isTyping: false, context: participantContext() })], { type: "application/json" }));
+          }
+        });
 
         document.addEventListener("click", (event) => {
           if (menu.hidden || menu.contains(event.target) || plusButton.contains(event.target)) return;
@@ -527,11 +702,15 @@
           try {
             if (!currentChatId) await createChat();
             markOriginalChat(currentChatId);
+            const nextShareCount = currentShareCount(currentChatId) + 1;
+            setStored(shareCountKey(currentChatId), String(nextShareCount));
+            await registerParticipant(currentChatId);
             const url = new URL(window.location.href);
             url.search = "";
             url.searchParams.set("chat", currentChatId);
+            url.searchParams.set("share", String(nextShareCount));
             await navigator.clipboard.writeText(url.toString());
-            setStatusText("Share link copied. Anyone with it can join this chat.");
+            setStatusText(`Share link #${nextShareCount} copied. Anyone with it can join this chat.`);
           } catch (error) {
             const url = new URL(window.location.href);
             url.search = "";
@@ -574,8 +753,11 @@
 
         window.addEventListener("load", () => {
           if (!sharedChatId) return;
+          if (sharedLinkNumber > currentShareCount(sharedChatId)) setStored(shareCountKey(sharedChatId), String(sharedLinkNumber));
           setTimeout(() => {
-            loadSharedChat(sharedChatId, { force: true }).catch(() => setStatusText("This shared chat could not be loaded."));
+            loadSharedChat(sharedChatId, { force: true })
+              .then(() => registerParticipant(sharedChatId))
+              .catch(() => setStatusText("This shared chat could not be loaded."));
           }, 250);
         });
 
