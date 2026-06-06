@@ -80,7 +80,7 @@
     return { ...options, headers };
   }
 
-  function nestedAdminNav({ className, summaryLabel, summaryIcon, itemLabel, pages }) {
+  function nestedAdminNav({ className, summaryLabel, summaryIcon = "", itemLabel, pages }) {
     const path = currentPath();
     const active = pages.some((page) => page.href === path);
     const details = document.createElement("details");
@@ -89,7 +89,8 @@
 
     const summary = document.createElement("summary");
     summary.className = `reports-summary${active ? " active" : ""}`;
-    summary.innerHTML = `<span class="reports-summary-label"><span aria-hidden="true">${summaryIcon}</span>${summaryLabel}</span><span class="reports-summary-chevron" aria-hidden="true">⌄</span>`;
+    const iconMarkup = summaryIcon ? `<span aria-hidden="true">${summaryIcon}</span>` : "";
+    summary.innerHTML = `<span class="reports-summary-label">${iconMarkup}${summaryLabel}</span><span class="reports-summary-chevron" aria-hidden="true">⌄</span>`;
 
     const items = document.createElement("div");
     items.className = `reports-nav-items ${className}-items`;
@@ -120,10 +121,13 @@
 
   function initPlaygroundNav() {
     const nav = document.querySelector(".primary-nav");
-    const playgroundLink = nav?.querySelector('a.nav-item[href="/playground.html"]');
-    if (!nav || !playgroundLink || nav.querySelector(".playground-nav")) return;
-    nav.querySelector('a.nav-item[href="/playground-tasks.html"]')?.remove();
-    playgroundLink.replaceWith(nestedAdminNav({ className: "playground-nav", summaryLabel: "Playground", summaryIcon: "▦", itemLabel: "Playground navigation", pages: playgroundPages }));
+    if (!nav || nav.querySelector(".playground-nav")) return;
+    const playgroundLink = nav.querySelector('a.nav-item[href="/playground.html"]');
+    const tasksLink = nav.querySelector('a.nav-item[href="/playground-tasks.html"]');
+    const anchor = playgroundLink || tasksLink;
+    if (!anchor) return;
+    tasksLink?.remove();
+    anchor.replaceWith(nestedAdminNav({ className: "playground-nav", summaryLabel: "Playground", itemLabel: "Playground navigation", pages: playgroundPages }));
   }
 
   function updateRoleAwareMenu(user) {
