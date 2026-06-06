@@ -48,33 +48,49 @@
           </div>
         </header>
         <div class="admin-scroll">
-          <div class="admin-layout">
+          <div class="admin-layout settings-layout">
             <p class="admin-status" id="status">Loading settings...</p>
-            <div class="admin-grid">
-              <section class="admin-card wide" id="settingsPage">
-                <div class="card-head"><div><h2>Settings</h2><p class="card-subtitle">Application-wide preferences and admin state.</p></div></div>
-                <div class="settings-list">
+            <div class="admin-grid settings-grid">
+              <section class="admin-card wide settings-section-card" id="settingsPage">
+                <div class="card-head"><div><p class="section-kicker">Preferences</p><h2>Settings</h2><p class="card-subtitle">Application-wide preferences that are safe to manage from this browser.</p></div></div>
+                <div class="settings-list relaxed">
                   <div class="settings-row">
                     <div><strong>Theme preference</strong><p>Switch between light and dark mode. This is saved locally for the browser.</p></div>
                     <button id="settingsThemeButton" type="button">Toggle theme</button>
                   </div>
                   <div class="settings-row">
-                    <div><strong>Refresh cadence</strong><p>Current admin data refreshes automatically every 40 seconds.</p></div>
-                    <span>40 seconds</span>
-                  </div>
-                  <div class="settings-row">
-                    <div><strong>Protected admin data</strong><p>Management-only records still require backend admin access through protected routes.</p></div>
-                    <span id="settingsAdminState">Public view</span>
+                    <div><strong>Refresh cadence</strong><p>Admin status data refreshes automatically in the background.</p></div>
+                    <span class="status-badge status-loaded">40 seconds</span>
                   </div>
                 </div>
               </section>
+
+              <section class="admin-card wide settings-section-card" id="accessSecurityPage">
+                <div class="card-head"><div><p class="section-kicker">Access and security</p><h2>Admin state</h2><p class="card-subtitle">Protected management records stay behind backend admin routes.</p></div></div>
+                <div class="settings-list relaxed">
+                  <div class="settings-row">
+                    <div><strong>Protected admin data</strong><p>Review logs and management-only records require a valid admin session.</p></div>
+                    <span class="status-badge status-public" id="settingsAdminState">Public view</span>
+                  </div>
+                </div>
+              </section>
+
               <section class="admin-card" id="reviewRunsPage">
-                <div class="card-head"><div><h2>Review runs</h2><p class="card-subtitle">Review history, run counts, and errors.</p></div></div>
+                <div class="card-head"><div><p class="section-kicker">Review runs</p><h2>Review runs</h2><p class="card-subtitle">Review history, run counts, and errors.</p></div></div>
                 <div class="list compact-list" id="runs">Protected review logs require an admin session.</div>
               </section>
-              <section class="admin-card" id="systemHealthPage">
-                <div class="card-head"><div><h2>System health</h2><p class="card-subtitle">Storage, AI, directory, and protected route status.</p></div></div>
-                <div class="list compact-list" id="systemHealth">Loading system health...</div>
+
+              <section class="admin-card wide" id="systemHealthPage">
+                <div class="card-head"><div><p class="section-kicker">System health</p><h2>System health</h2><p class="card-subtitle">Storage, AI, directory, and protected route status.</p></div></div>
+                <div class="health-grid" id="systemHealth">Loading system health...</div>
+              </section>
+
+              <section class="admin-card" id="diagnosticsPage">
+                <div class="card-head"><div><p class="section-kicker">Diagnostics</p><h2>Diagnostics</h2><p class="card-subtitle">Operational notes for the current Settings build.</p></div></div>
+                <div class="list diagnostics-list">
+                  <article class="item"><div class="row"><span>Status source</span><small class="status-badge status-loaded">Loaded</small></div><p>System health comes from <code>/api/status</code>; protected review history loads only through admin routes.</p></article>
+                  <article class="item"><div class="row"><span>Protected route policy</span><small class="status-badge status-public">Public view</small></div><p>The page never asks for secrets. Admin authorization remains backend-managed through protected routes.</p></article>
+                </div>
               </section>
             </div>
           </div>
