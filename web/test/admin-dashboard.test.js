@@ -81,6 +81,8 @@ test("top nav includes current time and profile settings person icon", () => {
   for (const pageHtml of allAdminPages) {
     assert.match(pageHtml, /id="menuClock"/);
     assert.match(pageHtml, /class="profile-settings" href="\/user\.html#profile" aria-label="User profile settings">👤<\/a>/);
+    assert.doesNotMatch(pageHtml, /id="themeToggle"/);
+    assert.doesNotMatch(pageHtml, /id="themeToggleText"/);
   }
 
   assert.match(adminJs, /function updateClock\(\)/);
@@ -88,6 +90,15 @@ test("top nav includes current time and profile settings person icon", () => {
   assert.match(adminJs, /month: "short"/);
   assert.match(adminJs, /hour: "numeric"/);
   assert.match(adminJs, /minute: "2-digit"/);
+});
+
+test("theme mode control lives inside settings page", () => {
+  assert.match(settingsHtml, /id="settingsThemeButton"/);
+  assert.match(settingsHtml, />Toggle theme<\/button>/);
+  assert.doesNotMatch(chatHtml, /id="settingsThemeButton"/);
+  assert.doesNotMatch(knowledgeHtml, /id="settingsThemeButton"/);
+  assert.doesNotMatch(userHtml, /id="settingsThemeButton"/);
+  assert.match(adminJs, /els\.settingsThemeButton\?\.addEventListener\("click", toggleTheme\)/);
 });
 
 test("admin javascript switches behavior by page", () => {
