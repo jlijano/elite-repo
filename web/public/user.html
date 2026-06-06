@@ -31,11 +31,6 @@
       body[data-admin-page="user"] .users-table tr.active td { box-shadow: inset 3px 0 0 var(--primary); }
       body[data-admin-page="user"] .users-table .muted-cell { color: var(--muted); }
       body[data-admin-page="user"] .users-table .actions { justify-content: flex-end; flex-wrap: nowrap; }
-      body[data-admin-page="user"] .user-dashboard-panel { margin-top: 14px; }
-      body[data-admin-page="user"] .audit-head { align-items: center; }
-      body[data-admin-page="user"] .audit-head .card-actions { justify-content: flex-end; min-width: 0; }
-      body[data-admin-page="user"] .audit-panel { border: 0; border-radius: 0; }
-      body[data-admin-page="user"] .audit-panel .compact-list { max-height: 420px; overflow: auto; color: var(--muted); }
       body[data-admin-page="user"] .modal-backdrop { position: fixed; inset: 0; width: min(680px, calc(100vw - 28px)); max-height: min(720px, calc(100dvh - 28px)); margin: auto; padding: 0; border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel); color: var(--text); box-shadow: 0 24px 80px rgba(0, 0, 0, 0.42); }
       body[data-admin-page="user"] .modal-backdrop::backdrop { background: rgba(0, 0, 0, 0.58); }
       body[data-admin-page="user"] .modal-content { display: grid; max-height: min(720px, calc(100dvh - 28px)); overflow: hidden; }
@@ -62,9 +57,6 @@
         body[data-admin-page="user"] .user-toolbar input,
         body[data-admin-page="user"] .user-toolbar button { flex: 0 0 auto; }
         body[data-admin-page="user"] .users-table { min-width: 680px; }
-        body[data-admin-page="user"] .audit-head { align-items: stretch; flex-direction: column; }
-        body[data-admin-page="user"] .audit-head .card-actions { width: 100%; }
-        body[data-admin-page="user"] #exportUserAuditButton { width: 100%; }
         body[data-admin-page="user"] .photo-drop-zone { grid-template-columns: 1fr; justify-items: start; }
       }
       @media (max-width: 520px) {
@@ -159,15 +151,6 @@
                 </section>
               </div>
             </section>
-            <section class="admin-card wide user-dashboard-panel" id="userAuditPanel" data-dashboard-panel="user-audit" aria-label="User audit">
-              <div class="card-head audit-head">
-                <div><h2>User audit</h2><p class="card-subtitle">Recent user audit events stay grouped here for future dashboard placement.</p></div>
-                <div class="card-actions"><button id="exportUserAuditButton" type="button">Export report</button></div>
-              </div>
-              <div class="audit-panel" aria-label="Recent user audit events">
-                <div class="compact-list" id="userAuditEvents">Loading audit events...</div>
-              </div>
-            </section>
           </div>
         </div>
       </section>
@@ -251,7 +234,6 @@
         const cancelEditButton = document.getElementById("cancelUserEditButton");
         const form = document.getElementById("userForm");
         const status = document.getElementById("status");
-        const exportButton = document.getElementById("exportUserAuditButton");
         const photoInput = document.getElementById("userPhotoUrl");
         const photoFileInput = document.getElementById("photoFileInput");
         const photoDropZone = document.getElementById("photoDropZone");
@@ -363,36 +345,6 @@
           transformingUsers = false;
         }
 
-        function csvEscape(value) {
-          return `"${String(value || "").replace(/"/g, '""')}"`;
-        }
-
-        function exportAuditReport() {
-          const auditItems = Array.from(document.querySelectorAll("#userAuditEvents .audit-item"));
-          if (!auditItems.length) {
-            if (status) status.textContent = "No user audit events available to export.";
-            return;
-          }
-          const rows = auditItems.map((item) => {
-            const action = item.querySelector(".row span")?.textContent?.trim() || "";
-            const details = Array.from(item.querySelectorAll("p")).map((node) => node.textContent.trim());
-            const target = (details[0] || "").replace(/^Target:\s*/i, "");
-            const createdAt = details[1] || "";
-            return [action, target, createdAt].map(csvEscape).join(",");
-          });
-          const csv = ["Action,Target user,Created at", ...rows].join("\n");
-          const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
-          const url = URL.createObjectURL(blob);
-          const link = document.createElement("a");
-          link.href = url;
-          link.download = `user-audit-report-${new Date().toISOString().slice(0, 10)}.csv`;
-          document.body.appendChild(link);
-          link.click();
-          link.remove();
-          URL.revokeObjectURL(url);
-          if (status) status.textContent = "User audit report exported.";
-        }
-
         addButton?.addEventListener("click", () => window.setTimeout(openUserDialog, 0));
         closeButton?.addEventListener("click", closeUserDialog);
         cancelEditButton?.addEventListener("click", closeUserDialog);
@@ -409,7 +361,6 @@
         dialog?.addEventListener("click", (event) => {
           if (event.target === dialog) closeUserDialog();
         });
-        exportButton?.addEventListener("click", exportAuditReport);
         choosePhotoButton?.addEventListener("click", () => photoFileInput?.click());
         photoFileInput?.addEventListener("change", () => applyPhotoFile(photoFileInput.files?.[0]));
         photoInput?.addEventListener("input", () => renderPhotoPreview());
