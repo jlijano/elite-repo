@@ -6,6 +6,7 @@ const cors = require("cors");
 const dotenv = require("dotenv");
 const OpenAI = require("openai");
 const { Pool } = require("pg");
+const { attachUserManagementRoutes } = require("./user-management");
 
 dotenv.config();
 
@@ -418,6 +419,25 @@ function tokenOk(req, res, envName, headerName) {
 
 const reviewTokenOk = (req, res) => !process.env.REVIEW_RUN_TOKEN || tokenOk(req, res, "REVIEW_RUN_TOKEN", "x-review-token");
 const adminTokenOk = (req, res) => tokenOk(req, res, "ADMIN_TOKEN", "x-admin-token");
+const userManagementStore = attachUserManagementRoutes(app, {
+  adminTokenOk,
+  databaseUrl: process.env.DATABASE_URL,
+  databaseSsl: process.env.DATABASE_SSL,
+  schemaPath
+});
+app.locals.userManagementAttached = true;
+
+async function requireAdmin(req, res, next) {
+  try {
+    const sessionToken = req.get("x-session-token");
+    const session = sessionToken ? await userManagementStore.getSessionUser(sessionToken) : null;
+    if (["owner", "admin"].includes(session?.user?.role)) return next();
+    if (adminTokenOk(req, res)) return next();
+    return undefined;
+  } catch (error) {
+    return next(error);
+  }
+}
 
 app.get("/health", async (req, res) => {
   try { await db.health(); res.json({ ok: true }); }
@@ -480,24 +500,21 @@ app.post("/api/reviews/run", async (req, res) => {
   res.status(run.status === "failed" ? 500 : 201).json({ run });
 });
 
-app.get("/api/admin/summary", async (req, res) => {
-  if (!adminTokenOk(req, res)) return;
+app.get("/api/admin/summary", requireAdmin, async (req, res) => {
   res.json({ summary: await db.getAdminSummary(), status: { aiAvailable: Boolean(process.env.OPENAI_API_KEY), storageMode: db.mode } });
 });
-app.get("/api/admin/chats", async (req, res) => { if (adminTokenOk(req, res)) res.json({ chats: await db.listChats({ includeArchived: true }) }); });
-app.get("/api/admin/chats/:chatId", async (req, res) => {
-  if (!adminTokenOk(req, res)) return;
+app.get("/api/admin/chats", requireAdmin, async (req, res) => { res.json({ chats: await db.listChats({ includeArchived: true }) }); });
+app.get("/api/admin/chats/:chatId", requireAdmin, async (req, res) => {
   const chat = await db.getChat(req.params.chatId);
   chat ? res.json({ chat }) : res.status(404).json({ error: "Chat not found." });
 });
-app.get("/api/admin/knowledge", async (req, res) => { if (adminTokenOk(req, res)) res.json({ entries: await db.listKnowledge(req.query.status || "all") }); });
-app.patch("/api/admin/knowledge/:entryId", async (req, res) => {
-  if (!adminTokenOk(req, res)) return;
+app.get("/api/admin/knowledge", requireAdmin, async (req, res) => { res.json({ entries: await db.listKnowledge(req.query.status || "all") }); });
+app.patch("/api/admin/knowledge/:entryId", requireAdmin, async (req, res) => {
   const entry = await db.updateKnowledge(req.params.entryId, req.body || {});
   entry ? res.json({ entry }) : res.status(404).json({ error: "Knowledge entry not found." });
 });
-app.get("/api/admin/review-runs", async (req, res) => { if (adminTokenOk(req, res)) res.json({ runs: await db.listReviewRuns() }); });
-app.post("/api/admin/reviews/run", async (req, res) => { if (adminTokenOk(req, res)) res.status(201).json({ run: await db.runReview() }); });
+app.get("/api/admin/review-runs", requireAdmin, async (req, res) => { res.json({ runs: await db.listReviewRuns() }); });
+app.post("/api/admin/reviews/run", requireAdmin, async (req, res) => { res.status(201).json({ run: await db.runReview() }); });
 
 app.post("/api/chat", async (req, res) => {
   let chatId = req.body?.chatId;
