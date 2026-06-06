@@ -37,6 +37,8 @@ test("top-level admin navigation uses dedicated page links", () => {
 
     assert.doesNotMatch(pageHtml, /Knowledge queue/);
     assert.doesNotMatch(pageHtml, /Admin access/);
+    assert.doesNotMatch(pageHtml, /id="logoutButton"/);
+    assert.doesNotMatch(pageHtml, /logout-action/);
   }
 });
 
@@ -96,11 +98,13 @@ test("top nav includes current time and profile settings person icon", () => {
   assert.match(adminJs, /minute: "2-digit"/);
 });
 
-test("profile dropdown links to update profile and logout", () => {
+test("profile dropdown is the admin logout surface", () => {
   for (const pageHtml of allAdminPages) {
     assert.match(pageHtml, /id="profileDropdown"/);
     assert.match(pageHtml, /href="\/update-profile\.html"[\s\S]*>Update Profile<\/a>/);
     assert.match(pageHtml, /class="profile-logout"[\s\S]*>Logout<\/button>/);
+    assert.doesNotMatch(pageHtml, /id="logoutButton"/);
+    assert.doesNotMatch(pageHtml, /logout-action/);
   }
 
   assert.match(adminJs, /function toggleProfileDropdown\(\)/);
