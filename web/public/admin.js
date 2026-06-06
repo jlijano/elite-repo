@@ -2,6 +2,7 @@ const page = document.body.dataset.adminPage || "chat";
 const themeStorageKey = "switchboard-theme";
 const themePreferenceStorageKey = "switchboard-theme-mode";
 const refreshCadenceStorageKey = "switchboard-refresh-cadence";
+const sessionTokenStorageKey = "switchboard-session-token";
 const adminTokenStorageKey = "switchboard-admin-token";
 const userProfileStorageKey = "switchboard-user-profile";
 const defaultRefreshCadence = "standard";
@@ -60,6 +61,11 @@ const els = {
   settingsRefreshOptions: document.querySelectorAll("[data-refresh-choice]"),
   settingsRefreshSummary: $("settingsRefreshSummary"),
   settingsRefreshNow: $("settingsRefreshNow"),
+  settingsAccessSummary: $("settingsAccessSummary"),
+  settingsSessionState: $("settingsSessionState"),
+  settingsSessionDetail: $("settingsSessionDetail"),
+  settingsProtectedRouteState: $("settingsProtectedRouteState"),
+  settingsProtectedRouteDetail: $("settingsProtectedRouteDetail"),
   settingsAdminState: $("settingsAdminState"),
   menuClock: $("menuClock")
 };
@@ -78,6 +84,8 @@ const html = (value) => String(value ?? "").replace(/&/g, "&amp;").replace(/</g,
 const time = (value) => value ? new Intl.DateTimeFormat(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }).format(new Date(value)) : "";
 const textMatch = (value, query = "") => String(value || "").toLowerCase().includes(query.trim().toLowerCase());
 const publicHeaders = () => ({ "Content-Type": "application/json" });
+const getStoredSessionToken = () => sessionStorage.getItem(sessionTokenStorageKey) || "";
+const hasAdminAccess = () => Boolean(token || getStoredSessionToken());
 const adminHeaders = () => token ? { "Content-Type": "application/json", "x-admin-token": token } : publicHeaders();
 const getCurrentTheme = () => document.documentElement.dataset.theme === "dark" ? "dark" : "light";
 const validThemeChoices = ["light", "dark", "system"];
@@ -223,13 +231,45 @@ function applyRefreshCadence(cadence) {
   schedulePageRefresh(choice);
 }
 
+function setBadgeElement(element, state) {
+  if (!element) return;
+  element.textContent = state;
+  element.className = `status-badge ${statusClass(state)}`;
+}
+
+function updateAccessSecurityState() {
+  const sessionToken = getStoredSessionToken();
+  const adminTokenAvailable = Boolean(token);
+  const sessionAvailable = Boolean(sessionToken);
+  const accessAvailable = adminTokenAvailable || sessionAvailable;
+  const state = accessAvailable ? "Ready" : "Public view";
+
+  setBadgeElement(els.settingsAdminState, state);
+  setBadgeElement(els.settingsSessionState, state);
+  setBadgeElement(els.settingsProtectedRouteState, state);
+
+  if (els.settingsSessionDetail) {
+    els.settingsSessionDetail.textContent = sessionAvailable
+      ? "An owner/admin browser session is available for protected admin requests. Session values stay hidden."
+      : adminTokenAvailable
+        ? "A compatibility admin token is available in this browser session. Token values stay hidden."
+        : "No owner/admin session is stored in this browser.";
+  }
+  if (els.settingsProtectedRouteDetail) {
+    els.settingsProtectedRouteDetail.textContent = accessAvailable
+      ? "Protected review logs, user records, audit events, and reports can be requested by this browser."
+      : "Review logs, user records, audit events, and management reports stay hidden until an admin session is available.";
+  }
+  if (els.settingsAccessSummary) {
+    els.settingsAccessSummary.textContent = accessAvailable
+      ? "Protected admin access is available for this browser without displaying secrets."
+      : "Public view is active. Protected admin data stays hidden and this page will not ask for credentials.";
+  }
+}
+
 function refreshTokenFromSession() {
   token = sessionStorage.getItem(adminTokenStorageKey) || "";
-  if (els.settingsAdminState) {
-    const state = token ? "Ready" : "Public view";
-    els.settingsAdminState.textContent = state;
-    els.settingsAdminState.className = `status-badge ${statusClass(state)}`;
-  }
+  updateAccessSecurityState();
   return token;
 }
 
@@ -351,7 +391,7 @@ function renderKnowledge() {
 
 function renderRuns(runs = []) {
   if (!els.runs) return;
-  if (!token) {
+  if (!hasAdminAccess()) {
     els.runs.innerHTML = `<div class="empty action-empty"><strong>Review logs are protected.</strong><p>Start or restore a valid admin session to inspect run history, counts, and errors. Public view keeps review records hidden.</p></div>`;
     return;
   }
@@ -395,7 +435,7 @@ function fillUserForm(user) {
 
 function renderUserAuditEvents() {
   if (!els.userAuditEvents) return;
-  if (!token) {
+  if (!hasAdminAccess()) {
     els.userAuditEvents.innerHTML = `<div class="empty action-empty"><strong>Audit events are protected.</strong><p>Start or restore an admin session to inspect account changes.</p></div>`;
     return;
   }
@@ -406,8 +446,8 @@ function renderUserAuditEvents() {
 
 function renderUsers(users = usersCache, runtime = {}) {
   if (!els.users) return;
-  setUserFormEnabled(Boolean(token));
-  if (!token) {
+  setUserFormEnabled(hasAdminAccess());
+  if (!hasAdminAccess()) {
     resetUserForm();
     els.users.innerHTML = `<article class="item"><div class="row"><span>Admin session required</span>${statusBadge(runtime.storageMode || "Public view")}</div><p>User records are protected. Start or restore an admin session before creating or editing accounts.</p></article>`;
     renderUserAuditEvents();
@@ -434,11 +474,12 @@ function renderUsers(users = usersCache, runtime = {}) {
 
 function renderSystemHealth(status = lastStatus || {}) {
   if (!els.systemHealth) return;
+  const accessAvailable = hasAdminAccess();
   const rows = [
     ["Storage", status.storageAvailable === false ? "Error" : "Ready", status.storageMode || "unknown"],
     ["AI availability", status.aiAvailable ? "Ready" : "Storage-only", status.aiAvailable ? "Responses enabled" : "Messages are saved for review"],
     ["Directory loaded", status.directoryAvailable ? "Loaded" : "Error", Array.isArray(status.filesLoaded) ? `${status.filesLoaded.length} files loaded` : "No file count"],
-    ["Protected route status", token ? "Ready" : "Public view", token ? "Admin token present in this browser session" : "Protected management routes remain hidden in public view"]
+    ["Protected route status", accessAvailable ? "Ready" : "Public view", accessAvailable ? "Admin access is available in this browser session" : "Protected management routes remain hidden in public view"]
   ];
   els.systemHealth.innerHTML = rows.map(([label, state, detail]) => `<article class="item health-item"><div class="row"><span>${html(label)}</span>${statusBadge(state)}</div><p>${html(detail)}</p></article>`).join("");
 }
@@ -448,8 +489,8 @@ async function loadChat(chatId) {
   renderChats();
   if (els.chatDetail) els.chatDetail.innerHTML = `<div class="empty">Loading chat...</div>`;
   try {
-    const url = token ? `/api/admin/chats/${encodeURIComponent(chatId)}` : `/api/chats/${encodeURIComponent(chatId)}`;
-    const data = await fetchJson(url, {}, Boolean(token));
+    const url = hasAdminAccess() ? `/api/admin/chats/${encodeURIComponent(chatId)}` : `/api/chats/${encodeURIComponent(chatId)}`;
+    const data = await fetchJson(url, {}, hasAdminAccess());
     const messages = data.chat.messages || [];
     if (els.chatDetail) {
       els.chatDetail.innerHTML = `<article class="item"><div class="row"><span>${html(data.chat.title)}</span><small>${html(messages.length)} messages</small></div>${messages.map((m) => `<div class="admin-message"><p class="admin-message-meta"><strong>${html(m.role)}</strong> ${html(time(m.createdAt))}</p><p class="admin-message-content">${html(m.content)}</p></div>`).join("")}</article>`;
@@ -461,7 +502,7 @@ async function loadChat(chatId) {
 }
 
 async function updateKnowledge(entryId, status) {
-  if (!token) return setStatus("Protected knowledge controls require an admin session.", true);
+  if (!hasAdminAccess()) return setStatus("Protected knowledge controls require an admin session.", true);
   setStatus(`Updating knowledge entry to ${status}...`);
   try {
     await fetchJson(`/api/admin/knowledge/${encodeURIComponent(entryId)}`, { method: "PATCH", body: JSON.stringify({ status }) }, true);
@@ -473,7 +514,7 @@ async function updateKnowledge(entryId, status) {
 
 async function saveUser(event) {
   event.preventDefault();
-  if (!token) return setStatus("User management requires an admin session.", true);
+  if (!hasAdminAccess()) return setStatus("User management requires an admin session.", true);
   const payload = {
     name: els.userName?.value,
     email: els.userEmail?.value,
@@ -497,7 +538,7 @@ async function saveUser(event) {
 }
 
 async function updateUserStatus(userId, action) {
-  if (!token) return setStatus("User management requires an admin session.", true);
+  if (!hasAdminAccess()) return setStatus("User management requires an admin session.", true);
   setStatus(action === "disable" ? "Disabling user..." : "Reactivating user...");
   try {
     await fetchJson(`/api/admin/users/${encodeURIComponent(userId)}/${action}`, { method: "POST", body: "{}" }, true);
@@ -510,10 +551,10 @@ async function updateUserStatus(userId, action) {
 }
 
 async function loadChatPage() {
-  setStatus(token ? "Loading admin chats..." : "Loading recent chats...");
+  setStatus(hasAdminAccess() ? "Loading admin chats..." : "Loading recent chats...");
   const [status, chats] = await Promise.all([
     fetchJson("/api/status"),
-    token ? fetchJson("/api/admin/chats", {}, true) : fetchJson("/api/chats?includeArchived=true")
+    hasAdminAccess() ? fetchJson("/api/admin/chats", {}, true) : fetchJson("/api/chats?includeArchived=true")
   ]);
   lastStatus = status;
   chatsCache = chats.chats || [];
@@ -523,10 +564,10 @@ async function loadChatPage() {
 }
 
 async function loadKnowledgePage() {
-  setStatus(token ? "Loading protected knowledge base..." : "Loading project knowledge base...");
+  setStatus(hasAdminAccess() ? "Loading protected knowledge base..." : "Loading project knowledge base...");
   const status = await fetchJson("/api/status");
   lastStatus = status;
-  if (token) {
+  if (hasAdminAccess()) {
     const knowledge = await fetchJson(`/api/admin/knowledge?status=${encodeURIComponent(els.knowledgeStatus?.value === "project" ? "all" : els.knowledgeStatus?.value || "all")}`, {}, true);
     knowledgeCache = [...projectKnowledgeEntries, ...(knowledge.entries || [])];
   } else {
@@ -537,10 +578,10 @@ async function loadKnowledgePage() {
 }
 
 async function loadUserPage() {
-  setStatus(token ? "Loading user records..." : "Loading public user management state...");
+  setStatus(hasAdminAccess() ? "Loading user records..." : "Loading public user management state...");
   const status = await fetchJson("/api/status");
   lastStatus = status;
-  if (token) {
+  if (hasAdminAccess()) {
     const [users, audit] = await Promise.all([
       fetchJson("/api/admin/users", {}, true),
       fetchJson("/api/admin/user-audit-events", {}, true)
@@ -558,11 +599,11 @@ async function loadUserPage() {
 }
 
 async function loadSettingsPage() {
-  setStatus(token ? "Loading settings and review history..." : "Loading settings...");
+  setStatus(hasAdminAccess() ? "Loading settings and review history..." : "Loading settings...");
   const status = await fetchJson("/api/status");
   lastStatus = status;
   renderSystemHealth(status);
-  if (token) {
+  if (hasAdminAccess()) {
     const runs = await fetchJson("/api/admin/review-runs", {}, true);
     renderRuns(runs.runs || []);
   } else {
@@ -614,7 +655,7 @@ els.profileForm?.addEventListener("submit", saveProfile);
 els.userForm?.addEventListener("submit", saveUser);
 els.cancelUserEditButton?.addEventListener("click", () => { resetUserForm(); renderUsers(); });
 els.manageUsersButton?.addEventListener("click", () => {
-  if (!token) return setStatus("User management requires an admin session.", true);
+  if (!hasAdminAccess()) return setStatus("User management requires an admin session.", true);
   resetUserForm();
   els.userName?.focus();
   setStatus("Ready to create a new user.");
