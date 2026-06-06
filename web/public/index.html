@@ -39,12 +39,33 @@
       }
 
       .chat-header {
-        justify-content: flex-end;
+        justify-content: space-between;
         padding: 0 clamp(12px, 3vw, 24px);
       }
 
+      .chat-close-button {
+        display: inline-grid;
+        place-items: center;
+        width: 42px;
+        height: 42px;
+        min-height: 42px;
+        border: 1px solid var(--line);
+        border-radius: 50%;
+        background: transparent;
+        color: var(--text);
+        font-size: 1.35rem;
+        font-weight: 700;
+        line-height: 1;
+      }
+
+      .chat-close-button:hover:not(:disabled),
+      .chat-close-button:focus-visible:not(:disabled) {
+        background: var(--panel-soft);
+        border-color: var(--composer-border);
+      }
+
       .header-actions {
-        width: 100%;
+        width: auto;
         justify-content: flex-end;
       }
 
@@ -71,6 +92,13 @@
       @media (max-width: 900px) {
         .chat-header {
           min-height: 58px;
+        }
+
+        .chat-close-button {
+          width: 38px;
+          height: 38px;
+          min-height: 38px;
+          font-size: 1.25rem;
         }
 
         .composer {
@@ -138,6 +166,7 @@
 
       <section class="chat-panel" aria-label="Chat with Switchboard Agent">
         <header class="chat-header">
+          <button class="chat-close-button" id="closeChatButton" type="button" aria-label="Close chat and start a new chat">×</button>
           <button class="mobile-new-chat" id="mobileNewChatButton" type="button">New chat</button>
           <div class="header-spacer" aria-hidden="true"></div>
           <div class="header-actions">
@@ -189,7 +218,7 @@
       </section>
     </main>
 
-    <script src="app.js?v=20260606-no-auto-replies"></script>
+    <script src="app.js?v=20260606-close-chat"></script>
     <script>
       (() => {
         const setNewChatLabel = () => {
