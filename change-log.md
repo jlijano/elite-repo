@@ -2,6 +2,7 @@
 
 ## [Unreleased]
 
+- Updated `/user.html` so current users render in a table, Add user opens the create/edit form in a modal, recent audit events live in a dedicated User audit section, and audit events can be exported as a CSV report for future dashboard reuse.
 - Completed Settings Phase 6 and Phase 7 polish with Review runs summary cards, clearer protected/empty review states, richer System health hints, live Diagnostics for status source, refresh cadence, theme mode, protected-route policy, secret-display guardrails, responsive styling, README notes, and frontend contract tests.
 - Completed Phase 6-8 auth hardening: `server.js` now owns the shared admin authorization middleware, the user-management preloader is only a guarded compatibility fallback, admin sessions show logged-in user context with expired-session and non-admin redirects, login attempts are rate-limited, password policy is stricter, password changes rotate the active session, and login/logout/profile changes are audited.
 - Polished admin Settings Access and security with clearer browser-session and protected-route summaries, secret-handling reassurance, safe login/profile/audit links, responsive layout styling, README notes, and frontend contract tests.
