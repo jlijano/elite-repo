@@ -57,12 +57,17 @@ function privateUser(row) {
 }
 
 function auditRow(row) {
+  const details = row.details || {};
   return {
     id: row.id,
     actorUserId: row.actor_user_id || row.actorUserId || null,
+    actorName: row.actor_name || row.actorName || details.actorName || null,
+    actorEmail: row.actor_email || row.actorEmail || details.actorEmail || null,
     targetUserId: row.target_user_id || row.targetUserId || null,
+    targetName: row.target_name || row.targetName || details.targetName || null,
+    targetEmail: row.target_email || row.targetEmail || details.targetEmail || details.email || null,
     action: row.action,
-    details: row.details || {},
+    details,
     createdAt: new Date(row.created_at || row.createdAt).toISOString()
   };
 }
@@ -412,9 +417,14 @@ function createPostgresUserStore(options) {
     },
     async listAuditEvents(targetUserId = "") {
       await ready();
+      const baseQuery = `
+        SELECT e.*, actor.name AS actor_name, actor.email AS actor_email, target.name AS target_name, target.email AS target_email
+        FROM user_audit_events e
+        LEFT JOIN users actor ON actor.id = e.actor_user_id
+        LEFT JOIN users target ON target.id = e.target_user_id`;
       const result = targetUserId
-        ? await pool.query("SELECT * FROM user_audit_events WHERE target_user_id = $1 ORDER BY created_at DESC LIMIT 100", [targetUserId])
-        : await pool.query("SELECT * FROM user_audit_events ORDER BY created_at DESC LIMIT 100");
+        ? await pool.query(`${baseQuery} WHERE e.target_user_id = $1 ORDER BY e.created_at DESC LIMIT 100`, [targetUserId])
+        : await pool.query(`${baseQuery} ORDER BY e.created_at DESC LIMIT 100`);
       return result.rows.map(auditRow);
     }
   };
@@ -429,10 +439,22 @@ function createMemoryUserStore(options) {
     return [...users.values()].some((user) => user.email === email && user.id !== exceptUserId);
   }
 
+  function enrichAuditEvent(event) {
+    const actor = event.actorUserId ? users.get(event.actorUserId) : null;
+    const target = event.targetUserId ? users.get(event.targetUserId) : null;
+    return auditRow({
+      ...event,
+      actorName: actor?.name || null,
+      actorEmail: actor?.email || null,
+      targetName: target?.name || null,
+      targetEmail: target?.email || event.details?.email || null
+    });
+  }
+
   function writeAudit(action, targetUserId, details = {}, actorUserId = null) {
     const event = { id: options.makeId(), actorUserId, targetUserId, action, details: auditDetails(action, details), createdAt: options.currentTime() };
     auditEvents.push(event);
-    return auditRow(event);
+    return enrichAuditEvent(event);
   }
 
   function applyUserUpdates(userId, updates, source, actorUserId = null) {
@@ -542,7 +564,7 @@ function createMemoryUserStore(options) {
         .filter((event) => !targetUserId || event.targetUserId === targetUserId)
         .slice(-100)
         .reverse()
-        .map(auditRow);
+        .map(enrichAuditEvent);
     }
   };
 }
