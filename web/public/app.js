@@ -574,6 +574,6 @@ resizeInput();
 
 window.addEventListener("load", () => {
   const script = document.createElement("script");
-  script.src = "bubble-color.js?v=20260607-bubble-picker";
+  script.src = "bubble-color.js?v=20260607-chat-identity-seen";
   document.body.appendChild(script);
 });
