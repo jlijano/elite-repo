@@ -129,11 +129,15 @@
     if (!actions || actions.querySelector(".session-user-chip")) return;
     const chip = document.createElement("span");
     chip.className = "session-user-chip";
+    chip.style.display = "inline-flex";
+    chip.style.alignItems = "baseline";
+    chip.style.gap = "4px";
+    chip.style.whiteSpace = "nowrap";
     const name = document.createElement("strong");
     name.textContent = user?.name || user?.email || "Signed in";
     const role = document.createElement("small");
     role.textContent = user?.role ? `Logged in as ${user.role}` : "Logged in";
-    chip.append(name, role);
+    chip.append(name, document.createTextNode(" "), role);
     actions.prepend(chip);
   }
 
