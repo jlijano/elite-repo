@@ -155,7 +155,8 @@
         font-weight: 650;
       }
 
-      .admin-status[hidden] {
+      .admin-status[hidden],
+      .chat-review-card[hidden] {
         display: none;
       }
 
@@ -503,7 +504,7 @@
             <div class="summary" id="summary"></div>
 
             <div class="admin-grid">
-              <section class="admin-card" id="chatReviewSection">
+              <section class="admin-card chat-review-card" id="chatReviewSection" hidden>
                 <div class="section-head">
                   <div>
                     <h2>Chat Review</h2>
@@ -514,7 +515,7 @@
                 <div class="list" id="chats">Loading chats...</div>
               </section>
 
-              <section class="admin-card" id="chatDetailSection">
+              <section class="admin-card chat-review-card" id="chatDetailSection" hidden>
                 <div class="section-head"><h2>Chat Detail</h2></div>
                 <div class="detail" id="chatDetail">Select a chat to inspect messages.</div>
               </section>
@@ -595,6 +596,8 @@
         summary: document.getElementById("summary"),
         chats: document.getElementById("chats"),
         chatSearch: document.getElementById("chatSearch"),
+        chatReviewSection: document.getElementById("chatReviewSection"),
+        chatDetailSection: document.getElementById("chatDetailSection"),
         chatDetail: document.getElementById("chatDetail"),
         knowledgeSearch: document.getElementById("knowledgeSearch"),
         knowledgeStatus: document.getElementById("knowledgeStatus"),
@@ -664,6 +667,11 @@
         document.documentElement.dataset.theme = theme;
         try { localStorage.setItem(themeStorageKey, theme); } catch (error) {}
         updateThemeToggle(theme);
+      }
+      function revealChatReviewSection() {
+        els.chatReviewSection.hidden = false;
+        els.chatDetailSection.hidden = false;
+        els.chatReviewSection.scrollIntoView({ behavior: "smooth", block: "start" });
       }
       async function fetchJson(url, options = {}, useAdminHeaders = false) {
         const res = await fetch(url, { ...options, headers: { ...(useAdminHeaders ? adminHeaders() : publicHeaders()), ...(options.headers || {}) } });
@@ -777,6 +785,7 @@
         }
       }
       async function loadChat(chatId) {
+        revealChatReviewSection();
         selectedChatId = chatId;
         renderChats();
         els.chatDetail.innerHTML = `<div class="empty">Loading chat...</div>`;
@@ -786,7 +795,7 @@
           const messages = data.chat.messages || [];
           els.chatDetail.innerHTML = `<article class="item"><div class="row"><span>${html(data.chat.title)}</span><small>${html(messages.length)} messages</small></div>${messages.map((m) => `<div class="admin-message"><p class="admin-message-meta"><strong>${html(m.role)}</strong> ${html(time(m.createdAt))}</p><p class="admin-message-content">${html(m.content)}</p></div>`).join("")}</article>`;
           renderFileManagementFromMessages(messages);
-          document.getElementById("chatDetailSection").scrollIntoView({ behavior: "smooth", block: "start" });
+          els.chatDetailSection.scrollIntoView({ behavior: "smooth", block: "start" });
         } catch (error) {
           els.chatDetail.innerHTML = `<div class="empty">${html(error.message)}</div>`;
         }
@@ -806,7 +815,13 @@
       els.themeToggle.addEventListener("click", () => applyTheme(getCurrentTheme() === "dark" ? "light" : "dark"));
       els.logoutButton.addEventListener("click", logout);
       document.querySelectorAll("[data-target]").forEach((button) => {
-        button.addEventListener("click", () => document.getElementById(button.dataset.target)?.scrollIntoView({ behavior: "smooth", block: "start" }));
+        button.addEventListener("click", () => {
+          if (button.dataset.target === "chatReviewSection") {
+            revealChatReviewSection();
+            return;
+          }
+          document.getElementById(button.dataset.target)?.scrollIntoView({ behavior: "smooth", block: "start" });
+        });
       });
       els.chatSearch.addEventListener("input", renderChats);
       els.knowledgeSearch.addEventListener("input", renderKnowledge);
