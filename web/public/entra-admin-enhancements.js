@@ -128,17 +128,22 @@
     style.id = "entraAdminEnhancementStyles";
     style.textContent = `
       .company-logo-field {
-        border: 1px solid rgba(148, 163, 184, 0.28);
-        border-radius: 10px;
-        padding: 12px;
-        background: rgba(255, 255, 255, 0.74);
-        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.72);
+        display: grid;
+        gap: 6px;
+        margin: 0;
+        padding: 0;
+        border: 0;
+        background: transparent;
+        box-shadow: none;
+        color: var(--text);
+        font-weight: 800;
+        font-size: 0.82rem;
       }
 
       .company-logo-picker {
         display: grid;
-        grid-template-columns: 54px minmax(0, 1fr);
-        gap: 12px;
+        grid-template-columns: 46px minmax(0, 1fr);
+        gap: 10px;
         align-items: center;
       }
 
@@ -148,17 +153,17 @@
         align-items: center;
         justify-content: center;
         overflow: hidden;
-        border: 1px solid rgba(148, 163, 184, 0.32);
-        background: rgba(255, 255, 255, 0.82);
+        border: 1px solid var(--line);
+        background: var(--panel-soft);
       }
 
       .company-logo-preview {
-        width: 54px;
-        height: 54px;
-        border-radius: 14px;
-        color: #64748b;
+        width: 46px;
+        height: 46px;
+        border-radius: 10px;
+        color: var(--muted);
         font-weight: 800;
-        font-size: 0.8rem;
+        font-size: 0.72rem;
       }
 
       .company-logo-preview img,
@@ -169,19 +174,42 @@
       }
 
       .company-logo-tools {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 8px;
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto auto;
+        gap: 6px;
         align-items: center;
       }
 
       .company-logo-tools input[type="url"] {
-        flex: 1 1 220px;
+        width: 100%;
         min-width: 0;
       }
 
       .company-logo-tools input[type="file"] {
         display: none;
+      }
+
+      .company-logo-tools button {
+        min-height: 34px;
+        padding: 0 10px;
+        border-radius: 8px;
+        white-space: nowrap;
+        font-size: 0.78rem;
+      }
+
+      @media (max-width: 560px) {
+        .company-logo-picker {
+          grid-template-columns: 42px minmax(0, 1fr);
+        }
+
+        .company-logo-preview {
+          width: 42px;
+          height: 42px;
+        }
+
+        .company-logo-tools {
+          grid-template-columns: 1fr;
+        }
       }
 
       .company-logo-mark {
