@@ -2,6 +2,7 @@
 
 ## [Unreleased]
 
+- Fixed the admin header session label so the signed-in user name and `Logged in as ...` role text have readable spacing.
 - Made normal chat access account-only so logged-out visitors see a login gate and cannot list, create, read, send, or archive chats without a session.
 - Added read-only chat share links so someone with the exact shared URL can view one chat without seeing the chat list or composer.
 - Added a logged-in chat sidebar Users section backed by `/api/users/available-chat-users`, showing only active users who share the current user's company, department, or group.
