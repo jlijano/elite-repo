@@ -2,6 +2,7 @@
 
 ## [Unreleased]
 
+- Added configurable admin Settings refresh cadence with Manual, 15 seconds, 40 seconds, 1 minute, and 5 minutes options, persisted browser preference, Refresh now wiring, timer cancellation, styling, README notes, and frontend contract tests.
 - Added the `/playground.html` admin workspace with Playground sidebar navigation, active-state coverage, summary metrics, a Kanban board, project progress cards, Today's Tasks, Workspace Notes, responsive Playground styling, and frontend contract tests.
 - Added a Reports section to the admin sidebar with working Reports overview, Logs, Review runs, System health, and User audit pages.
 - Added Phase 5 admin auth hardening so legacy `/api/admin/*` routes accept active owner/admin user sessions as well as `ADMIN_TOKEN`, with tests for summary, chats, knowledge, review runs, logout revocation, and non-admin session rejection.
