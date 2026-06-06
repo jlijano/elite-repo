@@ -4,14 +4,27 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Switchboard Admin - Chat</title>
-    <script>(() => { const storageKey = "switchboard-theme"; const systemPrefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches; let storedTheme = null; try { storedTheme = localStorage.getItem(storageKey); } catch (error) { storedTheme = null; } document.documentElement.dataset.theme = storedTheme || (systemPrefersDark ? "dark" : "light"); })();</script>
+    <script>
+      (() => {
+        const storageKey = "switchboard-theme";
+        const systemPrefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+        let storedTheme = null;
+        try { storedTheme = localStorage.getItem(storageKey); } catch (error) { storedTheme = null; }
+        document.documentElement.dataset.theme = storedTheme || (systemPrefersDark ? "dark" : "light");
+      })();
+    </script>
     <link rel="stylesheet" href="style.css" />
     <link rel="stylesheet" href="admin.css" />
   </head>
   <body data-admin-page="chat">
     <main class="app-shell admin-shell" aria-label="Switchboard Admin chat page">
       <aside class="sidebar" aria-label="Admin navigation and status">
-        <div class="sidebar-topbar"><a class="brand-lockup" href="/" aria-label="Switchboard Agent home"><span class="brand-mark" aria-hidden="true">★</span><span>Switchboard</span></a></div>
+        <div class="sidebar-topbar">
+          <a class="brand-lockup" href="/" aria-label="Switchboard Agent home">
+            <span class="brand-mark" aria-hidden="true">★</span>
+            <span>Switchboard</span>
+          </a>
+        </div>
         <nav class="primary-nav" aria-label="Admin navigation">
           <a class="nav-item" href="/" aria-label="Back to chat"><span aria-hidden="true">←</span>Back to chat</a>
           <a class="nav-item active" href="/chat.html" aria-current="page"><span aria-hidden="true">□</span>Chat</a>
@@ -21,20 +34,62 @@
         </nav>
         <section class="admin-section-list" aria-label="Admin workspace">
           <h2 class="session-heading">Workspace</h2>
-          <div class="workspace-card"><strong>Switchboard Admin</strong><small>Chat review and message attachments.</small></div>
+          <div class="workspace-card">
+            <strong>Switchboard Admin</strong>
+            <small>Chat review and message attachments.</small>
+          </div>
           <button class="nav-item logout-action" id="logoutButton" type="button"><span aria-hidden="true">↩</span>Logout</button>
         </section>
-        <div class="directory-card"><div class="status-row"><span class="status-dot online" aria-hidden="true"></span><span>Admin chat</span></div><p>Review chats and inspect files surfaced from messages.</p></div>
+        <div class="directory-card">
+          <div class="status-row">
+            <span class="status-dot online" aria-hidden="true"></span>
+            <span>Admin chat</span>
+          </div>
+          <p>Review chats and inspect files surfaced from messages.</p>
+        </div>
       </aside>
       <section class="admin-panel" aria-label="Admin chat controls">
         <header class="chat-header admin-header">
-          <div class="admin-header-title"><h1>Chat</h1><p>Review conversations and inspect selected-chat attachments.</p></div>
-          <div class="header-actions"><span class="admin-clock" id="menuClock" aria-live="polite"></span><button class="theme-toggle" id="themeToggle" type="button" aria-label="Switch to dark mode" aria-pressed="false"><span class="theme-toggle-icon" aria-hidden="true">☾</span><span id="themeToggleText">Dark Mode</span></button><a class="profile-settings" href="/user.html#profile" aria-label="User profile settings">👤</a></div>
+          <div class="admin-header-title">
+            <h1>Chat</h1>
+            <p>Review conversations and inspect selected-chat attachments.</p>
+          </div>
+          <div class="header-actions">
+            <span class="admin-clock" id="menuClock" aria-live="polite"></span>
+            <a class="profile-settings" href="/user.html#profile" aria-label="User profile settings">👤</a>
+          </div>
         </header>
-        <div class="admin-scroll"><div class="admin-layout"><p class="admin-status" id="status">Loading chats...</p><div class="admin-grid">
-          <section class="admin-card wide" id="chatPage"><div class="card-head"><div><h2>Chat</h2><p class="card-subtitle">Recent chats and selected chat detail.</p></div><div class="section-tools"><input id="chatSearch" type="search" placeholder="Search chats" autocomplete="off" aria-label="Search chats" /></div></div><div class="split-panel"><div class="list" id="chats">Loading chats...</div><div class="detail" id="chatDetail">Select a chat to inspect messages.</div></div></section>
-          <section class="admin-card wide" id="attachmentsPanel"><div class="card-head"><div><h2>Attachments</h2><p class="card-subtitle">Files found in the selected chat messages.</p></div></div><div class="list compact-list" id="fileManagement">Select a chat to inspect attached files.</div></section>
-        </div></div></div>
+        <div class="admin-scroll">
+          <div class="admin-layout">
+            <p class="admin-status" id="status">Loading chats...</p>
+            <div class="admin-grid">
+              <section class="admin-card wide" id="chatPage">
+                <div class="card-head">
+                  <div>
+                    <h2>Chat</h2>
+                    <p class="card-subtitle">Recent chats and selected chat detail.</p>
+                  </div>
+                  <div class="section-tools">
+                    <input id="chatSearch" type="search" placeholder="Search chats" autocomplete="off" aria-label="Search chats" />
+                  </div>
+                </div>
+                <div class="split-panel">
+                  <div class="list" id="chats">Loading chats...</div>
+                  <div class="detail" id="chatDetail">Select a chat to inspect messages.</div>
+                </div>
+              </section>
+              <section class="admin-card wide" id="attachmentsPanel">
+                <div class="card-head">
+                  <div>
+                    <h2>Attachments</h2>
+                    <p class="card-subtitle">Files found in the selected chat messages.</p>
+                  </div>
+                </div>
+                <div class="list compact-list" id="fileManagement">Select a chat to inspect attached files.</div>
+              </section>
+            </div>
+          </div>
+        </div>
       </section>
     </main>
     <script src="admin.js"></script>
