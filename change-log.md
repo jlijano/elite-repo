@@ -2,6 +2,7 @@
 
 ## [Unreleased]
 
+- Fixed mobile admin navigation so the hidden desktop sidebar becomes a compact, scrollable top navigation strip on phones and small displays.
 - Improved admin mobile responsiveness across admin pages, fixing stacked toolbar input heights and adding compact small-screen rules for narrow or short displays such as Samsung Flip cover screens.
 - Added drag-and-drop and click-to-select profile photo upload support to the `/user.html` Add/Edit user modal, including preview, image type/size checks, and backend acceptance for small image Data URLs alongside hosted photo URLs.
 - Updated `/user.html` so current users render in a table, Add user opens the create/edit form in a modal, recent audit events live in a dedicated User audit section, and audit events can be exported as a CSV report for future dashboard reuse.
