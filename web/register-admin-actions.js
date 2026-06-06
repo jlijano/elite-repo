@@ -137,6 +137,14 @@ async function writeAudit(db, action, details = {}) {
   );
 }
 
+async function writeAuditSafely(db, action, details = {}) {
+  try {
+    await writeAudit(db, action, details);
+  } catch (error) {
+    // The delete already succeeded; audit storage should not resurrect it.
+  }
+}
+
 function databaseRequired(res) {
   res.status(501).json({ error: "Permanent delete and company logo storage require persistent database storage." });
 }
@@ -178,6 +186,27 @@ function attachAdminActionRoutes(app) {
           name: result.rows[0].name,
           logoUrl: result.rows[0].logo_url || ""
         }
+      });
+    } catch (error) {
+      return next(error);
+    }
+  });
+
+  app.delete("/api/admin/chats/:chatId", requireGlobalAdmin, async (req, res, next) => {
+    try {
+      const db = await ensureSchema();
+      if (!db) return databaseRequired(res);
+      const result = await db.query("DELETE FROM chats WHERE id = $1 RETURNING id, title", [req.params.chatId]);
+      if (!result.rowCount) return res.status(404).json({ error: "Chat not found." });
+      await writeAuditSafely(db, "chat.purged", {
+        ...actorDetails(req),
+        targetName: result.rows[0].title,
+        chatId: result.rows[0].id,
+        source: "global-admin-chat"
+      });
+      return res.json({
+        ok: true,
+        deleted: { id: result.rows[0].id, title: result.rows[0].title }
       });
     } catch (error) {
       return next(error);
@@ -290,7 +319,7 @@ express.static = function patchedStatic(root, options = {}) {
         return sendEnhancedJavaScript(res, root, "entra-management.js", "entra-admin-enhancements.js", "action-icon-polish.js");
       }
       if (pathname === "/admin.js" && fs.existsSync(path.join(root, "admin.js"))) {
-        return sendEnhancedJavaScript(res, root, "admin.js", null, ["user-purge-enhancements.js", "user-management-polish.js", "action-icon-polish.js"]);
+        return sendEnhancedJavaScript(res, root, "admin.js", null, ["chat-purge-enhancements.js", "user-purge-enhancements.js", "user-management-polish.js", "action-icon-polish.js"]);
       }
     } catch (error) {
       return next(error);
