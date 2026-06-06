@@ -7,9 +7,9 @@
     { selector: "[data-user-disable]", icon: "⊘", label: "Disable" },
     { selector: "[data-user-reactivate], [data-reactivate]", icon: "↻", label: "Reactivate" },
     { selector: "[data-user-purge], [data-purge]", icon: "×", label: "Delete", danger: true },
-    { selector: "[data-archive]", icon: "↓", label: "Archive" },
-    { selector: "[data-user-edit]:not(.user-name-edit-trigger), [data-edit]", icon: "✎", label: "Edit" }
+    { selector: "[data-archive]", icon: "↓", label: "Archive" }
   ];
+  if (page !== "user") actionConfig.push({ selector: "[data-edit]", icon: "✎", label: "Edit" });
 
   function addStyles() {
     if (document.getElementById("managementActionIconStyles")) return;
@@ -24,6 +24,15 @@
         align-items: center;
         justify-content: flex-end;
         gap: 8px;
+      }
+
+      body[data-admin-page="user"] .users-table td:last-child {
+        min-width: 112px;
+        padding-left: 18px;
+      }
+
+      body[data-admin-page="user"] .users-table .actions {
+        gap: 12px;
       }
 
       .management-icon-action {
@@ -51,6 +60,10 @@
         transform: translateY(-1px);
       }
 
+      .user-edit-action-hidden {
+        display: none !important;
+      }
+
       @media (max-width: 520px) {
         body[data-admin-page="company"] .entra-table .actions,
         body[data-admin-page="department"] .entra-table .actions,
@@ -58,6 +71,11 @@
         body[data-admin-page="user"] .users-table .actions {
           justify-content: flex-start;
           flex-wrap: wrap;
+        }
+
+        body[data-admin-page="user"] .users-table td:last-child {
+          min-width: 0;
+          padding-left: 0;
         }
 
         body[data-admin-page="company"] .entra-table .actions .management-icon-action,
@@ -78,8 +96,18 @@
     button.setAttribute("title", cleanLabel);
   }
 
+  function hideRedundantUserEditActions() {
+    if (page !== "user") return;
+    document.querySelectorAll("#users [data-user-edit]:not(.user-name-edit-trigger)").forEach((button) => {
+      button.classList.add("user-edit-action-hidden");
+      button.hidden = true;
+      button.tabIndex = -1;
+      button.setAttribute("aria-hidden", "true");
+    });
+  }
+
   function iconizeButton(button, config) {
-    if (!button || button.classList.contains("user-name-edit-trigger")) return;
+    if (!button || button.hidden || button.classList.contains("user-name-edit-trigger")) return;
     button.classList.add("management-icon-action");
     if (config.danger) button.classList.add("danger-action");
     describeAction(button, config);
@@ -87,6 +115,7 @@
   }
 
   function iconizeActions() {
+    hideRedundantUserEditActions();
     for (const config of actionConfig) {
       document.querySelectorAll(config.selector).forEach((button) => iconizeButton(button, config));
     }
