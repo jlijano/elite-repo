@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Verify Switchboard Account</title>
+    <script>
+      (() => {
+        const storageKey = "switchboard-theme";
+        const systemPrefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+        let storedTheme = null;
+        try { storedTheme = localStorage.getItem(storageKey); } catch (error) { storedTheme = null; }
+        document.documentElement.dataset.theme = storedTheme || (systemPrefersDark ? "dark" : "light");
+      })();
+    </script>
+    <link rel="stylesheet" href="style.css" />
+    <link rel="stylesheet" href="admin.css" />
+  </head>
+  <body>
+    <main class="login-shell" aria-label="Verify account">
+      <section class="login-panel" aria-labelledby="verifyTitle">
+        <div class="brand-lockup"><span class="brand-mark" aria-hidden="true">★</span><span>Switchboard</span></div>
+        <h1 id="verifyTitle">Verify your account</h1>
+        <p id="verifyIntro">Checking your verification link...</p>
+        <form class="management-form" id="verifyAccountForm" autocomplete="off" hidden>
+          <label>
+            <span>Email</span>
+            <input id="verifyEmail" type="email" readonly />
+          </label>
+          <label>
+            <span>New password</span>
+            <input id="verifyPassword" type="password" autocomplete="new-password" minlength="12" required />
+          </label>
+          <label>
+            <span>Confirm password</span>
+            <input id="verifyConfirmPassword" type="password" autocomplete="new-password" minlength="12" required />
+          </label>
+          <button type="submit">Verify and continue</button>
+        </form>
+        <p class="admin-status" id="verifyStatus" hidden></p>
+        <a class="primary-action" id="loginLink" href="/login.html" hidden>Go to login</a>
+      </section>
+    </main>
+    <script src="verify-account.js"></script>
+  </body>
+</html>
