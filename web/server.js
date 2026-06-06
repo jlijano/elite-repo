@@ -21,6 +21,7 @@ const minReviewIntervalMs = 60000;
 const maxAttachments = 4;
 const maxAttachmentChars = 50000;
 const maxAttachmentNameLength = 160;
+const anonymousChatRetentionDays = 30;
 const pendingReviewReply =
   "I saved your message for Switchboard review. The AI responder is unavailable right now, so this chat is in storage-only mode and can be reviewed later.";
 
@@ -47,6 +48,10 @@ function id() {
 
 function now() {
   return new Date().toISOString();
+}
+
+function daysFromNow(days) {
+  return new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString();
 }
 
 function redact(value) {
@@ -114,12 +119,16 @@ function readKnowledgeFiles() {
 
 function chatRow(row) {
   const archivedValue = row.archived_at || row.archivedAt || null;
+  const expiresValue = row.expires_at || row.expiresAt || null;
   return {
     id: row.id,
     title: row.title,
     createdAt: new Date(row.created_at || row.createdAt).toISOString(),
     updatedAt: new Date(row.updated_at || row.updatedAt).toISOString(),
     archivedAt: archivedValue ? new Date(archivedValue).toISOString() : null,
+    createdByUserId: row.created_by_user_id || row.createdByUserId || null,
+    isAnonymous: Boolean(row.is_anonymous ?? row.isAnonymous),
+    expiresAt: expiresValue ? new Date(expiresValue).toISOString() : null,
     messageCount: Number(row.message_count || row.messageCount || 0)
   };
 }
@@ -202,15 +211,23 @@ function createStore() {
     ssl: process.env.DATABASE_SSL === "true" ? { rejectUnauthorized: false } : undefined
   });
   let initialized;
-  const ready = () => (initialized ||= fs.promises.readFile(schemaPath, "utf8").then((schema) => pool.query(schema)));
+  const ready = () => (initialized ||= fs.promises.readFile(schemaPath, "utf8")
+    .then((schema) => pool.query(schema))
+    .then(() => pool.query("DELETE FROM chats WHERE is_anonymous = TRUE AND expires_at IS NOT NULL AND expires_at < NOW()")));
 
   return {
     mode: "postgres",
     async ready() { await ready(); },
     async health() { await ready(); await pool.query("SELECT 1"); },
-    async createChat(title = "New chat") {
+    async createChat(title = "New chat", options = {}) {
       await ready();
-      const result = await pool.query("INSERT INTO chats (id, title) VALUES ($1, $2) RETURNING *", [id(), title.slice(0, 120)]);
+      const userId = options.userId || null;
+      const isAnonymous = !userId && options.isAnonymous !== false;
+      const expiresAt = isAnonymous ? daysFromNow(anonymousChatRetentionDays) : null;
+      const result = await pool.query(
+        "INSERT INTO chats (id, title, created_by_user_id, is_anonymous, expires_at) VALUES ($1, $2, $3, $4, $5) RETURNING *",
+        [id(), title.slice(0, 120), userId, isAnonymous, expiresAt]
+      );
       return chatRow(result.rows[0]);
     },
     async listChats(options = {}) {
@@ -315,10 +332,31 @@ function createMemoryStore() {
   const byStatus = (status) => (status === "all" ? knowledge : knowledge.filter((entry) => entry.status === status));
   return {
     mode: "memory",
-    async ready() {},
+    async ready() {
+      const currentTime = Date.now();
+      for (const [chatId, chat] of chats.entries()) {
+        if (!chat.isAnonymous || !chat.expiresAt || new Date(chat.expiresAt).getTime() >= currentTime) continue;
+        chats.delete(chatId);
+        for (let index = messages.length - 1; index >= 0; index -= 1) {
+          if (messages[index].chatId === chatId) messages.splice(index, 1);
+        }
+      }
+    },
     async health() {},
-    async createChat(title = "New chat") {
-      const chat = { id: id(), title: title.slice(0, 120), createdAt: now(), updatedAt: now(), archivedAt: null, messageCount: 0 };
+    async createChat(title = "New chat", options = {}) {
+      const userId = options.userId || null;
+      const isAnonymous = !userId && options.isAnonymous !== false;
+      const chat = {
+        id: id(),
+        title: title.slice(0, 120),
+        createdAt: now(),
+        updatedAt: now(),
+        archivedAt: null,
+        createdByUserId: userId,
+        isAnonymous,
+        expiresAt: isAnonymous ? daysFromNow(anonymousChatRetentionDays) : null,
+        messageCount: 0
+      };
       chats.set(chat.id, chat);
       return chat;
     },
@@ -427,6 +465,13 @@ const userManagementStore = attachUserManagementRoutes(app, {
 });
 app.locals.userManagementAttached = true;
 
+async function sessionUserFromRequest(req) {
+  const sessionToken = req.get("x-session-token");
+  if (!sessionToken) return null;
+  const session = await userManagementStore.getSessionUser(sessionToken).catch(() => null);
+  return session?.user || null;
+}
+
 function scopeValue(user, field) {
   return typeof user?.[field] === "string" ? user[field].trim().toLowerCase() : "";
 }
@@ -497,8 +542,11 @@ app.get("/api/users/available-chat-users", async (req, res) => {
 });
 
 app.post("/api/chats", async (req, res) => {
-  try { res.status(201).json({ chat: await db.createChat(redact(req.body?.title || "New chat")) }); }
-  catch { res.status(500).json({ error: "Could not create a new chat." }); }
+  try {
+    const user = await sessionUserFromRequest(req);
+    const chat = await db.createChat(redact(req.body?.title || "New chat"), { userId: user?.id || null, isAnonymous: !user });
+    res.status(201).json({ chat });
+  } catch { res.status(500).json({ error: "Could not create a new chat." }); }
 });
 
 app.get("/api/chats", async (req, res) => {
@@ -566,12 +614,13 @@ app.post("/api/chat", async (req, res) => {
   let savedUser = null;
   const knowledge = readKnowledgeFiles();
   try {
+    const user = await sessionUserFromRequest(req);
     const attachments = cleanAttachments(req.body?.attachments);
     const rawMessage = typeof req.body?.message === "string" ? req.body.message.trim() : "";
     if (!rawMessage && !attachments.length) return res.status(400).json({ error: "Message or file attachment is required." });
     const fallbackMessage = attachments.length ? `Uploaded ${attachments.length} file${attachments.length === 1 ? "" : "s"}: ${attachments.map((attachment) => attachment.name).join(", ")}` : "";
     const clean = redact(rawMessage || fallbackMessage);
-    if (!chatId) chatId = (await db.createChat(clean.slice(0, 80) || "New chat")).id;
+    if (!chatId) chatId = (await db.createChat(clean.slice(0, 80) || "New chat", { userId: user?.id || null, isAnonymous: !user })).id;
     else {
       const existingChat = await db.getChat(chatId);
       if (!existingChat) return res.status(404).json({ error: "Chat not found. Start a new chat and try again." });
