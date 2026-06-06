@@ -3,11 +3,20 @@
 
   function sessionHeaders() {
     const headers = { "Content-Type": "application/json" };
-    const sessionToken = localStorage.getItem("switchboard_session_token");
-    const adminToken = localStorage.getItem("switchboard_admin_token");
+    const sessionToken = sessionStorage.getItem("switchboard-session-token") || localStorage.getItem("switchboard_session_token");
+    const adminToken = sessionStorage.getItem("switchboard-admin-token") || localStorage.getItem("switchboard_admin_token");
     if (sessionToken) headers["x-session-token"] = sessionToken;
     if (adminToken) headers["x-admin-token"] = adminToken;
     return headers;
+  }
+
+  function isGlobalAdmin() {
+    try {
+      const user = JSON.parse(sessionStorage.getItem("switchboard-session-user") || "{}");
+      return user.role === "owner" || Boolean(sessionStorage.getItem("switchboard-admin-token") || localStorage.getItem("switchboard_admin_token"));
+    } catch (error) {
+      return Boolean(sessionStorage.getItem("switchboard-admin-token") || localStorage.getItem("switchboard_admin_token"));
+    }
   }
 
   function addStyles() {
@@ -38,6 +47,7 @@
   }
 
   function enhanceRows() {
+    if (!isGlobalAdmin()) return;
     const list = document.getElementById("users");
     if (!list) return;
     list.querySelectorAll("tr, .user-card, li, article").forEach((row) => {
