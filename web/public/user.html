@@ -17,8 +17,9 @@
     <link rel="stylesheet" href="admin.css" />
     <style>
       body[data-admin-page="user"] .user-card-head { align-items: center; }
-      body[data-admin-page="user"] .user-toolbar { min-width: min(460px, 100%); }
-      body[data-admin-page="user"] .user-toolbar input { flex: 1 1 240px; }
+      body[data-admin-page="user"] .user-toolbar { flex: 1 1 560px; justify-content: flex-end; min-width: min(560px, 100%); }
+      body[data-admin-page="user"] .user-toolbar input { flex: 1 1 220px; max-width: 280px; }
+      body[data-admin-page="user"] .user-toolbar button { flex: 0 0 auto; min-width: max-content; padding-inline: 16px; white-space: nowrap; }
       body[data-admin-page="user"] .user-management-grid { display: block; min-height: 0; }
       body[data-admin-page="user"] .user-list-panel { border-right: 0; }
       body[data-admin-page="user"] .user-list { max-height: none; overflow: auto; }
@@ -55,7 +56,7 @@
         body[data-admin-page="user"] .user-card-head { align-items: stretch; flex-direction: column; }
         body[data-admin-page="user"] .user-toolbar { width: 100%; min-width: 0; flex-direction: column; align-items: stretch; }
         body[data-admin-page="user"] .user-toolbar input,
-        body[data-admin-page="user"] .user-toolbar button { flex: 0 0 auto; }
+        body[data-admin-page="user"] .user-toolbar button { flex: 0 0 auto; max-width: none; }
         body[data-admin-page="user"] .users-table { min-width: 680px; }
         body[data-admin-page="user"] .photo-drop-zone { grid-template-columns: 1fr; justify-items: start; }
       }
