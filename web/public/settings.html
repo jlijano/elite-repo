@@ -64,9 +64,17 @@
                       <span class="theme-mode-summary" id="settingsThemeSummary" aria-live="polite">Using system preference</span>
                     </div>
                   </div>
-                  <div class="settings-row">
-                    <div><strong>Refresh cadence</strong><p>Admin status data refreshes automatically in the background.</p></div>
-                    <span class="status-badge status-loaded">40 seconds</span>
+                  <div class="settings-row refresh-settings-row">
+                    <div><strong>Refresh cadence</strong><p>Choose how often admin data refreshes. Manual mode stops background refresh until you use Refresh now.</p></div>
+                    <div class="refresh-cadence-control" role="group" aria-label="Refresh cadence">
+                      <button class="refresh-cadence-option" type="button" data-refresh-choice="manual" aria-pressed="false">Manual</button>
+                      <button class="refresh-cadence-option" type="button" data-refresh-choice="fast" aria-pressed="false">15s</button>
+                      <button class="refresh-cadence-option" type="button" data-refresh-choice="standard" aria-pressed="false">40s</button>
+                      <button class="refresh-cadence-option" type="button" data-refresh-choice="minute" aria-pressed="false">1m</button>
+                      <button class="refresh-cadence-option" type="button" data-refresh-choice="relaxed" aria-pressed="false">5m</button>
+                      <button class="refresh-now-action" id="settingsRefreshNow" type="button">Refresh now</button>
+                      <span class="refresh-cadence-summary" id="settingsRefreshSummary" aria-live="polite">Auto refresh every 40 seconds</span>
+                    </div>
                   </div>
                 </div>
               </section>
