@@ -12,6 +12,7 @@ const themeToggleText = document.getElementById("themeToggleText");
 const themeToggleIcon = document.querySelector(".theme-toggle-icon");
 const newChatButton = document.getElementById("newChatButton");
 const mobileNewChatButton = document.getElementById("mobileNewChatButton");
+const closeChatButton = document.getElementById("closeChatButton");
 const chatList = document.getElementById("chatList");
 const availableUsersPanel = document.getElementById("availableUsersPanel");
 const availableUsersList = document.getElementById("availableUsersList");
@@ -27,6 +28,7 @@ const refreshIntervalMs = 40000;
 const maxAttachmentFiles = 4;
 const maxAttachmentBytes = 180 * 1024;
 const startChatLabel = "Start new chat";
+const newChatTitle = "New chat";
 let currentChatId = null;
 let chatHistory = [];
 let selectedAttachments = [];
@@ -194,6 +196,17 @@ function isAutomaticAssistantMessage(message = {}) {
     || content.includes("could not generate an AI response right now");
 }
 
+function resetChatView() {
+  removeStored(chatStorageKey);
+  currentChatId = null;
+  chatHistory = [];
+  selectedAttachments = [];
+  inputEl.value = "";
+  renderSelectedAttachments();
+  resizeInput();
+  renderWelcome();
+}
+
 function appendAttachmentList(parent, attachments = []) {
   if (!attachments.length) return;
   const list = document.createElement("div");
@@ -236,7 +249,7 @@ function createMessageElement(role, content, options = {}) {
 function renderWelcome() {
   messagesEl.innerHTML = "";
   chatHistory = [];
-  currentChatTitle.textContent = startChatLabel;
+  currentChatTitle.textContent = newChatTitle;
   const emptyState = document.createElement("div");
   emptyState.className = "start-chat-empty";
   emptyState.textContent = startChatLabel;
@@ -286,6 +299,7 @@ function setSending(nextValue) {
   sendButton.disabled = nextValue;
   filePickerButton.disabled = nextValue;
   fileInput.disabled = nextValue;
+  if (closeChatButton) closeChatButton.disabled = nextValue;
   sendButton.textContent = nextValue ? "..." : "↑";
 }
 
@@ -356,7 +370,7 @@ function renderChatList(chats = []) {
     const button = document.createElement("button");
     button.type = "button";
     button.className = "chat-list-item";
-    button.innerHTML = `<span>${escapeHtml(chat.title || "New chat")}</span><small>${chat.messageCount || 0} message${chat.messageCount === 1 ? "" : "s"}</small>`;
+    button.innerHTML = `<span>${escapeHtml(chat.title || newChatTitle)}</span><small>${chat.messageCount || 0} message${chat.messageCount === 1 ? "" : "s"}</small>`;
     button.addEventListener("click", () => loadChat(chat.id));
 
     const archiveButton = document.createElement("button");
@@ -437,34 +451,43 @@ async function loadChats() {
 async function createChat() {
   const data = await requestJson("/api/chats", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ title: startChatLabel })
+    headers: { "Content-Type": "application/json", ...authHeaders() },
+    body: JSON.stringify({ title: newChatTitle })
   });
   saveCurrentChat(data.chat.id);
-  currentChatTitle.textContent = data.chat.title || startChatLabel;
+  currentChatTitle.textContent = data.chat.title || newChatTitle;
   renderMessages([]);
   await loadChats();
 }
 
-async function archiveChat(chatId) {
+async function archiveChat(chatId, options = {}) {
   await requestJson(`/api/chats/${encodeURIComponent(chatId)}/archive`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ archived: true })
   });
-  const chats = await loadChats();
+  await loadChats();
   if (chatId === currentChatId) {
-    removeStored(chatStorageKey);
-    currentChatId = null;
-    if (chats[0]) await loadChat(chats[0].id);
-    else await createChat();
+    resetChatView();
+    if (options.createNext !== false) await createChat();
   }
+}
+
+async function closeCurrentChat() {
+  if (isSending) return;
+  const closingChatId = currentChatId;
+  if (!closingChatId) {
+    resetChatView();
+    await createChat();
+    return;
+  }
+  await archiveChat(closingChatId, { createNext: true });
 }
 
 async function loadChat(chatId) {
   const data = await requestJson(`/api/chats/${encodeURIComponent(chatId)}`);
   saveCurrentChat(data.chat.id);
-  currentChatTitle.textContent = data.chat.title || startChatLabel;
+  currentChatTitle.textContent = data.chat.title || newChatTitle;
   renderMessages(data.chat.messages || []);
   await loadChats();
 }
@@ -481,7 +504,7 @@ async function refreshCurrentSession() {
   await loadAvailableUsers();
   const chats = await loadChats();
   const active = chats.find((chat) => chat.id === currentChatId);
-  if (active) currentChatTitle.textContent = active.title || startChatLabel;
+  if (active) currentChatTitle.textContent = active.title || newChatTitle;
   if (currentChatId && !isSending && !inputEl.value.trim() && !selectedAttachments.length && document.visibilityState === "visible") {
     const data = await requestJson(`/api/chats/${encodeURIComponent(currentChatId)}`);
     renderMessages(data.chat.messages || []);
@@ -505,14 +528,14 @@ async function sendMessage() {
   try {
     const data = await requestJson("/api/chat", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", ...authHeaders() },
       body: JSON.stringify({ chatId: currentChatId, message, attachments, history: chatHistory.slice(0, -1) })
     });
     if (data.chatId && data.chatId !== currentChatId) saveCurrentChat(data.chatId);
     setStatus(data);
     const chats = await loadChats();
     const active = chats.find((chat) => chat.id === currentChatId);
-    if (active) currentChatTitle.textContent = active.title || startChatLabel;
+    if (active) currentChatTitle.textContent = active.title || newChatTitle;
   } catch (error) {
     addMessage("assistant", error.message || "Something went wrong while contacting the Switchboard Agent.", { error: true, skipHistory: true });
   } finally {
@@ -536,6 +559,7 @@ filePickerButton.addEventListener("click", () => fileInput.click());
 fileInput.addEventListener("change", () => addFiles(fileInput.files).catch((error) => addMessage("assistant", error.message, { error: true, skipHistory: true })));
 newChatButton.addEventListener("click", () => createChat().catch((error) => addMessage("assistant", error.message, { error: true, skipHistory: true })));
 mobileNewChatButton.addEventListener("click", () => createChat().catch((error) => addMessage("assistant", error.message, { error: true, skipHistory: true })));
+closeChatButton?.addEventListener("click", () => closeCurrentChat().catch((error) => addMessage("assistant", error.message, { error: true, skipHistory: true })));
 
 initializeThemeToggle();
 renderSelectedAttachments();
