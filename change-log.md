@@ -2,6 +2,7 @@
 
 ## [Unreleased]
 
+- Moved the audit report out of `/user.html` and into `/user-audit.html`, where it now shows User, Update, and Timestamp columns, includes actor/target identity details when available, and exports the report as CSV.
 - Added a visible X close state to the mobile admin navigation button so users can close the full-screen menu without leaving the current module.
 - Changed the mobile admin navigation to an icon-only burger button on the left that opens a full-screen navigation menu.
 - Added a mobile admin Menu button that opens the hidden admin navigation options as a dropdown on phone and small-screen views.
