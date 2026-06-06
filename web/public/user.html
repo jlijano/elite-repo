@@ -44,11 +44,24 @@
       body[data-admin-page="user"] .modal-close { width: 38px; height: 38px; padding: 0; font-size: 1.1rem; }
       body[data-admin-page="user"] .user-dialog-body { max-height: calc(100dvh - 104px); overflow: auto; padding: 12px; }
       body[data-admin-page="user"] .management-form { border: 0; padding: 0; }
+      body[data-admin-page="user"] .photo-field { min-width: 0; display: grid; gap: 8px; color: var(--text); font-weight: 800; }
+      body[data-admin-page="user"] .photo-field-label { font-size: 0.82rem; }
+      body[data-admin-page="user"] .photo-drop-zone { min-height: 118px; display: grid; grid-template-columns: 82px minmax(0, 1fr); gap: 12px; align-items: center; padding: 12px; border: 1px dashed var(--line); border-radius: var(--radius); background: var(--panel-soft); color: var(--muted); }
+      body[data-admin-page="user"] .photo-drop-zone.drag-active { border-color: var(--primary); background: rgba(16, 163, 127, 0.14); box-shadow: inset 0 0 0 1px rgba(16, 163, 127, 0.22); }
+      body[data-admin-page="user"] .photo-preview { width: 72px; height: 72px; display: grid; place-items: center; overflow: hidden; border: 1px solid var(--line); border-radius: 50%; background: var(--panel); color: var(--muted); font-size: 1.6rem; }
+      body[data-admin-page="user"] .photo-preview img { width: 100%; height: 100%; object-fit: cover; }
+      body[data-admin-page="user"] .photo-drop-copy { min-width: 0; display: grid; gap: 6px; }
+      body[data-admin-page="user"] .photo-drop-copy strong { color: var(--text); font-size: 0.92rem; }
+      body[data-admin-page="user"] .photo-drop-copy small { color: var(--muted); line-height: 1.35; }
+      body[data-admin-page="user"] .photo-upload-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+      body[data-admin-page="user"] .photo-upload-row button { min-height: 34px; }
+      body[data-admin-page="user"] .photo-file-input { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
       @media (max-width: 760px) {
         body[data-admin-page="user"] .users-table { min-width: 680px; }
         body[data-admin-page="user"] .audit-head { align-items: stretch; flex-direction: column; }
         body[data-admin-page="user"] .audit-head .card-actions { width: 100%; }
         body[data-admin-page="user"] #exportUserAuditButton { width: 100%; }
+        body[data-admin-page="user"] .photo-drop-zone { grid-template-columns: 1fr; justify-items: start; }
       }
     </style>
   </head>
@@ -146,10 +159,22 @@
               <span>Email address</span>
               <input id="userEmail" name="email" type="email" autocomplete="email" required />
             </label>
-            <label>
-              <span>Profile photo URL</span>
+            <div class="photo-field">
+              <label class="photo-field-label" for="userPhotoUrl">Profile photo</label>
+              <div class="photo-drop-zone" id="photoDropZone" role="button" tabindex="0" aria-label="Upload profile photo by dropping an image or choosing a file">
+                <div class="photo-preview" id="photoPreview" aria-hidden="true"><span id="photoPreviewText">+</span><img id="photoPreviewImage" alt="" hidden /></div>
+                <div class="photo-drop-copy">
+                  <strong>Drop a photo here</strong>
+                  <small>PNG, JPG, GIF, or WebP up to 512 KB. You can also paste a hosted image URL below.</small>
+                  <div class="photo-upload-row">
+                    <button id="choosePhotoButton" type="button">Choose photo</button>
+                    <small id="photoUploadStatus" aria-live="polite">No photo selected.</small>
+                  </div>
+                </div>
+              </div>
+              <input class="photo-file-input" id="photoFileInput" type="file" accept="image/png,image/jpeg,image/gif,image/webp" />
               <input id="userPhotoUrl" name="photoUrl" type="url" placeholder="https://example.com/photo.jpg" autocomplete="off" />
-            </label>
+            </div>
             <div class="form-row">
               <label>
                 <span>Role</span>
@@ -193,16 +218,68 @@
         const form = document.getElementById("userForm");
         const status = document.getElementById("status");
         const exportButton = document.getElementById("exportUserAuditButton");
+        const photoInput = document.getElementById("userPhotoUrl");
+        const photoFileInput = document.getElementById("photoFileInput");
+        const photoDropZone = document.getElementById("photoDropZone");
+        const choosePhotoButton = document.getElementById("choosePhotoButton");
+        const photoPreviewImage = document.getElementById("photoPreviewImage");
+        const photoPreviewText = document.getElementById("photoPreviewText");
+        const photoUploadStatus = document.getElementById("photoUploadStatus");
+        const maxPhotoBytes = 512 * 1024;
         let transformingUsers = false;
+
+        function renderPhotoPreview(value = photoInput?.value || "") {
+          const photoValue = String(value || "").trim();
+          const canPreview = /^(https?:|data:image\/(?:png|jpe?g|gif|webp);base64,)/i.test(photoValue);
+          if (photoPreviewImage) {
+            photoPreviewImage.hidden = !canPreview;
+            if (canPreview) photoPreviewImage.src = photoValue;
+            else photoPreviewImage.removeAttribute("src");
+          }
+          if (photoPreviewText) photoPreviewText.hidden = canPreview;
+          if (photoUploadStatus) photoUploadStatus.textContent = canPreview ? "Photo ready." : "No photo selected.";
+        }
 
         function openUserDialog() {
           if (!dialog || dialog.open) return;
           dialog.showModal();
-          window.setTimeout(() => document.getElementById("userName")?.focus(), 0);
+          window.setTimeout(() => {
+            renderPhotoPreview();
+            document.getElementById("userName")?.focus();
+          }, 0);
         }
 
         function closeUserDialog() {
           if (dialog?.open) dialog.close();
+        }
+
+        function setPhotoStatus(message, error = false) {
+          if (!photoUploadStatus) return;
+          photoUploadStatus.textContent = message;
+          photoUploadStatus.style.color = error ? "var(--error)" : "var(--muted)";
+        }
+
+        function applyPhotoFile(file) {
+          if (!file) return;
+          if (!/^image\/(png|jpeg|gif|webp)$/i.test(file.type)) {
+            setPhotoStatus("Choose a PNG, JPG, GIF, or WebP image.", true);
+            return;
+          }
+          if (file.size > maxPhotoBytes) {
+            setPhotoStatus("Photo must be 512 KB or smaller.", true);
+            return;
+          }
+          const reader = new FileReader();
+          reader.addEventListener("load", () => {
+            if (photoInput) {
+              photoInput.value = String(reader.result || "");
+              photoInput.dispatchEvent(new Event("input", { bubbles: true }));
+            }
+            renderPhotoPreview(reader.result);
+            setPhotoStatus(`${file.name} selected.`);
+          });
+          reader.addEventListener("error", () => setPhotoStatus("Could not read that image.", true));
+          reader.readAsDataURL(file);
         }
 
         function tableCell(content, className = "") {
@@ -285,6 +362,7 @@
         addButton?.addEventListener("click", () => window.setTimeout(openUserDialog, 0));
         closeButton?.addEventListener("click", closeUserDialog);
         cancelEditButton?.addEventListener("click", closeUserDialog);
+        form?.addEventListener("reset", () => window.setTimeout(renderPhotoPreview, 0));
         form?.addEventListener("submit", () => {
           window.setTimeout(() => {
             const message = status?.textContent || "";
@@ -298,10 +376,29 @@
           if (event.target === dialog) closeUserDialog();
         });
         exportButton?.addEventListener("click", exportAuditReport);
+        choosePhotoButton?.addEventListener("click", () => photoFileInput?.click());
+        photoFileInput?.addEventListener("change", () => applyPhotoFile(photoFileInput.files?.[0]));
+        photoInput?.addEventListener("input", () => renderPhotoPreview());
+        photoDropZone?.addEventListener("keydown", (event) => {
+          if (event.key === "Enter" || event.key === " ") {
+            event.preventDefault();
+            photoFileInput?.click();
+          }
+        });
+        ["dragenter", "dragover"].forEach((type) => photoDropZone?.addEventListener(type, (event) => {
+          event.preventDefault();
+          photoDropZone.classList.add("drag-active");
+        }));
+        ["dragleave", "drop"].forEach((type) => photoDropZone?.addEventListener(type, (event) => {
+          event.preventDefault();
+          if (type === "drop") applyPhotoFile(event.dataTransfer?.files?.[0]);
+          photoDropZone.classList.remove("drag-active");
+        }));
 
         const observer = new MutationObserver(transformUsersToTable);
         if (usersContainer) observer.observe(usersContainer, { childList: true, subtree: false });
         transformUsersToTable();
+        renderPhotoPreview();
       })();
     </script>
   </body>
