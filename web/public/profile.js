@@ -2,6 +2,8 @@ const themeStorageKey = "switchboard-theme";
 const sessionTokenStorageKey = "switchboard-session-token";
 const adminTokenStorageKey = "switchboard-admin-token";
 const legacyProfileStorageKey = "switchboard-user-profile";
+const sessionUserStorageKey = "switchboard-session-user";
+const minPasswordLength = 12;
 
 const $ = (id) => document.getElementById(id);
 const els = {
@@ -33,14 +35,43 @@ function sessionToken() {
   return sessionStorage.getItem(sessionTokenStorageKey) || "";
 }
 
+function isAdminRole(role) {
+  return role === "owner" || role === "admin";
+}
+
 function authHeaders() {
   return { "Content-Type": "application/json", "x-session-token": sessionToken() };
+}
+
+function clearSessionState() {
+  sessionStorage.removeItem(sessionTokenStorageKey);
+  sessionStorage.removeItem(adminTokenStorageKey);
+  sessionStorage.removeItem(sessionUserStorageKey);
+  localStorage.removeItem(legacyProfileStorageKey);
+}
+
+function persistSessionUser(user) {
+  if (!user) return;
+  sessionStorage.setItem(sessionUserStorageKey, JSON.stringify({ id: user.id, name: user.name, email: user.email, role: user.role }));
+  if (isAdminRole(user.role)) sessionStorage.setItem(adminTokenStorageKey, sessionToken());
+  else sessionStorage.removeItem(adminTokenStorageKey);
+}
+
+function redirectToLogin(reason = "expired") {
+  clearSessionState();
+  const params = new URLSearchParams({ redirect: "/update-profile.html", reason });
+  window.location.href = `/login.html?${params.toString()}`;
 }
 
 async function fetchJson(url, options = {}) {
   const response = await fetch(url, { ...options, headers: { ...authHeaders(), ...(options.headers || {}) } });
   const data = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(data.error || "Request failed.");
+  if (response.status === 401) redirectToLogin("expired");
+  if (!response.ok) {
+    const error = new Error(data.error || "Request failed.");
+    error.status = response.status;
+    throw error;
+  }
   return data;
 }
 
@@ -77,14 +108,17 @@ function closeProfileDropdown() {
   setProfileDropdownOpen(false);
 }
 
+function explainReason() {
+  const reason = new URLSearchParams(window.location.search).get("reason");
+  if (reason === "not-admin") setStatus("You are signed in, but admin pages require an owner or admin role.", true);
+}
+
 async function logout() {
   const token = sessionToken();
   if (token) {
     await fetch("/api/auth/logout", { method: "POST", headers: authHeaders(), body: "{}", keepalive: true }).catch(() => {});
   }
-  sessionStorage.removeItem(sessionTokenStorageKey);
-  sessionStorage.removeItem(adminTokenStorageKey);
-  localStorage.removeItem(legacyProfileStorageKey);
+  clearSessionState();
   window.location.href = "/login.html";
 }
 
@@ -92,16 +126,17 @@ async function loadProfile() {
   localStorage.removeItem(legacyProfileStorageKey);
   if (!sessionToken()) {
     setStatus("Login required. Redirecting to the login page...", true);
-    window.location.href = "/login.html?redirect=/update-profile.html";
+    redirectToLogin("required");
     return;
   }
-  setStatus("Loading profile...");
+  if (!els.status?.textContent) setStatus("Loading profile...");
   const data = await fetchJson("/api/profile");
+  persistSessionUser(data.user);
   els.profilePhoto.value = data.user?.photoUrl || "";
   els.profileName.value = data.user?.name || "";
   els.profileEmail.value = data.user?.email || "";
   updateProfilePreview(data.user?.photoUrl || "");
-  setStatus("Profile loaded.");
+  if (!els.status?.classList.contains("error")) setStatus("Profile loaded.");
 }
 
 async function saveProfile(event) {
@@ -110,7 +145,8 @@ async function saveProfile(event) {
   const confirmPassword = els.profileConfirmPassword?.value || "";
   const currentPassword = els.profileCurrentPassword?.value || "";
   if (newPassword || confirmPassword) {
-    if (newPassword.length < 8) return setStatus("New password must be at least 8 characters.", true);
+    if (newPassword.length < minPasswordLength) return setStatus(`New password must be at least ${minPasswordLength} characters.`, true);
+    if (new Set(newPassword).size < 4) return setStatus("New password must use at least four different characters.", true);
     if (newPassword !== confirmPassword) return setStatus("New password and confirmation must match.", true);
     if (!currentPassword) return setStatus("Current password is required to change your password.", true);
   }
@@ -126,16 +162,21 @@ async function saveProfile(event) {
         newPassword
       })
     });
+    if (data.sessionToken) {
+      sessionStorage.setItem(sessionTokenStorageKey, data.sessionToken);
+    }
+    persistSessionUser(data.user);
     clearPasswordFields();
     updateProfilePreview(data.user?.photoUrl || "");
-    setStatus(newPassword ? "Profile and password updated." : "Profile updated.");
+    setStatus(data.passwordChanged ? "Profile and password updated. Your session was refreshed." : "Profile updated.");
   } catch (error) {
-    setStatus(error.message, true);
+    if (error.status !== 401) setStatus(error.message, true);
   }
 }
 
 updateClock();
 setInterval(updateClock, 30000);
+explainReason();
 els.profilePhoto?.addEventListener("input", () => updateProfilePreview(els.profilePhoto.value));
 els.profileForm?.addEventListener("submit", saveProfile);
 els.profileMenuButton?.addEventListener("click", () => setProfileDropdownOpen(els.profileDropdown?.hidden !== false));
@@ -149,4 +190,6 @@ document.addEventListener("click", (event) => {
 document.addEventListener("keydown", (event) => {
   if (event.key === "Escape") closeProfileDropdown();
 });
-loadProfile().catch((error) => setStatus(error.message, true));
+loadProfile().catch((error) => {
+  if (error.status !== 401) setStatus(error.message, true);
+});
