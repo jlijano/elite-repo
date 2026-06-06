@@ -71,6 +71,23 @@ function cleanBubbleColor(value) {
   return /^#[0-9a-f]{6}$/.test(color) ? color : defaultBubbleColor;
 }
 
+function colorConflictError() {
+  const error = new Error("This bubble color is already in use for this chat. Pick another color.");
+  error.status = 409;
+  return error;
+}
+
+function hasRequestedBubbleColor(context = {}) {
+  return Boolean(context && typeof context === "object" && !Array.isArray(context) && Object.prototype.hasOwnProperty.call(context, "bubbleColor"));
+}
+
+function bubbleColorInUse(chatId, participantId, bubbleColor) {
+  const bucket = chatParticipants.get(chatId);
+  if (!bucket) return false;
+  const normalized = cleanBubbleColor(bubbleColor);
+  return [...bucket.values()].some((record) => record.participantId !== participantId && cleanBubbleColor(record.bubbleColor) === normalized);
+}
+
 function cleanAttachment(attachment = {}) {
   const name = typeof attachment.name === "string" && attachment.name.trim()
     ? attachment.name.trim().slice(0, maxAttachmentNameLength)
@@ -130,12 +147,17 @@ function participantPublicRecord(record = {}) {
 function upsertChatParticipant(chatId, context = {}) {
   const participant = cleanParticipantContext(context);
   if (!chatId || !participant.participantId) return null;
+  const requestedColor = hasRequestedBubbleColor(context);
   const bucket = participantBucket(chatId);
   const existing = bucket.get(participant.participantId) || {};
+  const nextBubbleColor = requestedColor
+    ? participant.bubbleColor
+    : existing.bubbleColor || participant.bubbleColor || defaultBubbleColor;
+  if (requestedColor && bubbleColorInUse(chatId, participant.participantId, nextBubbleColor)) throw colorConflictError();
   const record = {
     ...existing,
     ...participant,
-    bubbleColor: participant.bubbleColor || existing.bubbleColor || defaultBubbleColor,
+    bubbleColor: nextBubbleColor,
     shareCount: Math.max(Number(existing.shareCount || 0), participant.shareCount),
     isTyping: Boolean(existing.isTyping),
     lastTypingAt: existing.lastTypingAt || null,
@@ -669,7 +691,9 @@ app.post("/api/chats/:chatId/participants", async (req, res) => {
     const participant = upsertChatParticipant(req.params.chatId, req.body?.context || req.body || {});
     if (!participant) return res.status(400).json({ error: "A participant id is required." });
     res.status(201).json({ participant, participants: chatParticipantList(req.params.chatId) });
-  } catch { res.status(500).json({ error: "Could not update chat participant." }); }
+  } catch (error) {
+    res.status(error.status || 500).json({ error: error.status ? error.message : "Could not update chat participant." });
+  }
 });
 
 app.get("/api/chats/:chatId/typing", async (req, res) => {
@@ -687,7 +711,9 @@ app.post("/api/chats/:chatId/typing", async (req, res) => {
     const participant = setChatTyping(req.params.chatId, req.body?.context || {}, req.body?.isTyping !== false);
     if (!participant) return res.status(400).json({ error: "A participant id is required." });
     res.json({ participant, typingParticipants: typingParticipantsForChat(req.params.chatId, participant.participantId) });
-  } catch { res.status(500).json({ error: "Could not update typing status." }); }
+  } catch (error) {
+    res.status(error.status || 500).json({ error: error.status ? error.message : "Could not update typing status." });
+  }
 });
 
 app.post("/api/chats/:chatId/archive", async (req, res) => {
@@ -709,7 +735,9 @@ app.post("/api/chats/:chatId/messages", async (req, res) => {
     const message = await db.saveMessage(req.params.chatId, role, content.trim(), context);
     setChatTyping(req.params.chatId, context, false);
     res.status(201).json({ message, participants: chatParticipantList(req.params.chatId) });
-  } catch { res.status(500).json({ error: "Could not save the message." }); }
+  } catch (error) {
+    res.status(error.status || 500).json({ error: error.status ? error.message : "Could not save the message." });
+  }
 });
 
 app.get("/api/knowledge", async (req, res) => {
@@ -764,8 +792,9 @@ app.post("/api/chat", async (req, res) => {
     return res.json({ chatId, reply: null, pendingReview: false, messageSaved: true, messages: [savedUser], participants: chatParticipantList(chatId), ...knowledge, aiAvailable: false, storageMode: db.mode });
   } catch (error) {
     console.error("Chat request failed:", error.message);
-    res.status(savedUser ? 200 : 503).json({
+    res.status(error.status || (savedUser ? 200 : 503)).json({
       chatId,
+      error: error.status ? error.message : undefined,
       reply: null,
       pendingReview: false,
       messageSaved: Boolean(savedUser),
