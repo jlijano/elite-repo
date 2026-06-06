@@ -13,6 +13,26 @@ const maxPhotoDataUrlLength = 750000;
 const photoDataUrlPattern = /^data:image\/(?:png|jpe?g|gif|webp);base64,[A-Za-z0-9+/=\s]+$/i;
 const loginAttempts = new Map();
 
+const auditLogTypes = {
+  "user.login": ["login", "Login log"],
+  "user.logout": ["logout", "Logout log"],
+  "user.activity": ["activity", "Activity log"],
+  "user.updated": ["change", "Change log"],
+  "profile.updated": ["change", "Change log"],
+  "user.disabled": ["change", "Change log"],
+  "user.reactivated": ["change", "Change log"],
+  "user.created": ["create", "Create log"],
+  "chat.archived": ["archive", "Archive log"],
+  "chat.unarchived": ["archive", "Archive log"],
+  "chat.message": ["chat", "Chat log"],
+  "user.duration": ["duration", "Duration log"]
+};
+
+function auditDetails(action, details = {}) {
+  const [logType, logLabel] = auditLogTypes[action] || ["activity", "Activity log"];
+  return { ...details, logType: details.logType || logType, logLabel: details.logLabel || logLabel };
+}
+
 function publicUser(row) {
   return {
     id: row.id,
@@ -249,7 +269,7 @@ function createPostgresUserStore(options) {
     await ready();
     const result = await pool.query(
       "INSERT INTO user_audit_events (id, actor_user_id, target_user_id, action, details) VALUES ($1, $2, $3, $4, $5) RETURNING *",
-      [options.makeId(), actorUserId, targetUserId, action, details]
+      [options.makeId(), actorUserId, targetUserId, action, auditDetails(action, details)]
     );
     return auditRow(result.rows[0]);
   }
@@ -334,7 +354,12 @@ function createPostgresUserStore(options) {
       return applyUserUpdates(userId, updates, "profile", userId);
     },
     async setUserStatus(userId, status, actorUserId = null) {
-      return this.updateUser(userId, { status }, actorUserId);
+      await ready();
+      const result = await pool.query("UPDATE users SET status = $2, updated_at = NOW() WHERE id = $1 RETURNING *", [userId, status]);
+      if (!result.rows[0]) return null;
+      const user = publicUser(result.rows[0]);
+      await writeAudit(status === "disabled" ? "user.disabled" : "user.reactivated", user.id, { status, source: actorUserId ? "session" : "admin-token" }, actorUserId);
+      return user;
     },
     async updateLastLogin(userId) {
       await ready();
@@ -355,7 +380,7 @@ function createPostgresUserStore(options) {
       await ready();
       if (!token) return null;
       const result = await pool.query(
-        `SELECT u.*, s.expires_at AS session_expires_at
+        `SELECT u.*, s.created_at AS session_created_at, s.expires_at AS session_expires_at
          FROM user_sessions s
          JOIN users u ON u.id = s.user_id
          WHERE s.token_hash = $1 AND s.revoked_at IS NULL AND s.expires_at > NOW()
@@ -363,12 +388,17 @@ function createPostgresUserStore(options) {
         [hashSessionToken(token)]
       );
       if (!result.rows[0] || result.rows[0].status !== "active") return null;
-      return { user: publicUser(result.rows[0]), expiresAt: new Date(result.rows[0].session_expires_at).toISOString() };
+      return {
+        user: publicUser(result.rows[0]),
+        createdAt: new Date(result.rows[0].session_created_at).toISOString(),
+        expiresAt: new Date(result.rows[0].session_expires_at).toISOString()
+      };
     },
     async revokeSession(token) {
       await ready();
-      if (!token) return;
-      await pool.query("UPDATE user_sessions SET revoked_at = NOW() WHERE token_hash = $1", [hashSessionToken(token)]);
+      if (!token) return null;
+      const result = await pool.query("UPDATE user_sessions SET revoked_at = NOW() WHERE token_hash = $1 RETURNING *", [hashSessionToken(token)]);
+      return result.rows[0] || null;
     },
     async listAuditEvents(targetUserId = "") {
       await ready();
@@ -390,7 +420,7 @@ function createMemoryUserStore(options) {
   }
 
   function writeAudit(action, targetUserId, details = {}, actorUserId = null) {
-    const event = { id: options.makeId(), actorUserId, targetUserId, action, details, createdAt: options.currentTime() };
+    const event = { id: options.makeId(), actorUserId, targetUserId, action, details: auditDetails(action, details), createdAt: options.currentTime() };
     auditEvents.push(event);
     return auditRow(event);
   }
@@ -458,7 +488,12 @@ function createMemoryUserStore(options) {
       return applyUserUpdates(userId, updates, "profile", userId);
     },
     async setUserStatus(userId, status, actorUserId = null) {
-      return this.updateUser(userId, { status }, actorUserId);
+      const user = users.get(userId);
+      if (!user) return null;
+      user.status = status;
+      user.updatedAt = options.currentTime();
+      writeAudit(status === "disabled" ? "user.disabled" : "user.reactivated", user.id, { status, source: actorUserId ? "session" : "admin-token" }, actorUserId);
+      return publicUser(user);
     },
     async updateLastLogin(userId) {
       const user = users.get(userId);
@@ -470,8 +505,9 @@ function createMemoryUserStore(options) {
     },
     async createSession(userId) {
       const token = createSessionToken();
+      const createdAt = options.currentTime();
       const expiresAt = new Date(Date.now() + sessionTtlMs).toISOString();
-      sessions.set(hashSessionToken(token), { id: options.makeId(), userId, createdAt: options.currentTime(), expiresAt, revokedAt: null });
+      sessions.set(hashSessionToken(token), { id: options.makeId(), userId, createdAt, expiresAt, revokedAt: null });
       return { token, expiresAt };
     },
     async getSessionUser(token) {
@@ -480,12 +516,13 @@ function createMemoryUserStore(options) {
       if (!session || session.revokedAt || new Date(session.expiresAt).getTime() <= Date.now()) return null;
       const user = users.get(session.userId);
       if (!user || user.status !== "active") return null;
-      return { user: publicUser(user), expiresAt: session.expiresAt };
+      return { user: publicUser(user), createdAt: session.createdAt, expiresAt: session.expiresAt };
     },
     async revokeSession(token) {
-      if (!token) return;
+      if (!token) return null;
       const session = sessions.get(hashSessionToken(token));
       if (session) session.revokedAt = options.currentTime();
+      return session || null;
     },
     async listAuditEvents(targetUserId = "") {
       return auditEvents
@@ -546,6 +583,7 @@ function attachUserManagementRoutes(app, options = {}) {
       const updatedUser = await store.updateLastLogin(user.id);
       const publicLoginUser = updatedUser || publicUser(user);
       await store.writeAudit("user.login", user.id, { source: "session" }, user.id).catch(() => {});
+      await store.writeAudit("user.activity", user.id, { source: "session", activity: "login" }, user.id).catch(() => {});
       res.json({ sessionToken: session.token, expiresAt: session.expiresAt, user: publicLoginUser });
     } catch (error) { sendError(res, error, "Could not log in."); }
   });
@@ -555,7 +593,17 @@ function attachUserManagementRoutes(app, options = {}) {
       const token = sessionTokenFromRequest(req);
       const session = await store.getSessionUser(token);
       await store.revokeSession(token);
-      if (session) await store.writeAudit("user.logout", session.user.id, { source: "session" }, session.user.id).catch(() => {});
+      if (session) {
+        const durationMs = Math.max(0, Date.now() - new Date(session.createdAt).getTime());
+        await store.writeAudit("user.logout", session.user.id, { source: "session" }, session.user.id).catch(() => {});
+        await store.writeAudit("user.duration", session.user.id, {
+          source: "session",
+          startedAt: session.createdAt,
+          endedAt: new Date().toISOString(),
+          durationMs,
+          durationMinutes: Math.round(durationMs / 60000)
+        }, session.user.id).catch(() => {});
+      }
       res.json({ ok: true });
     } catch (error) { sendError(res, error, "Could not log out."); }
   });
