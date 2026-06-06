@@ -106,7 +106,7 @@
       usersContainer.innerHTML = `<div class="empty action-empty"><strong>No users match this search.</strong><p>Clear the search or create a new user record.</p></div>`;
       return;
     }
-    usersContainer.innerHTML = `<div class="users-table-wrap"><table class="users-table"><thead><tr><th>Name</th><th>Email</th><th>Company</th><th>Department</th><th>Group</th><th>Role</th><th>Status</th><th>Updated</th><th>Actions</th></tr></thead><tbody>${users.map((user) => {
+    usersContainer.innerHTML = `<div class="users-table-wrap"><table class="users-table" data-org-users-table="true"><thead><tr><th>Name</th><th>Email</th><th>Company</th><th>Department</th><th>Group</th><th>Role</th><th>Status</th><th>Updated</th><th>Actions</th></tr></thead><tbody>${users.map((user) => {
       const disabled = user.status === "disabled";
       const statusAction = disabled
         ? `<button data-user-reactivate="${html(user.id)}" type="button">Reactivate</button>`
@@ -192,7 +192,7 @@
     const usersContainer = document.getElementById("users");
     if (usersContainer) {
       new MutationObserver(() => {
-        if (usersContainer.querySelector(".users-table")) return;
+        if (usersContainer.querySelector("[data-org-users-table]")) return;
         window.setTimeout(renderOrgUserTable, 0);
       }).observe(usersContainer, { childList: true });
     }
