@@ -141,27 +141,40 @@
     }, 0);
   }
 
-  function enhanceNameTrigger(row, editButton) {
-    if (!editButton || row.querySelector(".user-name-edit-trigger")) return;
-    const titleRow = row.querySelector(".row");
-    const name = titleRow?.querySelector("span:first-child");
-    if (!titleRow || !name) return;
-
-    const trigger = document.createElement("button");
+  function bindNameTrigger(trigger, editButton, nameText) {
     trigger.type = "button";
     trigger.className = "user-name-edit-trigger";
     trigger.dataset.userEdit = editButton.dataset.userEdit || "";
-    trigger.setAttribute("aria-label", `Edit ${name.textContent?.trim() || "user"}`);
-
-    titleRow.replaceChild(trigger, name);
-    trigger.appendChild(name);
-
+    trigger.setAttribute("aria-label", `Edit ${nameText || "user"}`);
     trigger.addEventListener("click", (event) => {
       event.preventDefault();
       event.stopPropagation();
       editButton.click();
       window.setTimeout(openUserDialogFallback, 0);
     });
+  }
+
+  function enhanceNameTrigger(row, editButton) {
+    if (!editButton || row.querySelector(".user-name-edit-trigger")) return;
+    const titleRow = row.querySelector(".row");
+    const name = titleRow?.querySelector("span:first-child");
+    if (titleRow && name) {
+      const trigger = document.createElement("button");
+      bindNameTrigger(trigger, editButton, name.textContent?.trim());
+      titleRow.replaceChild(trigger, name);
+      trigger.appendChild(name);
+      return;
+    }
+
+    const nameCell = row.querySelector("td:first-child");
+    if (!nameCell) return;
+    const nameText = nameCell.textContent?.trim() || "user";
+    const trigger = document.createElement("button");
+    bindNameTrigger(trigger, editButton, nameText);
+    const label = document.createElement("span");
+    label.textContent = nameText;
+    trigger.appendChild(label);
+    nameCell.replaceChildren(trigger);
   }
 
   function hideListOnlyFields() {
