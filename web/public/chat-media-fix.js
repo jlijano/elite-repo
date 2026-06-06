@@ -1,6 +1,7 @@
 (() => {
   const overlayId = "chatCameraOverlay";
   const mentionMenuId = "chatMentionSuggestions";
+  const richFileAccept = ".txt,.md,.csv,.json,.log,.html,.css,.js,.jsx,.ts,.tsx,.xml,.yaml,.yml,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.zip,text/*,application/json,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-powerpoint,application/vnd.openxmlformats-officedocument.presentationml.presentation";
   const mentionNames = new Map();
   let mentionIndex = 0;
 
@@ -24,9 +25,40 @@
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
       reader.onload = () => resolve(String(reader.result || ""));
-      reader.onerror = () => reject(new Error(`${file.name || "Photo"} could not be read.`));
+      reader.onerror = () => reject(new Error(`${file.name || "Attachment"} could not be read.`));
       reader.readAsDataURL(file);
     });
+  }
+
+  function fileExtension(file = {}) {
+    return String(file.name || "").toLowerCase().split(".").pop() || "";
+  }
+
+  function isTextLikeFile(file = {}) {
+    const type = String(file.type || "").toLowerCase();
+    const ext = fileExtension(file);
+    return type.startsWith("text/") || type.includes("json") || ["txt", "md", "csv", "json", "log", "html", "css", "js", "jsx", "ts", "tsx", "xml", "yaml", "yml"].includes(ext);
+  }
+
+  async function attachGenericFiles(files = []) {
+    const nextFiles = [...files].filter(Boolean).slice(0, availableSlots());
+    if (!nextFiles.length) {
+      setStatusText(`You can attach up to ${maxAttachmentFiles} files per message.`);
+      return;
+    }
+    for (const file of nextFiles) {
+      if (file.size > maxAttachmentBytes) {
+        setStatusText(`${file.name || "Attachment"} is too large. Maximum ${formatBytes(maxAttachmentBytes)}.`);
+        continue;
+      }
+      const content = isTextLikeFile(file) ? await file.text() : await fileToDataUrl(file);
+      if (!String(content || "").trim()) {
+        setStatusText(`${file.name || "Attachment"} does not contain readable content.`);
+        continue;
+      }
+      selectedAttachments.push({ name: file.name || "Attachment", type: file.type || "application/octet-stream", size: file.size, content });
+    }
+    renderSelectedAttachments();
   }
 
   async function attachMediaFiles(files, kind = "Photo") {
@@ -233,7 +265,8 @@
       item.innerHTML = `<span class="file-type-icon" aria-hidden="true">${kind}</span><span class="file-attachment-meta"><strong>${escapeHtml(attachment.name || "Attachment")}</strong><small>${attachment.size ? escapeHtml(formatBytes(Number(attachment.size))) : escapeHtml(attachment.type || "file")}</small></span>`;
       list.appendChild(item);
     }
-    bubble.appendChild(list);
+    const marker = bubble.querySelector("time, .message-status, .attachment-previews");
+    bubble.insertBefore(list, marker || null);
   }
 
   function enhanceAttachmentDisplay(article, content, attachments = []) {
@@ -402,6 +435,14 @@
   function installMessageEnhancements() {
     ensureEnhancementStyles();
     wireMentions();
+    if (fileInput) fileInput.accept = richFileAccept;
+
+    if (typeof addFiles === "function" && addFiles.__mediaPolishEnhanced !== true) {
+      addFiles = async function mediaPolishAddFiles(files = []) {
+        await attachGenericFiles(files);
+      };
+      addFiles.__mediaPolishEnhanced = true;
+    }
 
     if (typeof requestJson === "function" && requestJson.__mediaPolishEnhanced !== true) {
       const originalRequestJson = requestJson;
