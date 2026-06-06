@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+- Extracted `/user.html` page-specific styling and behavior into `web/public/user-page.css` and `web/public/user-page.js`, and added the extracted script to `npm run check` syntax validation.
+- Moved bootstrap/demo user rows out of `web/db/schema.sql` and into the explicit `web/db/seed-bootstrap-users.sql` file so PostgreSQL startup no longer silently creates default accounts.
+- Updated the bootstrap account policy and README notes to link the production rules, document the safer seed workflow, and describe the user-page asset split.
+- Added Sprint 1 regression tests for mojibake markers, extracted user-page assets, 12-character password markup, and the schema/seed split.
 - Added a logged-in chat sidebar Users section backed by `/api/users/available-chat-users`, showing only active users who share the current user's company, department, or group.
 - Updated Company, Department, and Group management pages to match the Users UI/UX with table-based records, search plus Add actions in the card header, and create/edit forms in modals.
 - Moved the audit report out of `/user.html` and into `/user-audit.html`, where it now shows User, Update, and Timestamp columns, includes actor/target identity details when available, and exports the report as CSV.
