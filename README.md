@@ -32,8 +32,9 @@ The `web/` directory contains a Render-ready Express app that serves a plain HTM
   - `/login.html` as the post-logout redirect target.
   - `/admin.html` redirects to `/chat.html` for backward compatibility.
 - Admin navigation uses Back to chat, Chat, Knowledge base, User, and Settings. Admin logout is available from the top-header profile menu.
-- Admin pages share the chat UI shell, theme tokens, persistent light/dark mode behavior, fixed desktop sidebar, and independently scrolling right panel.
+- Admin pages share the chat UI shell, theme tokens, fixed desktop sidebar, independently scrolling right panel, and reload-safe theme behavior.
 - Admin Settings is organized into Preferences, Access and security, Review runs, System health, and Diagnostics sections with standardized `Ready`, `Loaded`, `Public view`, `Storage-only`, and `Error` status badges.
+- Admin Settings includes a Light / Dark / System theme preference control. Explicit Light and Dark choices are restored after reload, while System follows the visitor's device preference.
 - Admin top headers include a Mac-style current day/time display and a user profile menu with Update Profile and Logout actions.
 - Logout clears the browser-held admin session token and redirects to `/login.html`.
 - Admin pages no longer expose visible token-entry, Login, or Run Review controls; protected backend admin routes still require `ADMIN_TOKEN` for management-only data.
@@ -43,8 +44,8 @@ The `web/` directory contains a Render-ready Express app that serves a plain HTM
 - Chat failure responses distinguish between saved messages awaiting review and storage failures that could not save the message.
 - Agent Directory status indicator backed by the `/api/status` endpoint.
 - Render health check support through `/health`.
-- Light and dark mode toggle in the chat header and admin Settings page.
-- Theme preference stored in browser `localStorage` under `switchboard-theme`; if no preference exists, the app uses the visitor's `prefers-color-scheme` system setting.
+- Chat keeps a compact light/dark toggle in the header, and admin Settings uses the clearer Light / Dark / System control.
+- Explicit Light and Dark theme choices are stored in browser `localStorage` under `switchboard-theme`; the Settings theme mode is stored under `switchboard-theme-mode`. Choosing System clears the explicit theme so reloads follow `prefers-color-scheme`.
 
 ### Local development
 
@@ -139,7 +140,7 @@ The review workflow is implemented as an idempotent backend route and optional b
 - Admin approval of knowledge entries and approved knowledge retrieval.
 - Protected user-management routes, user creation/listing/loading/updating, duplicate email handling, disable/reactivate actions, and audit-event creation.
 - User page controls for search, create/edit fields, role/status selection, password entry, audit events, and backend API wiring.
-- Admin navigation routes, page ownership for Chat, Knowledge base, User, Settings, nested Attachments, nested Review runs, nested System health, Settings section structure, standardized Settings status badges, the profile dropdown, Update Profile form, Logout redirect, profile-menu-only admin logout, and the Mac-style clock wiring.
+- Admin navigation routes, page ownership for Chat, Knowledge base, User, Settings, nested Attachments, nested Review runs, nested System health, Settings section structure, standardized Settings status badges, Settings Light / Dark / System theme preference markup, persistence keys, reload restore behavior, System-mode handling, the profile dropdown, Update Profile form, Logout redirect, profile-menu-only admin logout, and the Mac-style clock wiring.
 
 ## GitHub Actions / auto-deploy
 
