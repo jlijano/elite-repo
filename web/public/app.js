@@ -186,6 +186,14 @@ function clearStartPrompt() {
   messagesEl.querySelector(".start-chat-empty")?.remove();
 }
 
+function isAutomaticAssistantMessage(message = {}) {
+  if (message.role !== "assistant") return false;
+  const content = String(message.content || "");
+  return Boolean(message.context?.pendingReview || message.context?.aiError)
+    || content.includes("I saved your message for Switchboard review")
+    || content.includes("could not generate an AI response right now");
+}
+
 function appendAttachmentList(parent, attachments = []) {
   if (!attachments.length) return;
   const list = document.createElement("div");
@@ -238,11 +246,12 @@ function renderWelcome() {
 function renderMessages(messages = []) {
   messagesEl.innerHTML = "";
   chatHistory = [];
-  if (!messages.length) {
+  const visibleMessages = messages.filter((message) => !isAutomaticAssistantMessage(message));
+  if (!visibleMessages.length) {
     renderWelcome();
     return;
   }
-  for (const message of messages) {
+  for (const message of visibleMessages) {
     const attachments = Array.isArray(message.context?.attachments) ? message.context.attachments : [];
     messagesEl.appendChild(createMessageElement(message.role, message.content, { createdAt: message.createdAt, attachments }));
     if (message.role === "user" || message.role === "assistant") chatHistory.push({ role: message.role, content: message.content });
@@ -492,7 +501,6 @@ async function sendMessage() {
   renderSelectedAttachments();
   resizeInput();
   setSending(true);
-  showTyping();
 
   try {
     const data = await requestJson("/api/chat", {
@@ -500,16 +508,12 @@ async function sendMessage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ chatId: currentChatId, message, attachments, history: chatHistory.slice(0, -1) })
     });
-    hideTyping();
     if (data.chatId && data.chatId !== currentChatId) saveCurrentChat(data.chatId);
     setStatus(data);
-    const assistantMessage = data.messages?.find((item) => item.role === "assistant");
-    addMessage("assistant", data.reply || "I could not produce a response.", { createdAt: assistantMessage?.createdAt });
     const chats = await loadChats();
     const active = chats.find((chat) => chat.id === currentChatId);
     if (active) currentChatTitle.textContent = active.title || startChatLabel;
   } catch (error) {
-    hideTyping();
     addMessage("assistant", error.message || "Something went wrong while contacting the Switchboard Agent.", { error: true, skipHistory: true });
   } finally {
     setSending(false);
