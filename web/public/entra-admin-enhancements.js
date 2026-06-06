@@ -204,13 +204,18 @@
         flex-direction: column;
         align-items: flex-start;
         max-width: 100%;
-        padding: 0;
-        border: 0;
-        background: transparent;
+        min-height: 0 !important;
+        padding: 0 !important;
+        border: 0 !important;
+        outline: 0 !important;
+        appearance: none;
+        background: transparent !important;
+        box-shadow: none !important;
         color: inherit;
         font: inherit;
         text-align: left;
         cursor: pointer;
+        transform: none;
       }
 
       .entra-name-edit-trigger .entra-record-name {
@@ -218,11 +223,22 @@
         text-decoration: underline;
         text-decoration-thickness: 1px;
         text-underline-offset: 3px;
+        transition: color 160ms ease, text-underline-offset 160ms ease;
       }
 
       .entra-name-edit-trigger:hover .entra-record-name,
       .entra-name-edit-trigger:focus-visible .entra-record-name {
         color: var(--primary-strong, var(--primary));
+        text-underline-offset: 5px;
+      }
+
+      .entra-name-edit-trigger:hover,
+      .entra-name-edit-trigger:focus,
+      .entra-name-edit-trigger:focus-visible {
+        border: 0 !important;
+        outline: 0 !important;
+        background: transparent !important;
+        box-shadow: none !important;
       }
 
       .danger-action {
