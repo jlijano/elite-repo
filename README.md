@@ -14,17 +14,18 @@ The `web/` directory contains a Render-ready Express app that serves a plain HTM
 
 - Chat interface backed by the `/api/chat` endpoint.
 - ChatGPT-inspired full-height chat UI with a dark sidebar, centered conversation stream, rounded bottom composer, and responsive mobile layout.
-- Focused navigation for New Chat, saved chat sessions, chat archiving, agent status, theme switching, text file uploads, and message sending.
+- Focused navigation for New Chat, saved chat sessions, chat archiving, agent status, theme switching, the composer plus menu, and message sending.
+- The composer plus menu includes Share link, Attach image, Take a photo, Attach a file, and Send voice message actions. Share links use the current chat ID so anyone with the link can open the same conversation and continue chatting in it.
 - Separate chat sessions with New Chat behavior so conversations do not overlap.
 - The simplified chat header includes an X close control that archives the current chat and immediately starts a fresh `New chat` state.
 - Logged-in chat users see a sidebar Users section populated by active users who share the current user's company, department, or group.
 - Non-destructive chat archiving with active chat lists hiding archived chats while admin chat review can still load all chats.
 - Anonymous chats created without a logged-in user session are marked with a 30-day expiry and cleaned up from storage after expiry.
-- Text file attachments in the composer, stored in sanitized message context and included in AI context for the current message.
+- Text, image, camera, and voice attachments are stored in sanitized message context.
 - Automatic 40-second refresh for status, chat list, available users, and active chat history when the user is not composing a message or attaching files.
 - Persistent message storage with `chat_id`, `role`, `content`, sanitized `context`, review state, and timestamps.
 - Optional PostgreSQL support through `DATABASE_URL`; the app uses storage-only in-memory mode when no database URL is configured.
-- Storage-only chat behavior when `OPENAI_API_KEY` is missing, including a pending-review API response for saved messages.
+- Chat message submission stores user messages only. The backend no longer creates or stores automatic assistant replies, including storage-only fallback replies.
 - Durable knowledge entries produced by review runs as `pending_review` entries and reused in future AI context only after approval.
 - Backend management area split into dedicated admin pages instead of one scrolling static dashboard:
   - `/chat.html` for chat review and selected-chat attachments.
@@ -64,7 +65,7 @@ The `web/` directory contains a Render-ready Express app that serves a plain HTM
 - The `/user-audit.html` report page reads protected audit events, shows the acting user, a plain-language update summary, and timestamp, and exports the same audit data as CSV.
 - Knowledge base includes source-controlled project knowledge cards plus review-created backend knowledge when an admin session is available.
 - Chat and knowledge search controls filter cached management data, keep selected chats highlighted, and show clear loading and error states during admin actions.
-- Chat failure responses distinguish between saved messages awaiting review and storage failures that could not save the message.
+- Chat failure responses distinguish between saved user messages and storage failures that could not save the message.
 - Agent Directory status indicator backed by the `/api/status` endpoint.
 - Render health check support through `/health`.
 - Chat keeps a compact light/dark toggle in the header, and admin Settings uses the clearer Light / Dark / System control.
@@ -83,7 +84,7 @@ From the `web/` directory:
 
 `npm start` runs `node server.js`; `server.js` owns the shared admin session middleware. `register-user-management.js` remains only as a guarded compatibility fallback for older commands that preload it.
 
-`OPENAI_API_KEY` is optional. When it is missing, messages are still stored and the app returns a pending-review response. `OPENAI_MODEL` is optional and defaults to `gpt-4.1-mini`.
+Chat submissions are storage-only by design. `OPENAI_API_KEY` and `OPENAI_MODEL` may remain configured for future AI work, but `/api/chat` no longer calls OpenAI or stores assistant auto-replies.
 
 For persistent PostgreSQL storage, set `DATABASE_URL`. The server creates these tables automatically at startup when PostgreSQL is configured:
 
@@ -105,8 +106,8 @@ Without `DATABASE_URL`, the app starts in in-memory storage mode for local testi
 
 - `DATABASE_URL`: optional PostgreSQL connection string for persistent storage.
 - `DATABASE_SSL`: optional. Set to `true` only when the PostgreSQL connection requires SSL.
-- `OPENAI_API_KEY`: optional. Enables AI responses when present.
-- `OPENAI_MODEL`: optional. Defaults to `gpt-4.1-mini`.
+- `OPENAI_API_KEY`: optional and currently unused by `/api/chat`; keep it unset unless future AI behavior is intentionally restored.
+- `OPENAI_MODEL`: optional and currently unused by `/api/chat`.
 - `REVIEW_RUN_TOKEN`: optional. When set, `/api/reviews/run` requires the token through `x-review-token` or `Authorization: Bearer ...`.
 - `ADMIN_TOKEN`: recommended for bootstrapping user records before an owner/admin account can log in; also remains supported as a compatibility path for `/api/admin/*` routes.
 - `REVIEW_RUN_INTERVAL_MS`: optional. Enables the backend scheduled review runner when set to at least `60000`.
@@ -116,14 +117,14 @@ Do not commit secrets, API keys, deploy hooks, database URLs, passwords, session
 ### API routes
 
 - `GET /health`: Render-compatible health check.
-- `GET /api/status`: returns directory, AI, and storage availability.
+- `GET /api/status`: returns directory and storage availability. `aiAvailable` is false while chat auto-replies are disabled.
 - `POST /api/chats`: creates a chat session. Calls without `x-session-token` create anonymous chats that expire after 30 days; calls with a valid user session create non-expiring logged-in chats.
 - `GET /api/chats`: lists recent unarchived chat sessions.
 - `GET /api/chats?includeArchived=true`: lists recent chat sessions including archived chats.
-- `GET /api/chats/:chatId`: loads a chat and its message history.
+- `GET /api/chats/:chatId`: loads a chat and its message history. Shared links use this route through the chat page's `?chat=<chatId>` URL.
 - `POST /api/chats/:chatId/archive`: archives or unarchives a chat with `{ "archived": true }` or `{ "archived": false }`.
 - `POST /api/chats/:chatId/messages`: stores a message for a chat.
-- `POST /api/chat`: stores a user message and optional text attachments, attempts an AI response when available, stores the assistant response when possible, and returns a storage failure status if the user message could not be saved. When it must create a chat, it follows the same anonymous/logged-in retention rules as `POST /api/chats`.
+- `POST /api/chat`: stores a user message and optional attachments, then returns without creating or storing an assistant reply. When it must create a chat, it follows the same anonymous/logged-in retention rules as `POST /api/chats`.
 - `GET /api/knowledge?status=approved`: reads durable knowledge entries.
 - `POST /api/reviews/run`: records a review run, reads unreviewed messages, creates pending-review knowledge entries, and marks messages reviewed.
 - `POST /api/auth/login`: logs in an active user with email and password, returning a session token and public user record. Repeated failed attempts are rate-limited and successful logins are audited.
@@ -155,7 +156,7 @@ The review workflow is implemented as an idempotent backend route and optional b
 3. Or configure `REVIEW_RUN_INTERVAL_MS` to run reviews from the backend process at the chosen interval. Values below `60000` are ignored for safety.
 4. The run reads unreviewed chat messages, writes durable `pending_review` `knowledge_entries`, marks messages reviewed, and records the result in `review_runs`.
 5. An admin can approve or archive knowledge entries from `/knowledge.html`.
-6. Future AI responses include approved knowledge entries as additional Switchboard context.
+6. Future AI responses include approved knowledge entries as additional Switchboard context only if AI chat responses are intentionally restored.
 
 ### Test coverage
 
@@ -163,7 +164,7 @@ The review workflow is implemented as an idempotent backend route and optional b
 
 - `/health` and `/api/status`.
 - Chat creation, anonymous-chat expiry metadata, logged-in non-expiring chat metadata, message storage, sanitized context, and chat history loading.
-- `/api/chat` storage-only fallback when `OPENAI_API_KEY` is missing.
+- `/api/chat` user-message storage with no backend assistant auto-reply.
 - Chat archiving, hidden archived chats, and archived-chat write protection.
 - Available chat-user filtering by logged-in session, active user status, and shared company, department, or group.
 - Text attachment storage and attachment secret redaction.
