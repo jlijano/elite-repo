@@ -116,6 +116,14 @@
     if (!isAdminRole(data.user?.role)) redirectNonAdmin();
   }
 
+  function loadUserOrgFields() {
+    if (document.body?.dataset.adminPage !== "user" || document.getElementById("userOrgFieldsScript")) return;
+    const script = document.createElement("script");
+    script.id = "userOrgFieldsScript";
+    script.src = "/user-org-fields.js";
+    document.body.appendChild(script);
+  }
+
   const nativeFetch = window.fetch.bind(window);
   window.fetch = async (input, options = {}) => {
     const url = typeof input === "string" ? input : input?.url || "";
@@ -143,7 +151,9 @@
 
   if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", bootstrapSession, { once: true });
+    document.addEventListener("DOMContentLoaded", loadUserOrgFields, { once: true });
   } else {
     bootstrapSession();
+    loadUserOrgFields();
   }
 })();
