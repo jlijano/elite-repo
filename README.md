@@ -38,7 +38,7 @@ The `web/` directory contains a Render-ready Express app that serves a plain HTM
 - Chat failure responses distinguish between saved messages awaiting review and storage failures that could not save the message.
 - Agent Directory status indicator backed by the `/api/status` endpoint.
 - Render health check support through `/health`.
-- Light and dark mode toggle in the chat and admin headers.
+- Light and dark mode toggle in the chat header and admin Settings page.
 - Theme preference stored in browser `localStorage` under `switchboard-theme`; if no preference exists, the app uses the visitor's `prefers-color-scheme` system setting.
 
 ### Local development
