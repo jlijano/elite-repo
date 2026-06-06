@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Switchboard Admin - Update Profile</title>
+    <script>
+      (() => {
+        const storageKey = "switchboard-theme";
+        const systemPrefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+        let storedTheme = null;
+        try { storedTheme = localStorage.getItem(storageKey); } catch (error) { storedTheme = null; }
+        document.documentElement.dataset.theme = storedTheme || (systemPrefersDark ? "dark" : "light");
+      })();
+    </script>
+    <link rel="stylesheet" href="style.css" />
+    <link rel="stylesheet" href="admin.css" />
+  </head>
+  <body data-admin-page="update-profile">
+    <main class="app-shell admin-shell" aria-label="Switchboard Admin update profile page">
+      <aside class="sidebar" aria-label="Admin navigation and status">
+        <div class="sidebar-topbar"><a class="brand-lockup" href="/"><span class="brand-mark" aria-hidden="true">★</span><span>Switchboard</span></a></div>
+        <nav class="primary-nav" aria-label="Admin navigation">
+          <a class="nav-item" href="/" aria-label="Back to chat"><span aria-hidden="true">←</span>Back to chat</a>
+          <a class="nav-item" href="/chat.html"><span aria-hidden="true">□</span>Chat</a>
+          <a class="nav-item" href="/knowledge.html"><span aria-hidden="true">◇</span>Knowledge base</a>
+          <a class="nav-item active" href="/user.html" aria-current="page"><span aria-hidden="true">◉</span>User</a>
+          <a class="nav-item" href="/settings.html"><span aria-hidden="true">⚙</span>Settings</a>
+        </nav>
+        <section class="admin-section-list" aria-label="Admin workspace">
+          <h2 class="session-heading">Workspace</h2>
+          <div class="workspace-card"><strong>Switchboard Admin</strong><small>Update the current user profile.</small></div>
+          <button class="nav-item logout-action" id="logoutButton" type="button"><span aria-hidden="true">↩</span>Logout</button>
+        </section>
+        <div class="directory-card"><div class="status-row"><span class="status-dot online" aria-hidden="true"></span><span>Update profile</span></div><p>Current-user profile preferences.</p></div>
+      </aside>
+      <section class="admin-panel" aria-label="Update profile controls">
+        <header class="chat-header admin-header">
+          <div class="admin-header-title"><h1>Update Profile</h1><p>Update your profile photo, name, email, and password.</p></div>
+          <div class="header-actions">
+            <span class="admin-clock" id="menuClock" aria-live="polite"></span>
+            <div class="profile-menu">
+              <button class="profile-settings" id="profileMenuButton" type="button" aria-label="Open profile menu" aria-haspopup="true" aria-expanded="false">👤</button>
+              <div class="profile-dropdown" id="profileDropdown" role="menu" hidden>
+                <a href="/update-profile.html" role="menuitem">Update Profile</a>
+                <button class="profile-logout" type="button" role="menuitem">Logout</button>
+              </div>
+            </div>
+          </div>
+        </header>
+        <div class="admin-scroll">
+          <div class="admin-layout">
+            <p class="admin-status" id="status">Loading profile...</p>
+            <section class="admin-card wide" id="updateProfilePage">
+              <div class="card-head">
+                <div><h2>Profile details</h2><p class="card-subtitle">Changes apply to the currently logged-in browser session.</p></div>
+              </div>
+              <form class="profile-form" id="profileForm" autocomplete="on">
+                <div class="profile-photo-preview" id="profilePhotoPreview" aria-hidden="true">👤</div>
+                <label>
+                  <span>Profile photo URL</span>
+                  <input id="profilePhoto" name="photo" type="url" placeholder="https://example.com/photo.jpg" autocomplete="photo" />
+                </label>
+                <label>
+                  <span>Name</span>
+                  <input id="profileName" name="name" type="text" placeholder="Your name" autocomplete="name" required />
+                </label>
+                <label>
+                  <span>Email address</span>
+                  <input id="profileEmail" name="email" type="email" placeholder="you@example.com" autocomplete="email" required />
+                </label>
+                <label>
+                  <span>Current password</span>
+                  <input id="profileCurrentPassword" name="current-password" type="password" autocomplete="current-password" />
+                </label>
+                <label>
+                  <span>New password</span>
+                  <input id="profileNewPassword" name="new-password" type="password" autocomplete="new-password" minlength="8" />
+                </label>
+                <label>
+                  <span>Confirm new password</span>
+                  <input id="profileConfirmPassword" name="confirm-password" type="password" autocomplete="new-password" minlength="8" />
+                </label>
+                <div class="form-actions">
+                  <a class="secondary-action" href="/user.html">Cancel</a>
+                  <button id="saveProfileButton" type="submit">Save profile</button>
+                </div>
+              </form>
+            </section>
+          </div>
+        </div>
+      </section>
+    </main>
+    <script src="admin.js"></script>
+  </body>
+</html>
