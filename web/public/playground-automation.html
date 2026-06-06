@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Switchboard Admin - Playground Automation</title>
+    <script>
+      (() => {
+        const storageKey = "switchboard-theme";
+        const systemPrefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+        let storedTheme = null;
+        try { storedTheme = localStorage.getItem(storageKey); } catch (error) { storedTheme = null; }
+        document.documentElement.dataset.theme = storedTheme || (systemPrefersDark ? "dark" : "light");
+      })();
+    </script>
+    <link rel="stylesheet" href="style.css" />
+    <link rel="stylesheet" href="admin.css" />
+    <link rel="stylesheet" href="playground.css" />
+  </head>
+  <body data-admin-page="playground-automation">
+    <main class="app-shell admin-shell" aria-label="Switchboard Admin playground automation page">
+      <aside class="sidebar" aria-label="Admin navigation and status">
+        <div class="sidebar-topbar"><a class="brand-lockup" href="/"><span class="brand-mark" aria-hidden="true">★</span><span>Switchboard</span></a></div>
+        <nav class="primary-nav" aria-label="Admin navigation">
+          <a class="nav-item" href="/" aria-label="Back to chat"><span aria-hidden="true">←</span>Back to chat</a>
+          <a class="nav-item" href="/chat.html"><span aria-hidden="true">□</span>Chat</a>
+          <a class="nav-item" href="/knowledge.html"><span aria-hidden="true">◇</span>Knowledge base</a>
+          <a class="nav-item" href="/user.html"><span aria-hidden="true">◉</span>User</a>
+          <details class="admin-section-list reports-nav playground-nav" open>
+            <summary class="reports-summary active"><span class="reports-summary-label">Playground</span><span class="reports-summary-chevron" aria-hidden="true">⌄</span></summary>
+            <div class="reports-nav-items playground-nav-items" aria-label="Playground navigation">
+              <a class="nav-item" href="/playground.html"><span aria-hidden="true">▦</span>Board</a>
+              <a class="nav-item" href="/playground-tasks.html"><span aria-hidden="true">☑</span>Tasks</a>
+              <a class="nav-item active" href="/playground-automation.html" aria-current="page"><span aria-hidden="true">⚙</span>Automation</a>
+            </div>
+          </details>
+          <details class="admin-section-list reports-nav" open>
+            <summary class="reports-summary"><span class="reports-summary-label">Reports</span><span class="reports-summary-chevron" aria-hidden="true">⌄</span></summary>
+            <div class="reports-nav-items" aria-label="Reports navigation">
+              <a class="nav-item" href="/reports.html"><span aria-hidden="true">▣</span>Overview</a>
+              <a class="nav-item" href="/logs.html"><span aria-hidden="true">≡</span>Logs</a>
+              <a class="nav-item" href="/review-runs.html"><span aria-hidden="true">↻</span>Review runs</a>
+              <a class="nav-item" href="/system-health.html"><span aria-hidden="true">✚</span>System health</a>
+              <a class="nav-item" href="/user-audit.html"><span aria-hidden="true">◎</span>User audit</a>
+              <a class="nav-item" href="/settings.html"><span aria-hidden="true">⚙</span>Settings</a>
+            </div>
+          </details>
+        </nav>
+        <section class="admin-section-list" aria-label="Admin workspace"><h2 class="session-heading">Workspace</h2><div class="workspace-card"><strong>Switchboard Admin</strong><small>Automation rules, triggers, and routing helpers.</small></div></section>
+        <div class="directory-card"><div class="status-row"><span class="status-dot online" aria-hidden="true"></span><span>Automation</span></div><p>Plan repeatable workflow rules for the Playground.</p></div>
+      </aside>
+      <section class="admin-panel" aria-label="Playground automation">
+        <header class="chat-header admin-header playground-header"><div class="admin-header-title"><h1>Playground Automation</h1><p>Plan task rules, review triggers, and workflow handoffs for the workspace.</p></div><div class="header-actions"><span class="admin-clock" id="menuClock" aria-live="polite"></span><a class="secondary-action" href="/playground.html">Board</a><a class="secondary-action" href="/playground-tasks.html">Tasks</a><div class="profile-menu"><button class="profile-settings" id="profileMenuButton" type="button" aria-label="Open profile menu" aria-haspopup="true" aria-expanded="false">👤</button><div class="profile-dropdown" id="profileDropdown" role="menu" hidden><a href="/update-profile.html" role="menuitem">Update Profile</a><button class="profile-logout" type="button" role="menuitem">Logout</button></div></div></div></header>
+        <div class="admin-scroll"><div class="admin-layout playground-layout"><p class="admin-status" id="status">Automation workspace ready.</p><section class="playground-metrics" aria-label="Automation summary"><article class="metric-card"><span>Rules Drafted</span><strong>4</strong><p>Ready to connect to task events</p></article><article class="metric-card"><span>Manual Checks</span><strong>3</strong><p>Need owner approval before running</p></article><article class="metric-card"><span>Handoffs</span><strong>2</strong><p>Potential agent routing flows</p></article><article class="metric-card"><span>Live Runs</span><strong>0</strong><p>No background automations enabled yet</p></article></section><section class="admin-card wide" aria-labelledby="automationTitle"><div class="card-head"><div><p class="section-kicker">Workflow rules</p><h2 id="automationTitle">Automation</h2><p class="card-subtitle">Draft rules for moving, assigning, and reviewing Playground work.</p></div></div><div class="project-list"><article class="project-card"><div class="row"><span>Move overdue tasks to Review</span><small class="status-badge status-storage">Draft</small></div><p>Flag high-priority tasks whose due date has passed so an admin can decide the next step.</p><div class="project-meta"><strong>Trigger</strong><span>Due date passes</span></div></article><article class="project-card"><div class="row"><span>Assign unowned tasks</span><small class="status-badge status-public">Manual</small></div><p>Surface tasks without assignees and prepare them for owner assignment.</p><div class="project-meta"><strong>Trigger</strong><span>Task has no assignee</span></div></article><article class="project-card"><div class="row"><span>Create review follow-up</span><small class="status-badge status-loaded">Planned</small></div><p>When a task enters Review, add a follow-up checklist item for QA and accessibility checks.</p><div class="project-meta"><strong>Trigger</strong><span>Status changes to Review</span></div></article><article class="project-card"><div class="row"><span>Route blocked work</span><small class="status-badge status-error">Needs approval</small></div><p>Identify blocked tasks and prepare a human escalation note before any automated routing.</p><div class="project-meta"><strong>Trigger</strong><span>Priority high and blocked</span></div></article></div></section><section class="admin-card wide" aria-labelledby="automationNotesTitle"><div class="card-head"><div><p class="section-kicker">Guardrails</p><h2 id="automationNotesTitle">Automation Notes</h2><p class="card-subtitle">High-impact workflow actions should stay manual until approved.</p></div></div><div class="notes-list"><article class="item"><div class="row"><span>Start with read-only suggestions before enabling automatic task changes.</span><small class="status-badge status-ready">Safe</small></div></article><article class="item"><div class="row"><span>Require human approval before changing assignees, priority, or status for high-risk work.</span><small class="status-badge status-storage">Review</small></div></article><article class="item"><div class="row"><span>Log every automation action so admins can audit what happened later.</span><small class="status-badge status-loaded">Audit</small></div></article></div></section></div></div>
+      </section>
+    </main>
+    <script src="admin-session.js"></script>
+    <script src="admin.js"></script>
+  </body>
+</html>
