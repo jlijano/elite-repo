@@ -27,6 +27,7 @@ The `web/` directory contains a Render-ready Express app that serves a plain HTM
 - Admin dashboard styling shares the chat UI shell, theme tokens, and persistent light/dark mode behavior for a consistent management experience.
 - Admin dashboard navigation includes Chat Review, User Management, File Management, Knowledge, Logs, Files Management, and Logout sections.
 - Admin dashboard keeps the left sidebar fixed on desktop while the right dashboard panel scrolls independently so lower sections remain reachable.
+- Admin dashboard keeps the Chat Review and Chat Detail cards hidden until the Chat review navigation item is selected.
 - Admin dashboard no longer exposes visible token-entry, Login, or Run Review controls; Chat Review loads recent chats into the highlighted review section, while protected backend admin routes still require `ADMIN_TOKEN` for management-only data.
 - Admin dashboard Knowledge includes source-controlled project knowledge cards from the current build conversation, plus review-created backend knowledge when an admin session is available.
 - Admin dashboard chat and knowledge search controls filter cached management data, keep selected chats highlighted, and show clear loading and error states during admin actions.
