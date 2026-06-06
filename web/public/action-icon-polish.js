@@ -157,7 +157,8 @@
         background: var(--sidebar-card) !important;
       }
 
-      .admin-shell .nav-item[data-playground-placeholder="true"] {
+      .admin-shell .nav-item[data-playground-placeholder="true"],
+      .mobile-admin-menu-link[data-playground-placeholder="true"] {
         cursor: pointer;
       }
     `;
@@ -193,9 +194,9 @@
     try { sessionStorage.setItem(activeNavStorageKey, key); } catch (error) {}
   }
 
-  function playgroundItem() {
+  function playgroundItem(className = "nav-item") {
     const link = document.createElement("a");
-    link.className = "nav-item";
+    link.className = className;
     link.href = playgroundHref;
     link.dataset.playgroundPlaceholder = "true";
     link.dataset.navKey = playgroundHref;
@@ -205,11 +206,21 @@
 
   function ensurePlaygroundOption() {
     document.querySelectorAll(".admin-shell .primary-nav").forEach((nav) => {
-      if (nav.querySelector(`[href="${playgroundHref}"], [data-playground-placeholder="true"]`)) return;
-      const userItem = nav.querySelector('[href="/user.html"]');
-      const item = playgroundItem();
+      if (!nav.querySelector(`[href="${playgroundHref}"], [data-playground-placeholder="true"]`)) {
+        const userItem = nav.querySelector('[href="/user.html"]');
+        const item = playgroundItem("nav-item");
+        if (userItem) userItem.insertAdjacentElement("afterend", item);
+        else nav.appendChild(item);
+      }
+    });
+
+    document.querySelectorAll(".mobile-admin-menu-list").forEach((list) => {
+      if (list.querySelector(`[href="${playgroundHref}"], [data-playground-placeholder="true"]`)) return;
+      const userItem = list.querySelector('[href="/user.html"]');
+      const item = playgroundItem("mobile-admin-menu-link");
+      item.setAttribute("role", "menuitem");
       if (userItem) userItem.insertAdjacentElement("afterend", item);
-      else nav.appendChild(item);
+      else list.appendChild(item);
     });
   }
 
