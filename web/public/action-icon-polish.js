@@ -9,7 +9,7 @@
     { selector: "[data-user-purge], [data-purge]", icon: "×", label: "Delete", danger: true },
     { selector: "[data-archive]", icon: "↓", label: "Archive" }
   ];
-  if (page !== "user") actionConfig.push({ selector: "[data-edit]", icon: "✎", label: "Edit" });
+  if (page !== "user") actionConfig.push({ selector: ".actions [data-edit]", icon: "✎", label: "Edit" });
 
   function addStyles() {
     if (document.getElementById("managementActionIconStyles")) return;
@@ -107,7 +107,7 @@
   }
 
   function iconizeButton(button, config) {
-    if (!button || button.hidden || button.classList.contains("user-name-edit-trigger")) return;
+    if (!button || button.hidden || button.classList.contains("user-name-edit-trigger") || button.classList.contains("entra-name-edit-trigger")) return;
     button.classList.add("management-icon-action");
     if (config.danger) button.classList.add("danger-action");
     describeAction(button, config);
