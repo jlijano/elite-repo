@@ -16,9 +16,10 @@ The `web/` directory contains a Render-ready Express app that serves a plain HTM
 - ChatGPT-inspired full-height chat UI with a dark sidebar, centered conversation stream, rounded bottom composer, and responsive mobile layout.
 - Focused navigation for New Chat, saved chat sessions, chat archiving, agent status, theme switching, text file uploads, and message sending.
 - Separate chat sessions with New Chat behavior so conversations do not overlap.
+- Logged-in chat users see a sidebar Users section populated by active users who share the current user's company, department, or group.
 - Non-destructive chat archiving with active chat lists hiding archived chats while admin chat review can still load all chats.
 - Text file attachments in the composer, stored in sanitized message context and included in AI context for the current message.
-- Automatic 40-second refresh for status, chat list, and active chat history when the user is not composing a message or attaching files.
+- Automatic 40-second refresh for status, chat list, available users, and active chat history when the user is not composing a message or attaching files.
 - Persistent message storage with `chat_id`, `role`, `content`, sanitized `context`, review state, and timestamps.
 - Optional PostgreSQL support through `DATABASE_URL`; the app uses storage-only in-memory mode when no database URL is configured.
 - Storage-only chat behavior when `OPENAI_API_KEY` is missing, including a friendly pending-review assistant response.
@@ -127,6 +128,7 @@ Do not commit secrets, API keys, deploy hooks, database URLs, passwords, session
 - `POST /api/auth/logout`: revokes the current user session when called with `x-session-token` and audits logout when a valid session is present.
 - `GET /api/profile`: returns the current logged-in user's public profile. Requires `x-session-token`.
 - `PATCH /api/profile`: updates the current user's name, email, photo URL, or password. Password changes require `currentPassword` and `newPassword`, enforce the password policy, rotate the session token, revoke the old token, and audit the profile update. Requires `x-session-token`.
+- `GET /api/users/available-chat-users`: lists active users available to the current logged-in user because they share the same company, department, or group. Requires `x-session-token`.
 - `GET /api/admin/summary`: returns backend management counts and runtime status. Requires `ADMIN_TOKEN` or an active owner/admin user session.
 - `GET /api/admin/chats`: lists chats for management review. Requires `ADMIN_TOKEN` or an active owner/admin user session.
 - `GET /api/admin/chats/:chatId`: loads a chat and messages for management review. Requires `ADMIN_TOKEN` or an active owner/admin user session.
@@ -161,6 +163,7 @@ The review workflow is implemented as an idempotent backend route and optional b
 - Chat creation, message storage, sanitized context, and chat history loading.
 - `/api/chat` storage-only fallback when `OPENAI_API_KEY` is missing.
 - Chat archiving, hidden archived chats, and archived-chat write protection.
+- Available chat-user filtering by logged-in session, active user status, and shared company, department, or group.
 - Text attachment storage and attachment secret redaction.
 - Protected review routes and review token enforcement.
 - Protected admin routes and admin token enforcement.
