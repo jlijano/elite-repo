@@ -108,6 +108,16 @@ test("playground tasks page loads session bootstrap and task list script", () =>
   assert.ok(taskListIndex > adminSessionIndex);
 });
 
+test("shared admin navigation nests Tasks under Playground", () => {
+  const script = fs.readFileSync(path.join(__dirname, "..", "public", "admin-session.js"), "utf8");
+
+  assert.ok(script.includes("playgroundPages"));
+  assert.ok(script.includes("playground-nav"));
+  assert.ok(script.includes("Playground navigation"));
+  assert.ok(script.includes("/playground-tasks.html"));
+  assert.ok(script.includes('querySelector(\'a.nav-item[href="/playground-tasks.html"]\')?.remove()'));
+});
+
 test("playground tasks script lists saved tasks through the Playground API", () => {
   const script = fs.readFileSync(path.join(__dirname, "..", "public", "playground-tasks.js"), "utf8");
 
