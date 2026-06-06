@@ -2,6 +2,7 @@
   const colorStorageKey = "switchboard-bubble-color";
   const nicknameStorageKey = "switchboard-chat-nickname";
   const participantStorageKey = "switchboard-participant-id";
+  const quickReplyId = "chatQuickReplies";
   const colorChoices = [
     "#2563eb",
     "#16a34a",
@@ -25,6 +26,8 @@
   let confirmButton = null;
   let pendingResolve = null;
   let pendingColor = selectedColor;
+  let lastTypingStartAt = 0;
+  let lastTypingStopAt = 0;
 
   function normalizeColor(value) {
     if (typeof value !== "string") return "";
@@ -88,6 +91,18 @@
     if (plusStatus) plusStatus.textContent = message || "";
   }
 
+  function participantById(participantId) {
+    return knownParticipants.find((participant) => participant.participantId === participantId) || null;
+  }
+
+  function displayLabelForMessage(message = {}) {
+    const participant = participantById(message.context?.participantId || "");
+    const label = cleanNickname(participant?.participantLabel || message.context?.participantLabel || "");
+    if (label && !/^Original$|^Shared link/i.test(label)) return label;
+    if (message.context?.participantId === currentParticipantId() && selectedNickname) return selectedNickname;
+    return label || (message.context?.participantType === "shared" ? "Shared link" : "Original");
+  }
+
   function absorbParticipants(data = {}) {
     const participants = Array.isArray(data.participants)
       ? data.participants
@@ -128,140 +143,29 @@
     const style = document.createElement("style");
     style.id = "bubbleColorStyles";
     style.textContent = `
-      .bubble-color-modal {
-        position: fixed;
-        inset: 0;
-        z-index: 90;
-        display: grid;
-        place-items: center;
-        padding: 20px;
-        background: rgba(15, 23, 42, 0.48);
-      }
-
+      .bubble-color-modal { position: fixed; inset: 0; z-index: 90; display: grid; place-items: center; padding: 20px; background: rgba(15, 23, 42, 0.48); }
       .bubble-color-modal[hidden] { display: none; }
-
-      .bubble-color-card {
-        width: min(440px, calc(100vw - 32px));
-        padding: 18px;
-        border: 1px solid var(--line);
-        border-radius: 18px;
-        background: var(--composer);
-        color: var(--text);
-        box-shadow: 0 24px 70px rgba(0, 0, 0, 0.28);
-      }
-
-      .bubble-color-card h2 {
-        margin: 0 0 6px;
-        font-size: 1.05rem;
-        line-height: 1.2;
-      }
-
-      .bubble-color-card p {
-        margin: 0 0 14px;
-        color: var(--muted);
-        font-size: 0.9rem;
-        line-height: 1.4;
-      }
-
-      .bubble-nickname-label {
-        display: grid;
-        gap: 6px;
-        margin: 0 0 14px;
-        color: var(--text);
-        font-size: 0.82rem;
-        font-weight: 800;
-      }
-
-      .bubble-nickname-input {
-        width: 100%;
-        min-height: 42px;
-        padding: 0 12px;
-        border: 1px solid var(--line);
-        border-radius: 12px;
-        background: var(--panel-soft);
-        color: var(--text);
-        font: inherit;
-      }
-
-      .bubble-color-grid {
-        display: grid;
-        grid-template-columns: repeat(4, minmax(0, 1fr));
-        gap: 10px;
-      }
-
-      .bubble-color-option {
-        min-height: 46px;
-        border: 2px solid transparent;
-        border-radius: 14px;
-        background: var(--bubble-choice);
-        box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.22);
-      }
-
-      .bubble-color-option[aria-pressed="true"] {
-        border-color: var(--text);
-        box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.22), inset 0 0 0 1px rgba(255, 255, 255, 0.3);
-      }
-
-      .bubble-color-option:disabled {
-        cursor: not-allowed;
-        opacity: 0.32;
-        filter: grayscale(0.5);
-      }
-
-      .bubble-color-actions {
-        display: flex;
-        justify-content: flex-end;
-        gap: 8px;
-        margin-top: 14px;
-      }
-
-      .bubble-color-confirm {
-        width: auto;
-        min-width: 108px;
-        min-height: 42px;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        padding: 0 16px;
-        border-radius: 999px;
-        background: var(--primary);
-        color: #fff;
-        font-weight: 800;
-        line-height: 1;
-        white-space: nowrap;
-      }
-
-      .message.user .bubble.participant-bubble {
-        background: var(--bubble-color);
-        border-color: transparent;
-        color: #fff;
-      }
-
-      .message.user .bubble.participant-bubble .participant-label,
-      .message.user .bubble.participant-bubble time,
-      .message.user .bubble.participant-bubble .message-attachment {
-        color: rgba(255, 255, 255, 0.86);
-      }
-
-      .seen-status {
-        display: block;
-        margin-top: 6px;
-        color: var(--muted);
-        font-size: 0.7rem;
-        font-weight: 800;
-        line-height: 1.2;
-        text-align: right;
-      }
-
-      .message.user .bubble.participant-bubble .seen-status {
-        color: rgba(255, 255, 255, 0.78);
-      }
-
-      @media (max-width: 420px) {
-        .bubble-color-card { padding: 16px; border-radius: 16px; }
-        .bubble-color-grid { gap: 8px; }
-        .bubble-color-option { min-height: 42px; }
-      }
+      .bubble-color-card { width: min(440px, calc(100vw - 32px)); padding: 18px; border: 1px solid var(--line); border-radius: 18px; background: var(--composer); color: var(--text); box-shadow: 0 24px 70px rgba(0, 0, 0, 0.28); }
+      .bubble-color-card h2 { margin: 0 0 6px; font-size: 1.05rem; line-height: 1.2; }
+      .bubble-color-card p { margin: 0 0 14px; color: var(--muted); font-size: 0.9rem; line-height: 1.4; }
+      .bubble-nickname-label { display: grid; gap: 6px; margin: 0 0 14px; color: var(--text); font-size: 0.82rem; font-weight: 800; }
+      .bubble-nickname-input { width: 100%; min-height: 42px; padding: 0 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--panel-soft); color: var(--text); font: inherit; }
+      .bubble-color-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+      .bubble-color-option { min-height: 46px; border: 2px solid transparent; border-radius: 14px; background: var(--bubble-choice); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.22); }
+      .bubble-color-option[aria-pressed="true"] { border-color: var(--text); box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.22), inset 0 0 0 1px rgba(255, 255, 255, 0.3); }
+      .bubble-color-option:disabled { cursor: not-allowed; opacity: 0.32; filter: grayscale(0.5); }
+      .bubble-color-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 14px; }
+      .bubble-color-confirm { width: auto; min-width: 108px; min-height: 42px; display: inline-flex; align-items: center; justify-content: center; padding: 0 16px; border-radius: 999px; background: var(--primary); color: #fff; font-weight: 800; line-height: 1; white-space: nowrap; }
+      .message.user .bubble.participant-bubble { background: var(--bubble-color); border-color: transparent; color: #fff; }
+      .message.user .bubble.participant-bubble .participant-label, .message.user .bubble.participant-bubble time, .message.user .bubble.participant-bubble .message-attachment { color: rgba(255, 255, 255, 0.86); }
+      .message-status { display: block; margin-top: 6px; color: var(--muted); font-size: 0.7rem; font-weight: 800; line-height: 1.2; text-align: right; }
+      .message-status.failed { color: #ffb4b4; }
+      .message.user .bubble.participant-bubble .message-status { color: rgba(255, 255, 255, 0.78); }
+      .message.user .bubble.participant-bubble .message-status.failed { color: #ffe1e1; }
+      .quick-replies { display: flex; flex-wrap: wrap; gap: 8px; margin: -2px 8px 10px; }
+      .quick-replies button { min-height: 34px; padding: 0 12px; border: 1px solid var(--line); border-radius: 999px; background: var(--panel-soft); color: var(--text); font-weight: 760; }
+      .quick-replies button:hover, .quick-replies button:focus-visible { border-color: var(--composer-border); background: var(--composer); }
+      @media (max-width: 420px) { .bubble-color-card { padding: 16px; border-radius: 16px; } .bubble-color-grid { gap: 8px; } .bubble-color-option { min-height: 42px; } .quick-replies { gap: 6px; } .quick-replies button { min-height: 32px; padding: 0 10px; } }
     `;
     document.head.appendChild(style);
   }
@@ -276,15 +180,10 @@
       <section class="bubble-color-card" role="dialog" aria-modal="true" aria-labelledby="bubbleColorTitle">
         <h2 id="bubbleColorTitle">Set up your chat identity</h2>
         <p>Choose a nickname and message bubble color. Colors already used in this chat are locked.</p>
-        <label class="bubble-nickname-label" for="bubbleNicknameInput">
-          Nickname
-          <input class="bubble-nickname-input" id="bubbleNicknameInput" type="text" maxlength="40" autocomplete="nickname" placeholder="Example: Alex" />
-        </label>
+        <label class="bubble-nickname-label" for="bubbleNicknameInput">Nickname<input class="bubble-nickname-input" id="bubbleNicknameInput" type="text" maxlength="40" autocomplete="nickname" placeholder="Example: Alex" /></label>
         <div class="bubble-color-grid" id="bubbleColorGrid" role="group" aria-label="Bubble color choices"></div>
         <div class="plus-menu-status" id="bubbleColorStatus" aria-live="polite"></div>
-        <div class="bubble-color-actions">
-          <button class="bubble-color-confirm" id="bubbleColorConfirm" type="button">Use color</button>
-        </div>
+        <div class="bubble-color-actions"><button class="bubble-color-confirm" id="bubbleColorConfirm" type="button">Use color</button></div>
       </section>
     `;
     document.body.appendChild(modal);
@@ -295,20 +194,9 @@
     confirmButton.addEventListener("click", () => {
       const normalized = normalizeColor(pendingColor);
       const nickname = cleanNickname(nicknameInput.value);
-      if (!nickname) {
-        modalStatus.textContent = "Add a nickname to continue.";
-        nicknameInput.focus();
-        return;
-      }
-      if (!normalized) {
-        modalStatus.textContent = "Pick a color to continue.";
-        return;
-      }
-      if (colorIsTaken(normalized)) {
-        modalStatus.textContent = "That color is already taken in this chat.";
-        renderColorChoices();
-        return;
-      }
+      if (!nickname) { modalStatus.textContent = "Add a nickname to continue."; nicknameInput.focus(); return; }
+      if (!normalized) { modalStatus.textContent = "Pick a color to continue."; return; }
+      if (colorIsTaken(normalized)) { modalStatus.textContent = "That color is already taken in this chat."; renderColorChoices(); return; }
       selectedNickname = nickname;
       selectedColor = normalized;
       setStored(nicknameStorageKey, selectedNickname);
@@ -333,11 +221,7 @@
       button.setAttribute("aria-label", `${color}${taken.has(color) ? " taken" : ""}`);
       button.setAttribute("aria-pressed", String(normalizeColor(pendingColor) === color));
       button.disabled = taken.has(color);
-      button.addEventListener("click", () => {
-        pendingColor = color;
-        modalStatus.textContent = "";
-        renderColorChoices();
-      });
+      button.addEventListener("click", () => { pendingColor = color; modalStatus.textContent = ""; renderColorChoices(); });
       grid.appendChild(button);
     }
     if (taken.size >= colorChoices.length) modalStatus.textContent = "All colors are taken in this chat.";
@@ -351,17 +235,12 @@
     modal.hidden = false;
     modalStatus.textContent = "";
     nicknameInput.focus();
-    return new Promise((resolve) => {
-      pendingResolve = resolve;
-    });
+    return new Promise((resolve) => { pendingResolve = resolve; });
   }
 
   async function ensureChatIdentity() {
     if (selectedNickname && selectedColor && !colorIsTaken(selectedColor)) return participantContext();
-    if (selectedColor && colorIsTaken(selectedColor)) {
-      selectedColor = "";
-      removeStored(colorStorageKey);
-    }
+    if (selectedColor && colorIsTaken(selectedColor)) { selectedColor = ""; removeStored(colorStorageKey); }
     return openIdentityPicker();
   }
 
@@ -379,31 +258,59 @@
     }
   }
 
-  function seenLabelsForMessage(message = {}) {
+  function shouldSendTyping(url, options = {}) {
+    const target = String(url || "");
+    if (!/\/api\/chats\/[^/]+\/typing$/.test(target) || !options.body) return true;
+    try {
+      const body = JSON.parse(options.body);
+      const currentTime = Date.now();
+      if (body.isTyping !== false) {
+        if (currentTime - lastTypingStartAt < 1800) return false;
+        lastTypingStartAt = currentTime;
+        return true;
+      }
+      if (currentTime - lastTypingStopAt < 900) return false;
+      lastTypingStopAt = currentTime;
+      return true;
+    } catch (error) {
+      return true;
+    }
+  }
+
+  function readLabelsForMessage(message = {}) {
     const createdAt = new Date(message.createdAt || 0).getTime();
-    const messageId = message.id;
-    if (!messageId && !createdAt) return [];
+    const senderId = message.context?.participantId || "";
+    if (!createdAt) return [];
     return knownParticipants
-      .filter((participant) => participant.participantId !== (message.context || {}).participantId)
-      .filter((participant) => {
-        const readAt = participant.lastReadAt || participant.lastSeenAt;
-        if (participant.lastReadMessageId && messageId) return participant.lastReadMessageId === messageId;
-        return readAt && new Date(readAt).getTime() >= createdAt;
-      })
+      .filter((participant) => participant.participantId && participant.participantId !== senderId)
+      .filter((participant) => participant.lastSeenAt && new Date(participant.lastSeenAt).getTime() >= createdAt)
       .map((participant) => participant.participantLabel)
       .filter(Boolean);
   }
 
-  function appendSeenStatus(article, message = {}) {
-    if (message.role !== "user") return;
-    const labels = seenLabelsForMessage(message);
-    if (!labels.length) return;
+  function statusTextForMessage(message = {}) {
+    const labels = readLabelsForMessage(message);
+    if (labels.length === 1) return `Seen by ${labels[0]}`;
+    if (labels.length > 1) return `Seen by ${labels.length}`;
+    return "Delivered";
+  }
+
+  function appendMessageStatus(article, text, state = "delivered") {
+    if (!text) return;
     const bubble = article.querySelector(".bubble");
-    if (!bubble || bubble.querySelector(".seen-status")) return;
+    if (!bubble) return;
+    bubble.querySelector(".message-status")?.remove();
     const status = document.createElement("span");
-    status.className = "seen-status";
-    status.textContent = labels.length === 1 ? `Seen by ${labels[0]}` : `Seen by ${labels.length}`;
+    status.className = `message-status ${state}`;
+    status.textContent = text;
     bubble.appendChild(status);
+  }
+
+  function updatePendingStatuses(text, state = "delivered") {
+    document.querySelectorAll(".message.user .message-status.pending").forEach((status) => {
+      status.textContent = text;
+      status.className = `message-status ${state}`;
+    });
   }
 
   async function markChatRead(data = {}) {
@@ -416,15 +323,42 @@
     }).then((response) => response.json()).then(absorbParticipants).catch(() => {});
   }
 
+  function installQuickReplies() {
+    if (document.getElementById(quickReplyId)) return;
+    const typingStatus = document.getElementById("typingStatus");
+    const row = document.createElement("div");
+    row.id = quickReplyId;
+    row.className = "quick-replies";
+    row.setAttribute("aria-label", "Quick replies");
+    const replies = [
+      ["Yes", () => { inputEl.value = "Yes"; resizeInput(); sendMessage(); }],
+      ["No", () => { inputEl.value = "No"; resizeInput(); sendMessage(); }],
+      ["Send file", () => document.getElementById("attachFileButton")?.click() || fileInput?.click()],
+      ["Start new chat", () => createChat().catch((error) => addMessage("assistant", error.message, { error: true, skipHistory: true }))],
+      ["Share link", () => document.getElementById("shareChatButton")?.click()]
+    ];
+    for (const [label, action] of replies) {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.textContent = label;
+      button.addEventListener("click", action);
+      row.appendChild(button);
+    }
+    typingStatus?.insertAdjacentElement("afterend", row);
+  }
+
   if (typeof requestJson === "function") {
     const originalRequestJson = requestJson;
     requestJson = async function identityRequestJson(url, options = {}) {
+      if (!shouldSendTyping(url, options)) return {};
       try {
         const data = await originalRequestJson(url, withParticipantContextBody(url, options));
         absorbParticipants(data);
+        if (String(url || "") === "/api/chat" || /\/api\/chats\/[^/]+\/messages$/.test(String(url || ""))) updatePendingStatuses("Delivered", "delivered");
         if (/\/api\/chats\/[^/?]+(?:\?|$)/.test(String(url || "")) && (!options.method || options.method === "GET")) markChatRead(data);
         return data;
       } catch (error) {
+        if (String(url || "") === "/api/chat" || /\/api\/chats\/[^/]+\/messages$/.test(String(url || ""))) updatePendingStatuses("Failed", "failed");
         if (/bubble color|color is already/i.test(error.message || "")) {
           selectedColor = "";
           removeStored(colorStorageKey);
@@ -454,21 +388,19 @@
       messagesEl.innerHTML = "";
       chatHistory = [];
       const visibleMessages = messages.filter((message) => !isAutomaticAssistantMessage(message));
-      if (!visibleMessages.length) {
-        renderWelcome();
-        return;
-      }
+      if (!visibleMessages.length) { renderWelcome(); return; }
       for (const message of visibleMessages) {
         const context = message.context || {};
         const attachments = Array.isArray(context.attachments) ? context.attachments : [];
+        const label = displayLabelForMessage(message);
         const article = createMessageElement(message.role, message.content, {
           createdAt: message.createdAt,
           attachments,
           participantType: context.participantType || "original",
-          participantLabel: context.participantLabel || "",
+          participantLabel: label,
           bubbleColor: context.bubbleColor
         });
-        appendSeenStatus(article, message);
+        if (message.role === "user") appendMessageStatus(article, statusTextForMessage(message));
         messagesEl.appendChild(article);
         if (message.role === "user" || message.role === "assistant") chatHistory.push({ role: message.role, content: message.content });
       }
@@ -482,7 +414,8 @@
       const nextOptions = role === "user"
         ? { ...options, bubbleColor: options.bubbleColor || selectedColor, participantLabel: options.participantLabel || participantLabel() }
         : options;
-      return originalAddMessage(role, content, nextOptions);
+      originalAddMessage(role, content, nextOptions);
+      if (role === "user") appendMessageStatus(messagesEl.lastElementChild, "Sending...", "pending");
     };
   }
 
@@ -511,6 +444,8 @@
       }
     };
   }
+
+  installQuickReplies();
 
   document.addEventListener("keydown", (event) => {
     if (event.key !== "Escape" || !modal || modal.hidden) return;
