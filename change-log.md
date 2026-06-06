@@ -2,6 +2,7 @@
 
 ## [Unreleased]
 
+- Polished admin Settings Access and security with clearer browser-session and protected-route summaries, secret-handling reassurance, safe login/profile/audit links, responsive layout styling, README notes, and frontend contract tests.
 - Refactored the Phase 5 admin auth bridge so legacy `/api/admin/*` session checks validate directly against the shared user-management session store instead of self-calling `/api/profile`, and added static contract coverage for the cleaner auth path.
 - Added configurable admin Settings refresh cadence with Manual, 15 seconds, 40 seconds, 1 minute, and 5 minutes options, persisted browser preference, Refresh now wiring, timer cancellation, styling, README notes, and frontend contract tests.
 - Added the `/playground.html` admin workspace with Playground sidebar navigation, active-state coverage, summary metrics, a Kanban board, project progress cards, Today's Tasks, Workspace Notes, responsive Playground styling, and frontend contract tests.
