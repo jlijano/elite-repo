@@ -14,6 +14,7 @@ const settingsHtml = readPublic("settings.html");
 const updateProfileHtml = readPublic("update-profile.html");
 const loginHtml = readPublic("login.html");
 const adminJs = readPublic("admin.js");
+const adminCss = readPublic("admin.css");
 const allAdminPages = [chatHtml, knowledgeHtml, userHtml, settingsHtml, updateProfileHtml];
 
 test("admin.html redirects to the dedicated chat admin page", () => {
@@ -71,14 +72,36 @@ test("user page includes user management and manage users action", () => {
   assert.match(userHtml, />Manage users<\/button>/);
 });
 
-test("settings page owns review runs and system health", () => {
+test("settings page owns preferences access review health and diagnostics sections", () => {
   assert.match(settingsHtml, /<body data-admin-page="settings">/);
   assert.match(settingsHtml, /<h1>Settings<\/h1>/);
   assert.match(settingsHtml, /id="settingsPage"/);
+  assert.match(settingsHtml, /id="accessSecurityPage"/);
   assert.match(settingsHtml, /id="reviewRunsPage"/);
   assert.match(settingsHtml, /id="systemHealthPage"/);
+  assert.match(settingsHtml, /id="diagnosticsPage"/);
+  assert.match(settingsHtml, />Preferences<\/p>/);
+  assert.match(settingsHtml, />Access and security<\/p>/);
   assert.match(settingsHtml, /<h2>Review runs<\/h2>/);
   assert.match(settingsHtml, /<h2>System health<\/h2>/);
+  assert.match(settingsHtml, /<h2>Diagnostics<\/h2>/);
+});
+
+test("settings page uses standardized status badges and expanded health layout", () => {
+  assert.match(settingsHtml, /class="status-badge status-loaded">40 seconds<\/span>/);
+  assert.match(settingsHtml, /class="status-badge status-public" id="settingsAdminState">Public view<\/span>/);
+  assert.match(settingsHtml, /class="health-grid" id="systemHealth"/);
+  assert.doesNotMatch(settingsHtml, /id="systemHealth"[^>]*compact-list/);
+  assert.match(adminJs, /const statusClass = \(state = ""\) =>/);
+  assert.match(adminJs, /const statusBadge = \(state\) =>/);
+  assert.match(adminJs, /Review logs are protected\./);
+  assert.match(adminJs, /Protected management routes remain hidden in public view/);
+  assert.match(adminCss, /\.status-ready/);
+  assert.match(adminCss, /\.status-loaded/);
+  assert.match(adminCss, /\.status-public/);
+  assert.match(adminCss, /\.status-storage/);
+  assert.match(adminCss, /\.status-error/);
+  assert.match(adminCss, /\.health-grid/);
 });
 
 test("top nav includes current time and profile settings person icon", () => {
