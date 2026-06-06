@@ -54,6 +54,7 @@ The `web/` directory contains a Render-ready Express app that serves a plain HTM
 - Logout clears browser-held auth tokens, calls backend session logout when a user session is present, and redirects to `/login.html`.
 - Admin pages no longer expose visible token-entry, Login, or Run Review controls; protected backend admin routes accept either `ADMIN_TOKEN` or an active owner/admin user session.
 - Protected user-management APIs and the `/user.html` admin UI support table-based user listing and searching, Add user modal creation, drag-and-drop or click-to-select profile photo upload with preview, hosted profile photo URLs, user editing, disabling, reactivating, recent audit events in a dedicated User audit panel, and CSV audit report export when `ADMIN_TOKEN` or an active owner/admin user session is available.
+- User page-specific styling and client behavior live in `web/public/user-page.css` and `web/public/user-page.js`; the shared admin UI behavior remains in `web/public/admin.css` and `web/public/admin.js`.
 - Knowledge base includes source-controlled project knowledge cards plus review-created backend knowledge when an admin session is available.
 - Chat and knowledge search controls filter cached management data, keep selected chats highlighted, and show clear loading and error states during admin actions.
 - Chat failure responses distinguish between saved messages awaiting review and storage failures that could not save the message.
@@ -104,6 +105,10 @@ Without `DATABASE_URL`, the app starts in in-memory storage mode for local testi
 - `REVIEW_RUN_INTERVAL_MS`: optional. Enables the backend scheduled review runner when set to at least `60000`.
 
 Do not commit secrets, API keys, deploy hooks, database URLs, passwords, session cookies, or Render credentials. Configure secrets only in Render environment variables or another approved secret store.
+
+### Bootstrap account policy
+
+The PostgreSQL schema currently seeds bootstrap/demo user records when those email addresses do not already exist. Treat seeded accounts as bootstrap-only: rotate or disable them before production use, prefer named owner/admin users, and keep real credentials in the deployment environment rather than in repository files. See [docs/bootstrap-account-policy.md](docs/bootstrap-account-policy.md) for the production rules and hardening plan.
 
 ### API routes
 
