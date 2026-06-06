@@ -7,6 +7,8 @@ const webDir = path.resolve(__dirname, "..");
 const userHtml = fs.readFileSync(path.join(webDir, "public", "user.html"), "utf8");
 const adminJs = fs.readFileSync(path.join(webDir, "public", "admin.js"), "utf8");
 const adminCss = fs.readFileSync(path.join(webDir, "public", "admin.css"), "utf8");
+const userPageJs = fs.readFileSync(path.join(webDir, "public", "user-page.js"), "utf8");
+const userPageCss = fs.readFileSync(path.join(webDir, "public", "user-page.css"), "utf8");
 
 test("user page exposes account management controls", () => {
   [
@@ -27,6 +29,13 @@ test("user page exposes account management controls", () => {
   assert.match(userHtml, /Search users/);
 });
 
+test("user page loads extracted page assets", () => {
+  assert.match(userHtml, /href="user-page\.css"/);
+  assert.match(userHtml, /<script src="user-page\.js"><\/script>/);
+  assert.doesNotMatch(userHtml, /<style>/);
+  assert.match(userHtml, /id="userPassword"[\s\S]*minlength="12"/);
+});
+
 test("admin script wires user page to protected backend APIs", () => {
   [
     "/api/admin/users",
@@ -40,6 +49,17 @@ test("admin script wires user page to protected backend APIs", () => {
   ].forEach((needle) => assert.match(adminJs, new RegExp(needle.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"))));
 });
 
+test("user page script covers modal photo table and audit export behavior", () => {
+  [
+    "openUserDialog",
+    "closeUserDialog",
+    "applyPhotoFile",
+    "transformUsersToTable",
+    "exportAuditReport",
+    "MutationObserver"
+  ].forEach((needle) => assert.match(userPageJs, new RegExp(needle.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"))));
+});
+
 test("user management styles cover responsive management layout", () => {
   [
     ".user-management-grid",
@@ -48,4 +68,12 @@ test("user management styles cover responsive management layout", () => {
     ".user-toolbar",
     ".form-row"
   ].forEach((selector) => assert.match(adminCss, new RegExp(selector.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"))));
+
+  [
+    ".users-table-wrap",
+    ".modal-backdrop",
+    ".photo-drop-zone",
+    ".photo-preview",
+    "@media (max-width: 520px)"
+  ].forEach((selector) => assert.match(userPageCss, new RegExp(selector.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"))));
 });
