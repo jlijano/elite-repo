@@ -75,7 +75,6 @@
     return {
       participantId: currentParticipantId(),
       participantType: participantType(),
-      participantNickname: selectedNickname,
       participantLabel: participantLabel(),
       deviceType: deviceType(),
       shareCount: currentShareCount(),
@@ -104,10 +103,10 @@
       pendingColor = ownColor;
       setStored(colorStorageKey, ownColor);
     }
-    const ownNickname = cleanNickname(own?.participantNickname || "");
-    if (ownNickname) {
-      selectedNickname = ownNickname;
-      setStored(nicknameStorageKey, ownNickname);
+    const ownLabel = cleanNickname(own?.participantLabel || "");
+    if (ownLabel && !/^Original$|^Shared link/i.test(ownLabel)) {
+      selectedNickname = ownLabel;
+      setStored(nicknameStorageKey, ownLabel);
     }
   }
 
@@ -369,7 +368,7 @@
   function withParticipantContextBody(url, options = {}) {
     if (!selectedColor || !selectedNickname || !options.body || typeof options.body !== "string") return options;
     const target = String(url || "");
-    const shouldAttach = target === "/api/chat" || /\/api\/chats\/[^/]+\/(participants|typing|messages|read)$/.test(target);
+    const shouldAttach = target === "/api/chat" || /\/api\/chats\/[^/]+\/(participants|typing|messages)$/.test(target);
     if (!shouldAttach) return options;
     try {
       const body = JSON.parse(options.body);
@@ -387,10 +386,11 @@
     return knownParticipants
       .filter((participant) => participant.participantId !== (message.context || {}).participantId)
       .filter((participant) => {
+        const readAt = participant.lastReadAt || participant.lastSeenAt;
         if (participant.lastReadMessageId && messageId) return participant.lastReadMessageId === messageId;
-        return participant.lastReadAt && new Date(participant.lastReadAt).getTime() >= createdAt;
+        return readAt && new Date(readAt).getTime() >= createdAt;
       })
-      .map((participant) => participant.participantNickname || participant.participantLabel)
+      .map((participant) => participant.participantLabel)
       .filter(Boolean);
   }
 
@@ -409,12 +409,10 @@
   async function markChatRead(data = {}) {
     const chat = data.chat;
     if (!chat?.id || !Array.isArray(chat.messages) || !chat.messages.length || !selectedColor || !selectedNickname) return;
-    const lastMessage = chat.messages[chat.messages.length - 1];
-    if (!lastMessage?.id) return;
-    await fetch(`/api/chats/${encodeURIComponent(chat.id)}/read`, {
+    await fetch(`/api/chats/${encodeURIComponent(chat.id)}/participants`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ messageId: lastMessage.id, context: participantContext() })
+      body: JSON.stringify({ context: participantContext() })
     }).then((response) => response.json()).then(absorbParticipants).catch(() => {});
   }
 
@@ -467,7 +465,7 @@
           createdAt: message.createdAt,
           attachments,
           participantType: context.participantType || "original",
-          participantLabel: context.participantNickname || context.participantLabel || "",
+          participantLabel: context.participantLabel || "",
           bubbleColor: context.bubbleColor
         });
         appendSeenStatus(article, message);
