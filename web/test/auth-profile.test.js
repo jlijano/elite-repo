@@ -155,7 +155,7 @@ test("logs in with a real user session and protects profile updates", async () =
   assert.equal(adminList.response.status, 200);
   assert.equal(adminList.data.users.some((user) => user.email === "phase4@example.com"), true);
 
-  const chat = await jsonFetch("/api/chats", { method: "POST", body: JSON.stringify({ title: "Admin session chat" }) });
+  const chat = await jsonFetch("/api/chats", { method: "POST", headers: sessionHeaders(rotatedToken), body: JSON.stringify({ title: "Admin session chat" }) });
   assert.equal(chat.response.status, 201);
 
   const adminSummary = await jsonFetch("/api/admin/summary", { headers: sessionHeaders(rotatedToken) });
