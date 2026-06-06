@@ -2,6 +2,7 @@
 
 ## [Unreleased]
 
+- Changed the chat landing screen so it no longer auto-loads previous chat messages and instead shows a single `Start new chat` prompt.
 - Removed the admin header session status chip so the top-right header only shows the clock and profile menu.
 - Added a logged-in chat sidebar Users section backed by `/api/users/available-chat-users`, showing only active users who share the current user's company, department, or group.
 - Updated Company, Department, and Group management pages to match the Users UI/UX with table-based records, search plus Add actions in the card header, and create/edit forms in modals.
