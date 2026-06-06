@@ -27,6 +27,41 @@ CREATE INDEX IF NOT EXISTS chat_messages_chat_id_created_at_idx
 CREATE INDEX IF NOT EXISTS chat_messages_reviewed_idx
   ON chat_messages(reviewed, created_at);
 
+CREATE TABLE IF NOT EXISTS users (
+  id UUID PRIMARY KEY,
+  name TEXT NOT NULL,
+  email TEXT NOT NULL,
+  photo_url TEXT,
+  role TEXT NOT NULL DEFAULT 'viewer' CHECK (role IN ('owner', 'admin', 'member', 'viewer')),
+  status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('invited', 'active', 'disabled')),
+  password_hash TEXT,
+  password_updated_at TIMESTAMPTZ,
+  last_login_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS users_email_lower_idx
+  ON users(LOWER(email));
+
+CREATE INDEX IF NOT EXISTS users_status_role_idx
+  ON users(status, role);
+
+CREATE TABLE IF NOT EXISTS user_audit_events (
+  id UUID PRIMARY KEY,
+  actor_user_id UUID REFERENCES users(id) ON DELETE SET NULL,
+  target_user_id UUID REFERENCES users(id) ON DELETE SET NULL,
+  action TEXT NOT NULL,
+  details JSONB NOT NULL DEFAULT '{}'::jsonb,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS user_audit_events_target_created_at_idx
+  ON user_audit_events(target_user_id, created_at DESC);
+
+CREATE INDEX IF NOT EXISTS user_audit_events_actor_created_at_idx
+  ON user_audit_events(actor_user_id, created_at DESC);
+
 CREATE TABLE IF NOT EXISTS knowledge_entries (
   id UUID PRIMARY KEY,
   title TEXT NOT NULL,
