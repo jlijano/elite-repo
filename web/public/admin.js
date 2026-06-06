@@ -1,5 +1,6 @@
 const page = document.body.dataset.adminPage || "chat";
 const themeStorageKey = "switchboard-theme";
+const themePreferenceStorageKey = "switchboard-theme-mode";
 const adminTokenStorageKey = "switchboard-admin-token";
 const userProfileStorageKey = "switchboard-user-profile";
 const refreshIntervalMs = 40000;
@@ -53,6 +54,8 @@ const els = {
   themeToggleText: $("themeToggleText"),
   themeToggleIcon: document.querySelector(".theme-toggle-icon"),
   settingsThemeButton: $("settingsThemeButton"),
+  settingsThemeOptions: document.querySelectorAll("[data-theme-choice]"),
+  settingsThemeSummary: $("settingsThemeSummary"),
   settingsAdminState: $("settingsAdminState"),
   menuClock: $("menuClock")
 };
@@ -72,6 +75,9 @@ const textMatch = (value, query = "") => String(value || "").toLowerCase().inclu
 const publicHeaders = () => ({ "Content-Type": "application/json" });
 const adminHeaders = () => token ? { "Content-Type": "application/json", "x-admin-token": token } : publicHeaders();
 const getCurrentTheme = () => document.documentElement.dataset.theme === "dark" ? "dark" : "light";
+const validThemeChoices = ["light", "dark", "system"];
+const systemThemeQuery = window.matchMedia?.("(prefers-color-scheme: dark)");
+const resolveThemeChoice = (choice) => choice === "system" ? (systemThemeQuery?.matches ? "dark" : "light") : choice;
 const statusClass = (state = "") => {
   const normalized = String(state).toLowerCase();
   if (normalized.includes("error") || normalized.includes("unavailable") || normalized.includes("failed") || normalized.includes("disabled")) return "status-error";
@@ -116,14 +122,58 @@ function updateThemeToggle(theme) {
   els.themeToggleIcon.textContent = isDark ? "☀" : "☾";
 }
 
+function getStoredThemePreference() {
+  let explicitTheme = null;
+  let storedPreference = null;
+  try {
+    explicitTheme = localStorage.getItem(themeStorageKey);
+    storedPreference = localStorage.getItem(themePreferenceStorageKey);
+  } catch (error) {}
+  if (explicitTheme === "light" || explicitTheme === "dark") return explicitTheme;
+  return validThemeChoices.includes(storedPreference) ? storedPreference : "system";
+}
+
+function updateSettingsThemeControl(preference = getStoredThemePreference()) {
+  const resolvedTheme = resolveThemeChoice(preference);
+  els.settingsThemeOptions?.forEach((button) => {
+    const active = button.dataset.themeChoice === preference;
+    button.classList.toggle("active", active);
+    button.setAttribute("aria-pressed", String(active));
+  });
+  if (els.settingsThemeSummary) {
+    els.settingsThemeSummary.textContent = preference === "system"
+      ? `Using system preference (${resolvedTheme})`
+      : `Using ${preference} mode`;
+  }
+}
+
+function applyThemePreference(preference) {
+  const choice = validThemeChoices.includes(preference) ? preference : "system";
+  const resolvedTheme = resolveThemeChoice(choice);
+  document.documentElement.dataset.theme = resolvedTheme;
+  try {
+    localStorage.setItem(themePreferenceStorageKey, choice);
+    if (choice === "system") localStorage.removeItem(themeStorageKey);
+    else localStorage.setItem(themeStorageKey, choice);
+  } catch (error) {}
+  updateThemeToggle(resolvedTheme);
+  updateSettingsThemeControl(choice);
+}
+
+function applyStoredThemePreference() {
+  applyThemePreference(getStoredThemePreference());
+}
+
 function applyTheme(theme) {
-  document.documentElement.dataset.theme = theme;
-  try { localStorage.setItem(themeStorageKey, theme); } catch (error) {}
-  updateThemeToggle(theme);
+  applyThemePreference(theme);
 }
 
 function toggleTheme() {
-  applyTheme(getCurrentTheme() === "dark" ? "light" : "dark");
+  applyThemePreference(getCurrentTheme() === "dark" ? "light" : "dark");
+}
+
+function handleSystemThemeChange() {
+  if (getStoredThemePreference() === "system") applyThemePreference("system");
 }
 
 function refreshTokenFromSession() {
@@ -494,12 +544,14 @@ async function loadPage() {
   }
 }
 
-updateThemeToggle(getCurrentTheme());
+applyStoredThemePreference();
 updateClock();
 setInterval(updateClock, 30000);
 refreshTokenFromSession();
 els.themeToggle?.addEventListener("click", toggleTheme);
+els.settingsThemeOptions?.forEach((button) => button.addEventListener("click", () => applyThemePreference(button.dataset.themeChoice)));
 els.settingsThemeButton?.addEventListener("click", toggleTheme);
+systemThemeQuery?.addEventListener?.("change", handleSystemThemeChange);
 els.logoutButton?.addEventListener("click", logout);
 els.profileMenuButton?.addEventListener("click", toggleProfileDropdown);
 els.profileLogoutButtons.forEach((button) => button.addEventListener("click", logout));
