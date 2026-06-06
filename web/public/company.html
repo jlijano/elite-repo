@@ -50,24 +50,41 @@
           <div class="admin-layout">
             <p class="admin-status" id="status">Loading companies...</p>
             <section class="admin-card wide" id="companyPage" data-dashboard-panel="company">
-              <div class="card-head"><div><h2>Company management</h2><p class="card-subtitle">Create, edit, archive, and reactivate companies for future access rules.</p></div><div class="card-actions entra-toolbar"><label class="sr-only" for="entraSearch">Search companies</label><input id="entraSearch" type="search" placeholder="Search companies" autocomplete="off" /></div></div>
+              <div class="card-head entra-card-head">
+                <div><h2>Company management</h2><p class="card-subtitle">Create, edit, archive, and reactivate companies for future access rules.</p></div>
+                <div class="card-actions entra-toolbar">
+                  <label class="sr-only" for="entraSearch">Search companies</label>
+                  <input id="entraSearch" type="search" placeholder="Search companies" autocomplete="off" />
+                  <button id="addEntraButton" type="button">Add company</button>
+                </div>
+              </div>
               <div class="entra-management-grid">
                 <section class="list entra-list" id="entraList" aria-label="Company records">Loading company records...</section>
-                <section class="entra-form-panel" aria-label="Company form">
-                  <form class="management-form" id="entraForm" autocomplete="off">
-                    <div class="form-heading"><h3 id="entraFormTitle">Create Company</h3><button id="cancelEntraEditButton" type="button" hidden>Cancel edit</button></div>
-                    <label><span>Name</span><input id="entraName" name="name" type="text" required placeholder="Company name" /></label>
-                    <label><span>Description</span><input id="entraDescription" name="description" type="text" placeholder="Optional company notes" /></label>
-                    <label><span>Status</span><select id="entraStatus" name="status"><option value="active">Active</option><option value="archived">Archived</option></select></label>
-                    <div class="form-actions"><button id="saveEntraButton" type="submit">Create Company</button></div>
-                  </form>
-                </section>
               </div>
             </section>
           </div>
         </div>
       </section>
     </main>
+
+    <dialog class="entra-modal" id="entraDialog" aria-labelledby="entraFormTitle">
+      <div class="entra-modal-content">
+        <div class="entra-modal-head">
+          <h2>Add or edit company</h2>
+          <button class="entra-modal-close" id="closeEntraModalButton" type="button" aria-label="Close company form">×</button>
+        </div>
+        <div class="entra-dialog-body">
+          <form class="management-form" id="entraForm" autocomplete="off">
+            <div class="form-heading"><h3 id="entraFormTitle">Create Company</h3><button id="cancelEntraEditButton" type="button" hidden>Cancel edit</button></div>
+            <label><span>Name</span><input id="entraName" name="name" type="text" required placeholder="Company name" /></label>
+            <label><span>Description</span><input id="entraDescription" name="description" type="text" placeholder="Optional company notes" /></label>
+            <label><span>Status</span><select id="entraStatus" name="status"><option value="active">Active</option><option value="archived">Archived</option></select></label>
+            <div class="form-actions"><button id="saveEntraButton" type="submit">Create Company</button></div>
+          </form>
+        </div>
+      </div>
+    </dialog>
+
     <script src="admin-session.js"></script>
     <script src="admin.js"></script>
     <script src="entra-management.js"></script>
