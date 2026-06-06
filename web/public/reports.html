@@ -26,45 +26,24 @@
           <a class="nav-item" href="/knowledge.html"><span aria-hidden="true">◇</span>Knowledge base</a>
           <a class="nav-item" href="/user.html"><span aria-hidden="true">◉</span>User</a>
           <a class="nav-item" href="/playground.html"><span aria-hidden="true">▦</span>Playground</a>
-          <div class="admin-section-list reports-nav" aria-label="Reports navigation">
-            <h2 class="session-heading">Reports</h2>
-            <a class="nav-item active" href="/reports.html" aria-current="page"><span aria-hidden="true">▣</span>Overview</a>
-            <a class="nav-item" href="/logs.html"><span aria-hidden="true">≡</span>Logs</a>
-            <a class="nav-item" href="/review-runs.html"><span aria-hidden="true">↻</span>Review runs</a>
-            <a class="nav-item" href="/system-health.html"><span aria-hidden="true">✚</span>System health</a>
-            <a class="nav-item" href="/user-audit.html"><span aria-hidden="true">◎</span>User audit</a>
-          </div>
-          <a class="nav-item" href="/settings.html"><span aria-hidden="true">⚙</span>Settings</a>
+          <details class="admin-section-list reports-nav" open>
+            <summary class="reports-summary"><span class="reports-summary-label">Reports</span><span class="reports-summary-chevron" aria-hidden="true">⌄</span></summary>
+            <div class="reports-nav-items" aria-label="Reports navigation">
+              <a class="nav-item active" href="/reports.html" aria-current="page"><span aria-hidden="true">▣</span>Overview</a>
+              <a class="nav-item" href="/logs.html"><span aria-hidden="true">≡</span>Logs</a>
+              <a class="nav-item" href="/review-runs.html"><span aria-hidden="true">↻</span>Review runs</a>
+              <a class="nav-item" href="/system-health.html"><span aria-hidden="true">✚</span>System health</a>
+              <a class="nav-item" href="/user-audit.html"><span aria-hidden="true">◎</span>User audit</a>
+              <a class="nav-item" href="/settings.html"><span aria-hidden="true">⚙</span>Settings</a>
+            </div>
+          </details>
         </nav>
-        <section class="admin-section-list" aria-label="Admin workspace">
-          <h2 class="session-heading">Workspace</h2>
-          <div class="workspace-card"><strong>Switchboard Admin</strong><small>Reports, logs, and operational history.</small></div>
-        </section>
+        <section class="admin-section-list" aria-label="Admin workspace"><h2 class="session-heading">Workspace</h2><div class="workspace-card"><strong>Switchboard Admin</strong><small>Reports, logs, and operational history.</small></div></section>
         <div class="directory-card"><div class="status-row"><span class="status-dot online" aria-hidden="true"></span><span>Reports</span></div><p>Operational reporting and activity views.</p></div>
       </aside>
       <section class="admin-panel" aria-label="Reports overview">
-        <header class="chat-header admin-header">
-          <div class="admin-header-title"><h1>Reports</h1><p>Review logs, review runs, system health, and user audit activity.</p></div>
-          <div class="header-actions">
-            <span class="admin-clock" id="menuClock" aria-live="polite"></span>
-            <div class="profile-menu">
-              <button class="profile-settings" id="profileMenuButton" type="button" aria-label="Open profile menu" aria-haspopup="true" aria-expanded="false">👤</button>
-              <div class="profile-dropdown" id="profileDropdown" role="menu" hidden>
-                <a href="/update-profile.html" role="menuitem">Update Profile</a>
-                <button class="profile-logout" type="button" role="menuitem">Logout</button>
-              </div>
-            </div>
-          </div>
-        </header>
-        <div class="admin-scroll">
-          <div class="admin-layout">
-            <p class="admin-status" id="status">Loading reports...</p>
-            <section class="admin-card wide" id="reportsPage">
-              <div class="card-head"><div><p class="section-kicker">Reports</p><h2>Reports overview</h2><p class="card-subtitle">All report categories are grouped here, including Logs.</p></div></div>
-              <div class="list" id="reportsOverview">Loading reports...</div>
-            </section>
-          </div>
-        </div>
+        <header class="chat-header admin-header"><div class="admin-header-title"><h1>Reports</h1><p>Review logs, review runs, system health, and user audit activity.</p></div><div class="header-actions"><span class="admin-clock" id="menuClock" aria-live="polite"></span><div class="profile-menu"><button class="profile-settings" id="profileMenuButton" type="button" aria-label="Open profile menu" aria-haspopup="true" aria-expanded="false">👤</button><div class="profile-dropdown" id="profileDropdown" role="menu" hidden><a href="/update-profile.html" role="menuitem">Update Profile</a><button class="profile-logout" type="button" role="menuitem">Logout</button></div></div></div></header>
+        <div class="admin-scroll"><div class="admin-layout"><p class="admin-status" id="status">Loading reports...</p><section class="admin-card wide" id="reportsPage"><div class="card-head"><div><p class="section-kicker">Reports</p><h2>Reports overview</h2><p class="card-subtitle">All report categories are grouped here, including Logs.</p></div></div><div class="list" id="reportsOverview">Loading reports...</div></section></div></div>
       </section>
     </main>
     <script src="reports.js"></script>
