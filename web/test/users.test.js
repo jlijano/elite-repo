@@ -166,5 +166,6 @@ test("disables, reactivates, and audits user changes", async () => {
   const audit = await jsonFetch(`/api/admin/user-audit-events?targetUserId=${encodeURIComponent(userId)}`, { headers: adminHeaders() });
   assert.equal(audit.response.status, 200);
   assert.equal(audit.data.events.some((event) => event.action === "user.created"), true);
-  assert.equal(audit.data.events.filter((event) => event.action === "user.updated").length >= 2, true);
+  assert.equal(audit.data.events.some((event) => event.action === "user.disabled"), true);
+  assert.equal(audit.data.events.some((event) => event.action === "user.reactivated"), true);
 });
