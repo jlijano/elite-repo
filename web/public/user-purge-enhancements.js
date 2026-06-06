@@ -34,6 +34,62 @@
         border-color: rgba(220, 38, 38, 0.45) !important;
         background: rgba(254, 226, 226, 0.92) !important;
       }
+
+      .user-name-edit-trigger {
+        appearance: none;
+        display: inline-flex;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.35rem;
+        width: 100%;
+        padding: 0;
+        border: 0 !important;
+        border-radius: 0;
+        color: inherit;
+        background: transparent !important;
+        box-shadow: none !important;
+        font: inherit;
+        text-align: left;
+        cursor: pointer;
+      }
+
+      .user-name-edit-trigger:focus {
+        outline: none;
+      }
+
+      .user-name-edit-trigger:focus-visible {
+        outline: none;
+      }
+
+      .user-name-edit-trigger > span:first-child {
+        position: relative;
+        display: inline-flex;
+        color: inherit;
+        font-weight: 700;
+      }
+
+      .user-name-edit-trigger > span:first-child::after {
+        content: "";
+        position: absolute;
+        left: 0;
+        right: 0;
+        bottom: -0.18rem;
+        height: 2px;
+        border-radius: 999px;
+        background: currentColor;
+        transform: scaleX(0);
+        transform-origin: left;
+        transition: transform 160ms ease;
+      }
+
+      .user-name-edit-trigger:hover > span:first-child::after,
+      .user-name-edit-trigger:focus-visible > span:first-child::after {
+        transform: scaleX(1);
+      }
+
+      .user-edit-action-hidden {
+        display: none !important;
+      }
     `;
     document.head.appendChild(style);
   }
@@ -46,14 +102,49 @@
       "";
   }
 
+  function hideEditButton(button) {
+    if (!button || button.classList.contains("user-edit-action-hidden")) return;
+    button.classList.add("user-edit-action-hidden");
+    button.hidden = true;
+    button.tabIndex = -1;
+    button.setAttribute("aria-hidden", "true");
+  }
+
+  function enhanceNameTrigger(row, editButton) {
+    if (!editButton || row.querySelector(".user-name-edit-trigger")) return;
+    const titleRow = row.querySelector(".row");
+    const name = titleRow?.querySelector("span:first-child");
+    if (!titleRow || !name) return;
+
+    const trigger = document.createElement("button");
+    trigger.type = "button";
+    trigger.className = "user-name-edit-trigger";
+    trigger.setAttribute("aria-label", `Edit ${name.textContent?.trim() || "user"}`);
+
+    titleRow.replaceChild(trigger, name);
+    trigger.appendChild(name);
+
+    trigger.addEventListener("click", (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      editButton.click();
+    });
+  }
+
   function enhanceRows() {
-    if (!isGlobalAdmin()) return;
     const list = document.getElementById("users");
     if (!list) return;
     list.querySelectorAll("tr, .user-card, li, article").forEach((row) => {
+      const editButton = row.querySelector("[data-user-edit]");
       const userId = rowUserId(row);
-      if (!userId || row.querySelector("[data-user-purge]")) return;
       const actions = row.querySelector(".actions, .user-actions, td:last-child") || row;
+
+      if (editButton) {
+        enhanceNameTrigger(row, editButton);
+        hideEditButton(editButton);
+      }
+
+      if (!isGlobalAdmin() || !userId || row.querySelector("[data-user-purge]")) return;
       const button = document.createElement("button");
       button.type = "button";
       button.className = "danger-action";
