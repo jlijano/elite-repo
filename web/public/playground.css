@@ -6,6 +6,23 @@
 .metric-card strong { color: var(--text); font-size: 1.75rem; line-height: 1; }
 .metric-card p { margin: 0; color: var(--muted); font-size: 0.82rem; line-height: 1.35; }
 .playground-board-card { min-height: auto; }
+.projects-card-head { align-items: end; flex-wrap: wrap; }
+.project-view-switcher { display: inline-grid; grid-template-columns: repeat(3, minmax(86px, 1fr)); gap: 4px; padding: 4px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel-soft); }
+.project-view-switcher button { min-height: 34px; border: 0; border-radius: calc(var(--radius) - 2px); background: transparent; color: var(--muted); font: inherit; font-size: 0.82rem; font-weight: 900; cursor: pointer; }
+.project-view-switcher button:hover, .project-view-switcher button:focus { color: var(--text); outline: 3px solid var(--focus-ring); outline-offset: 1px; }
+.project-view-switcher button.active { background: var(--panel); color: var(--text); box-shadow: inset 0 0 0 1px var(--line); }
+.project-view-panels { min-width: 0; }
+.project-view-panel { min-width: 0; }
+.project-view-panel[hidden] { display: none; }
+.project-placeholder { display: grid; gap: 10px; margin: 12px; padding: 18px; border: 1px dashed var(--line); border-radius: var(--radius); background: var(--panel-soft); color: var(--text); }
+.project-placeholder strong { font-size: 1rem; }
+.project-placeholder p { max-width: 680px; margin: 0; color: var(--muted); line-height: 1.45; }
+.project-placeholder-grid { display: grid; grid-template-columns: minmax(140px, 1.6fr) repeat(3, minmax(90px, 1fr)); gap: 8px; margin-top: 6px; }
+.project-placeholder-grid span { min-height: 36px; display: flex; align-items: center; padding: 0 10px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel); color: var(--muted); font-size: 0.78rem; font-weight: 900; text-transform: uppercase; }
+.project-calendar-preview { display: grid; grid-template-columns: repeat(5, minmax(44px, 1fr)); gap: 8px; max-width: 420px; margin-top: 6px; }
+.project-calendar-preview span, .project-calendar-preview b { min-height: 38px; display: flex; align-items: center; justify-content: center; border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel); color: var(--muted); font-size: 0.76rem; font-style: normal; font-weight: 900; }
+.project-calendar-preview b { min-height: 48px; }
+.project-calendar-preview b.marked { background: rgba(0, 194, 168, 0.14); border-color: rgba(0, 194, 168, 0.34); }
 .playground-task-controls { display: grid; grid-template-columns: minmax(180px, 1.2fr) repeat(4, minmax(140px, 1fr)) auto; gap: 10px; align-items: end; padding: 12px 14px; border-top: 1px solid var(--line); }
 .playground-task-controls label { min-width: 0; display: grid; gap: 5px; color: var(--muted); font-size: 0.74rem; font-weight: 900; text-transform: uppercase; }
 .playground-task-controls input, .playground-task-controls select, .playground-modal input, .playground-modal select, .playground-modal textarea, .drawer-update-form textarea { width: 100%; min-width: 0; min-height: 38px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel); color: var(--text); font: inherit; padding: 8px 10px; }
@@ -99,4 +116,4 @@
 .playground-task-table td small { margin-top: 4px; color: var(--muted); }
 .playground-task-list-footer { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 14px; color: var(--muted); font-size: 0.82rem; font-weight: 850; }
 @media (max-width: 1180px) { .playground-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); } .playground-task-controls { grid-template-columns: repeat(3, minmax(0, 1fr)); } .kanban-board { grid-template-columns: repeat(5, minmax(220px, 1fr)); } .playground-lower-grid { grid-template-columns: 1fr; } .common-field-card-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
-@media (max-width: 760px) { .playground-header .header-actions { width: 100%; justify-content: flex-start; } .playground-metrics, .playground-task-controls, .playground-form-grid, .custom-field-row, .common-field-card-grid { grid-template-columns: 1fr; } .kanban-board { grid-template-columns: 1fr; overflow-x: visible; } .todo-item { grid-template-columns: auto minmax(0, 1fr); } .todo-item small, .todo-item .priority { justify-self: start; grid-column: 2; } .playground-task-drawer { width: 100vw; } .task-detail-grid { grid-template-columns: 1fr; } .playground-task-list-footer { align-items: stretch; flex-direction: column; } }
+@media (max-width: 760px) { .playground-header .header-actions { width: 100%; justify-content: flex-start; } .playground-metrics, .playground-task-controls, .playground-form-grid, .custom-field-row, .common-field-card-grid { grid-template-columns: 1fr; } .project-view-switcher { width: 100%; grid-template-columns: repeat(3, minmax(0, 1fr)); } .project-placeholder-grid, .project-calendar-preview { grid-template-columns: 1fr; max-width: none; } .kanban-board { grid-template-columns: 1fr; overflow-x: visible; } .todo-item { grid-template-columns: auto minmax(0, 1fr); } .todo-item small, .todo-item .priority { justify-self: start; grid-column: 2; } .playground-task-drawer { width: 100vw; } .task-detail-grid { grid-template-columns: 1fr; } .playground-task-list-footer { align-items: stretch; flex-direction: column; } }
