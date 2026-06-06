@@ -573,7 +573,9 @@ setInterval(() => refreshCurrentSession().catch(() => {}), refreshIntervalMs);
 resizeInput();
 
 window.addEventListener("load", () => {
-  const script = document.createElement("script");
-  script.src = "bubble-color.js?v=20260607-chat-identity-seen";
-  document.body.appendChild(script);
+  for (const src of ["bubble-color.js?v=20260607-chat-scope", "chat-media-fix.js?v=20260607-camera-fix"]) {
+    const script = document.createElement("script");
+    script.src = src;
+    document.body.appendChild(script);
+  }
 });
