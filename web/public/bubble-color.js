@@ -451,7 +451,8 @@
     const originalSaveCurrentChat = saveCurrentChat;
     saveCurrentChat = function identitySaveCurrentChat(chatId) {
       originalSaveCurrentChat(chatId);
-      loadStoredIdentity(chatId);
+      if (selectedNickname && selectedColor) persistIdentity(chatId);
+      else loadStoredIdentity(chatId);
     };
   }
 
