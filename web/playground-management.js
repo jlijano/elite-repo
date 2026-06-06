@@ -3,6 +3,7 @@ const { Pool } = require("pg");
 const taskStatuses = new Set(["backlog", "todo", "in_progress", "review", "done"]);
 const priorities = new Set(["low", "medium", "high"]);
 const projectStatuses = new Set(["planning", "active", "in_progress", "review", "completed", "archived"]);
+const customFieldTypes = new Set(["person", "date", "status", "dropdown", "text", "file"]);
 
 const seedTasks = [
   { id: "00000000-0000-4000-9000-000000000101", projectId: "00000000-0000-4000-9000-000000000204", title: "Update project notes", description: "Collect ideas and organize next sprint planning notes.", status: "backlog", category: "Planning", priority: "low", dueLabel: "No due date", dueDate: null, assigneeIds: [], customFields: [] },
@@ -64,11 +65,31 @@ function cleanAssigneeIds(value) {
   return [...new Set(value.map((item) => cleanString(item, 80)).filter(Boolean))].slice(0, 20);
 }
 
+function cleanCustomFieldType(value) {
+  const type = cleanString(value, 40).toLowerCase();
+  return customFieldTypes.has(type) ? type : "";
+}
+
 function cleanCustomFields(value) {
   if (!Array.isArray(value)) return [];
   return value
-    .map((field) => ({ name: cleanString(field?.name, 60), value: cleanString(field?.value, 240) }))
-    .filter((field) => field.name || field.value)
+    .map((field) => {
+      const type = cleanCustomFieldType(field?.type);
+      const cleaned = {
+        name: cleanString(field?.name, 60),
+        value: cleanString(field?.value, type === "file" ? 500 : 240)
+      };
+      if (type) cleaned.type = type;
+      if (type === "file") {
+        cleaned.fileName = cleanString(field?.fileName, 160);
+        cleaned.fileType = cleanString(field?.fileType, 120);
+        cleaned.fileSize = cleanInt(field?.fileSize, 0, 0, 1024 * 1024);
+        cleaned.fileData = cleanString(field?.fileData, 120000);
+        if (!cleaned.value && cleaned.fileName) cleaned.value = cleaned.fileName;
+      }
+      return cleaned;
+    })
+    .filter((field) => field.name || field.value || field.fileName)
     .slice(0, 12);
 }
 
@@ -215,7 +236,7 @@ function normalizeFilters(filters = {}) {
 }
 
 function customFieldText(task) {
-  return (task.customFields || []).map((field) => `${field.name || "Field"} ${field.value || ""}`).join(" ");
+  return (task.customFields || []).map((field) => `${field.type || ""} ${field.name || "Field"} ${field.value || ""} ${field.fileName || ""}`).join(" ");
 }
 
 function filteredTasks(tasks, filters = {}) {
