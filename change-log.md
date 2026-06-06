@@ -2,6 +2,7 @@
 
 ## [Unreleased]
 
+- Refined the admin navigation so section links sit in a compact top nav bar and Logout renders as a normal-sized sidebar option.
 - Added source-controlled project knowledge cards to the admin Knowledge section covering the admin-token UI cleanup, Chat Review loading behavior, Knowledge section purpose, and GitHub/Render deployment rule.
 - Changed the admin Chat Review section so recent chats load into the highlighted review list through the normal chat APIs, while protected management-only data still requires backend admin access.
 - Removed the visible admin dashboard login token controls and manual Run Review button so the admin screen opens directly into the review sections.
