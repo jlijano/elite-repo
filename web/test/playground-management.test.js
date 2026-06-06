@@ -91,7 +91,11 @@ test("playground page loads the storage-backed script after admin session bootst
   const adminIndex = html.indexOf('<script src="admin.js"></script>');
   const playgroundIndex = html.indexOf('<script src="playground.js"></script>');
 
-  assert.ok(html.includes('href="/playground-tasks.html"'));
+  assert.ok(html.includes('class="admin-section-list reports-nav playground-nav"'));
+  assert.ok(html.includes('<span class="reports-summary-label">Playground</span>'));
+  assert.ok(html.includes('aria-label="Playground navigation"'));
+  assert.ok(html.includes('href="/playground.html" aria-current="page"><span aria-hidden="true">▦</span>Board'));
+  assert.ok(html.includes('href="/playground-tasks.html"><span aria-hidden="true">☑</span>Tasks'));
   assert.ok(adminSessionIndex > -1);
   assert.ok(adminIndex > adminSessionIndex);
   assert.ok(playgroundIndex > adminIndex);
@@ -103,6 +107,10 @@ test("playground tasks page loads session bootstrap and task list script", () =>
   const taskListIndex = html.indexOf('<script src="playground-tasks.js"></script>');
 
   assert.ok(html.includes('data-admin-page="playground-tasks"'));
+  assert.ok(html.includes('class="admin-section-list reports-nav playground-nav"'));
+  assert.ok(html.includes('<span class="reports-summary-label">Playground</span>'));
+  assert.ok(html.includes('href="/playground.html"><span aria-hidden="true">▦</span>Board'));
+  assert.ok(html.includes('href="/playground-tasks.html" aria-current="page"><span aria-hidden="true">☑</span>Tasks'));
   assert.ok(html.includes('id="taskListBody"'));
   assert.ok(adminSessionIndex > -1);
   assert.ok(taskListIndex > adminSessionIndex);
@@ -112,10 +120,13 @@ test("shared admin navigation nests Tasks under Playground", () => {
   const script = fs.readFileSync(path.join(__dirname, "..", "public", "admin-session.js"), "utf8");
 
   assert.ok(script.includes("playgroundPages"));
+  assert.ok(script.includes("summaryIcon = \"\""));
   assert.ok(script.includes("playground-nav"));
+  assert.ok(script.includes("summaryLabel: \"Playground\""));
   assert.ok(script.includes("Playground navigation"));
   assert.ok(script.includes("/playground-tasks.html"));
-  assert.ok(script.includes('querySelector(\'a.nav-item[href="/playground-tasks.html"]\')?.remove()'));
+  assert.ok(script.includes('const tasksLink = nav.querySelector(\'a.nav-item[href="/playground-tasks.html"]\')'));
+  assert.ok(script.includes("tasksLink?.remove()"));
 });
 
 test("playground tasks script lists saved tasks through the Playground API", () => {
