@@ -2,6 +2,7 @@
 
 ## [Unreleased]
 
+- Removed automatic assistant reply bubbles from the chat UI, including the storage-only `saved for review` response.
 - Forced the chat landing page to clear the saved active chat, load the latest chat script, and show the composer title as `New chat` instead of an old chat name.
 - Added database-backed Playground storage with dedicated task, project, and note records, protected admin Playground APIs, stored page loading, and New Task/New Project creation from the Playground header.
 - Changed the chat landing screen so it no longer auto-loads previous chat messages and instead shows a single `Start new chat` prompt.
