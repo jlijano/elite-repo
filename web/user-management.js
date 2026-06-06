@@ -4,6 +4,7 @@ const { Pool } = require("pg");
 
 const allowedRoles = new Set(["owner", "admin", "member", "viewer"]);
 const allowedStatuses = new Set(["invited", "active", "disabled"]);
+const sessionTtlMs = 1000 * 60 * 60 * 12;
 
 function publicUser(row) {
   return {
@@ -17,6 +18,14 @@ function publicUser(row) {
     lastLoginAt: row.last_login_at || row.lastLoginAt ? new Date(row.last_login_at || row.lastLoginAt).toISOString() : null,
     createdAt: new Date(row.created_at || row.createdAt).toISOString(),
     updatedAt: new Date(row.updated_at || row.updatedAt).toISOString()
+  };
+}
+
+function privateUser(row) {
+  if (!row) return null;
+  return {
+    ...publicUser(row),
+    passwordHash: row.password_hash || row.passwordHash || null
   };
 }
 
@@ -77,6 +86,28 @@ function hashPassword(password) {
   return `scrypt:${salt}:${hash}`;
 }
 
+function verifyPassword(password, storedHash) {
+  const value = typeof password === "string" ? password : "";
+  if (!value || !storedHash) return false;
+  const [scheme, salt, expectedHash] = String(storedHash).split(":");
+  if (scheme !== "scrypt" || !salt || !expectedHash) return false;
+  const actual = Buffer.from(crypto.scryptSync(value, salt, 64).toString("hex"), "hex");
+  const expected = Buffer.from(expectedHash, "hex");
+  return actual.length === expected.length && crypto.timingSafeEqual(actual, expected);
+}
+
+function createSessionToken() {
+  return crypto.randomBytes(32).toString("hex");
+}
+
+function hashSessionToken(token) {
+  return crypto.createHash("sha256").update(String(token || "")).digest("hex");
+}
+
+function sessionTokenFromRequest(req) {
+  return cleanString(req.get("x-session-token"), 200);
+}
+
 function createUserPayload(body = {}) {
   const name = cleanString(body.name, 120);
   const email = normalizeEmail(body.email);
@@ -115,8 +146,32 @@ function updateUserPayload(body = {}) {
   return updates;
 }
 
+function profileUpdatePayload(body = {}) {
+  const updates = {};
+  if (Object.prototype.hasOwnProperty.call(body, "name")) {
+    const name = cleanString(body.name, 120);
+    if (!name) throw appError(400, "Name cannot be blank.");
+    updates.name = name;
+  }
+  if (Object.prototype.hasOwnProperty.call(body, "email")) {
+    const email = normalizeEmail(body.email);
+    if (!email || !isEmail(email)) throw appError(400, "A valid email is required.");
+    updates.email = email;
+  }
+  if (Object.prototype.hasOwnProperty.call(body, "photoUrl") || Object.prototype.hasOwnProperty.call(body, "photo_url")) {
+    updates.photoUrl = cleanPhotoUrl(body.photoUrl || body.photo_url);
+  }
+  const newPassword = typeof body.newPassword === "string" ? body.newPassword : "";
+  if (newPassword) {
+    updates.currentPassword = typeof body.currentPassword === "string" ? body.currentPassword : "";
+    updates.passwordHash = hashPassword(newPassword);
+  }
+  if (!Object.keys(updates).length) throw appError(400, "At least one profile field is required.");
+  return updates;
+}
+
 function createUserManagementStore(options = {}) {
-  const makeId = options.id || crypto.randomUUID;
+  const makeId = options.id || (() => crypto.randomUUID());
   const currentTime = options.now || (() => new Date().toISOString());
   if (options.databaseUrl) return createPostgresUserStore({ ...options, makeId });
   return createMemoryUserStore({ makeId, currentTime });
@@ -139,6 +194,36 @@ function createPostgresUserStore(options) {
     return auditRow(result.rows[0]);
   }
 
+  async function applyUserUpdates(userId, updates, source, actorUserId = null) {
+    await ready();
+    const fields = [];
+    const values = [userId];
+    const addField = (column, value) => {
+      values.push(value);
+      fields.push(`${column} = $${values.length}`);
+    };
+    if (Object.prototype.hasOwnProperty.call(updates, "name")) addField("name", updates.name);
+    if (Object.prototype.hasOwnProperty.call(updates, "email")) addField("email", updates.email);
+    if (Object.prototype.hasOwnProperty.call(updates, "photoUrl")) addField("photo_url", updates.photoUrl || null);
+    if (Object.prototype.hasOwnProperty.call(updates, "role")) addField("role", updates.role);
+    if (Object.prototype.hasOwnProperty.call(updates, "status")) addField("status", updates.status);
+    if (Object.prototype.hasOwnProperty.call(updates, "passwordHash")) {
+      addField("password_hash", updates.passwordHash);
+      fields.push("password_updated_at = NOW()");
+    }
+    fields.push("updated_at = NOW()");
+    try {
+      const result = await pool.query(`UPDATE users SET ${fields.join(", ")} WHERE id = $1 RETURNING *`, values);
+      if (!result.rows[0]) return null;
+      const user = publicUser(result.rows[0]);
+      await writeAudit(source === "profile" ? "profile.updated" : "user.updated", user.id, { fields: Object.keys(updates).filter((field) => field !== "currentPassword"), source }, actorUserId);
+      return user;
+    } catch (error) {
+      if (error.code === "23505") throw appError(409, "A user with that email already exists.");
+      throw error;
+    }
+  }
+
   return {
     async listUsers() {
       await ready();
@@ -150,7 +235,17 @@ function createPostgresUserStore(options) {
       const result = await pool.query("SELECT * FROM users WHERE id = $1", [userId]);
       return result.rows[0] ? publicUser(result.rows[0]) : null;
     },
-    async createUser(payload) {
+    async getPrivateUser(userId) {
+      await ready();
+      const result = await pool.query("SELECT * FROM users WHERE id = $1", [userId]);
+      return privateUser(result.rows[0]);
+    },
+    async getPrivateUserByEmail(email) {
+      await ready();
+      const result = await pool.query("SELECT * FROM users WHERE LOWER(email) = LOWER($1) LIMIT 1", [email]);
+      return privateUser(result.rows[0]);
+    },
+    async createUser(payload, actorUserId = null) {
       await ready();
       try {
         const result = await pool.query(
@@ -158,41 +253,61 @@ function createPostgresUserStore(options) {
           [options.makeId(), payload.name, payload.email, payload.photoUrl || null, payload.role, payload.status, payload.passwordHash]
         );
         const user = publicUser(result.rows[0]);
-        await writeAudit("user.created", user.id, { email: user.email, role: user.role, status: user.status, source: "admin-token" });
+        await writeAudit("user.created", user.id, { email: user.email, role: user.role, status: user.status, source: actorUserId ? "session" : "admin-token" }, actorUserId);
         return user;
       } catch (error) {
         if (error.code === "23505") throw appError(409, "A user with that email already exists.");
         throw error;
       }
     },
-    async updateUser(userId, updates) {
-      await ready();
-      const existing = await this.getUser(userId);
+    async updateUser(userId, updates, actorUserId = null) {
+      return applyUserUpdates(userId, updates, actorUserId ? "session" : "admin-token", actorUserId);
+    },
+    async updateProfile(userId, updates) {
+      const existing = await this.getPrivateUser(userId);
       if (!existing) return null;
-      try {
-        const result = await pool.query(
-          `UPDATE users SET
-            name = COALESCE($2, name),
-            email = COALESCE($3, email),
-            photo_url = COALESCE($4, photo_url),
-            role = COALESCE($5, role),
-            status = COALESCE($6, status),
-            password_hash = COALESCE($7, password_hash),
-            password_updated_at = CASE WHEN $7::text IS NULL THEN password_updated_at ELSE NOW() END,
-            updated_at = NOW()
-          WHERE id = $1 RETURNING *`,
-          [userId, updates.name || null, updates.email || null, Object.prototype.hasOwnProperty.call(updates, "photoUrl") ? updates.photoUrl || null : null, updates.role || null, updates.status || null, updates.passwordHash || null]
-        );
-        const user = publicUser(result.rows[0]);
-        await writeAudit("user.updated", user.id, { fields: Object.keys(updates), source: "admin-token" });
-        return user;
-      } catch (error) {
-        if (error.code === "23505") throw appError(409, "A user with that email already exists.");
-        throw error;
+      if (updates.passwordHash) {
+        if (!updates.currentPassword) throw appError(401, "Current password is required to change your password.");
+        if (!verifyPassword(updates.currentPassword, existing.passwordHash)) throw appError(401, "Current password is incorrect.");
       }
+      return applyUserUpdates(userId, updates, "profile", userId);
     },
-    async setUserStatus(userId, status) {
-      return this.updateUser(userId, { status });
+    async setUserStatus(userId, status, actorUserId = null) {
+      return this.updateUser(userId, { status }, actorUserId);
+    },
+    async updateLastLogin(userId) {
+      await ready();
+      const result = await pool.query("UPDATE users SET last_login_at = NOW(), updated_at = NOW() WHERE id = $1 RETURNING *", [userId]);
+      return result.rows[0] ? publicUser(result.rows[0]) : null;
+    },
+    async createSession(userId) {
+      await ready();
+      const token = createSessionToken();
+      const expiresAt = new Date(Date.now() + sessionTtlMs).toISOString();
+      await pool.query(
+        "INSERT INTO user_sessions (id, user_id, token_hash, expires_at) VALUES ($1, $2, $3, $4)",
+        [options.makeId(), userId, hashSessionToken(token), expiresAt]
+      );
+      return { token, expiresAt };
+    },
+    async getSessionUser(token) {
+      await ready();
+      if (!token) return null;
+      const result = await pool.query(
+        `SELECT u.*, s.expires_at AS session_expires_at
+         FROM user_sessions s
+         JOIN users u ON u.id = s.user_id
+         WHERE s.token_hash = $1 AND s.revoked_at IS NULL AND s.expires_at > NOW()
+         LIMIT 1`,
+        [hashSessionToken(token)]
+      );
+      if (!result.rows[0] || result.rows[0].status !== "active") return null;
+      return { user: publicUser(result.rows[0]), expiresAt: new Date(result.rows[0].session_expires_at).toISOString() };
+    },
+    async revokeSession(token) {
+      await ready();
+      if (!token) return;
+      await pool.query("UPDATE user_sessions SET revoked_at = NOW() WHERE token_hash = $1", [hashSessionToken(token)]);
     },
     async listAuditEvents(targetUserId = "") {
       await ready();
@@ -206,6 +321,7 @@ function createPostgresUserStore(options) {
 
 function createMemoryUserStore(options) {
   const users = new Map();
+  const sessions = new Map();
   const auditEvents = [];
 
   function emailExists(email, exceptUserId = "") {
@@ -218,6 +334,19 @@ function createMemoryUserStore(options) {
     return auditRow(event);
   }
 
+  function applyUserUpdates(userId, updates, source, actorUserId = null) {
+    const user = users.get(userId);
+    if (!user) return null;
+    if (updates.email && emailExists(updates.email, userId)) throw appError(409, "A user with that email already exists.");
+    const timestamp = options.currentTime();
+    Object.assign(user, updates);
+    if (updates.passwordHash) user.passwordUpdatedAt = timestamp;
+    delete user.currentPassword;
+    user.updatedAt = timestamp;
+    writeAudit(source === "profile" ? "profile.updated" : "user.updated", user.id, { fields: Object.keys(updates).filter((field) => field !== "currentPassword"), source }, actorUserId);
+    return publicUser(user);
+  }
+
   return {
     async listUsers() {
       return [...users.values()].sort((a, b) => b.createdAt.localeCompare(a.createdAt)).map(publicUser);
@@ -226,7 +355,13 @@ function createMemoryUserStore(options) {
       const user = users.get(userId);
       return user ? publicUser(user) : null;
     },
-    async createUser(payload) {
+    async getPrivateUser(userId) {
+      return privateUser(users.get(userId));
+    },
+    async getPrivateUserByEmail(email) {
+      return privateUser([...users.values()].find((user) => user.email === email));
+    },
+    async createUser(payload, actorUserId = null) {
       if (emailExists(payload.email)) throw appError(409, "A user with that email already exists.");
       const timestamp = options.currentTime();
       const user = {
@@ -243,22 +378,50 @@ function createMemoryUserStore(options) {
         updatedAt: timestamp
       };
       users.set(user.id, user);
-      writeAudit("user.created", user.id, { email: user.email, role: user.role, status: user.status, source: "admin-token" });
+      writeAudit("user.created", user.id, { email: user.email, role: user.role, status: user.status, source: actorUserId ? "session" : "admin-token" }, actorUserId);
       return publicUser(user);
     },
-    async updateUser(userId, updates) {
+    async updateUser(userId, updates, actorUserId = null) {
+      return applyUserUpdates(userId, updates, actorUserId ? "session" : "admin-token", actorUserId);
+    },
+    async updateProfile(userId, updates) {
+      const existing = users.get(userId);
+      if (!existing) return null;
+      if (updates.passwordHash) {
+        if (!updates.currentPassword) throw appError(401, "Current password is required to change your password.");
+        if (!verifyPassword(updates.currentPassword, existing.passwordHash)) throw appError(401, "Current password is incorrect.");
+      }
+      return applyUserUpdates(userId, updates, "profile", userId);
+    },
+    async setUserStatus(userId, status, actorUserId = null) {
+      return this.updateUser(userId, { status }, actorUserId);
+    },
+    async updateLastLogin(userId) {
       const user = users.get(userId);
       if (!user) return null;
-      if (updates.email && emailExists(updates.email, userId)) throw appError(409, "A user with that email already exists.");
       const timestamp = options.currentTime();
-      Object.assign(user, updates);
-      if (updates.passwordHash) user.passwordUpdatedAt = timestamp;
+      user.lastLoginAt = timestamp;
       user.updatedAt = timestamp;
-      writeAudit("user.updated", user.id, { fields: Object.keys(updates), source: "admin-token" });
       return publicUser(user);
     },
-    async setUserStatus(userId, status) {
-      return this.updateUser(userId, { status });
+    async createSession(userId) {
+      const token = createSessionToken();
+      const expiresAt = new Date(Date.now() + sessionTtlMs).toISOString();
+      sessions.set(hashSessionToken(token), { id: options.makeId(), userId, createdAt: options.currentTime(), expiresAt, revokedAt: null });
+      return { token, expiresAt };
+    },
+    async getSessionUser(token) {
+      if (!token) return null;
+      const session = sessions.get(hashSessionToken(token));
+      if (!session || session.revokedAt || new Date(session.expiresAt).getTime() <= Date.now()) return null;
+      const user = users.get(session.userId);
+      if (!user || user.status !== "active") return null;
+      return { user: publicUser(user), expiresAt: session.expiresAt };
+    },
+    async revokeSession(token) {
+      if (!token) return;
+      const session = sessions.get(hashSessionToken(token));
+      if (session) session.revokedAt = options.currentTime();
     },
     async listAuditEvents(targetUserId = "") {
       return auditEvents
@@ -274,28 +437,85 @@ function attachUserManagementRoutes(app, options = {}) {
   const store = createUserManagementStore(options);
   const adminTokenOk = options.adminTokenOk;
 
-  function requireAdmin(req, res) {
-    return typeof adminTokenOk === "function" ? adminTokenOk(req, res) : false;
+  async function getSession(req) {
+    return store.getSessionUser(sessionTokenFromRequest(req));
+  }
+
+  async function requireSession(req, res) {
+    const session = await getSession(req);
+    if (!session) {
+      res.status(401).json({ error: "Login required." });
+      return null;
+    }
+    return session;
+  }
+
+  async function requireAdmin(req, res) {
+    const session = await getSession(req);
+    if (session && ["owner", "admin"].includes(session.user.role)) return session;
+    if (typeof adminTokenOk === "function" && adminTokenOk(req, res)) return { user: null, expiresAt: null };
+    if (!res.headersSent) res.status(403).json({ error: "Admin session required." });
+    return null;
   }
 
   function sendError(res, error, fallback) {
     res.status(error.status || 500).json({ error: error.status ? error.message : fallback });
   }
 
+  app.post("/api/auth/login", async (req, res) => {
+    try {
+      const email = normalizeEmail(req.body?.email);
+      const password = typeof req.body?.password === "string" ? req.body.password : "";
+      if (!email || !password) throw appError(400, "Email and password are required.");
+      const user = await store.getPrivateUserByEmail(email);
+      if (!user || user.status !== "active" || !verifyPassword(password, user.passwordHash)) throw appError(401, "Invalid email or password.");
+      const session = await store.createSession(user.id);
+      const updatedUser = await store.updateLastLogin(user.id);
+      res.json({ sessionToken: session.token, expiresAt: session.expiresAt, user: updatedUser || publicUser(user) });
+    } catch (error) { sendError(res, error, "Could not log in."); }
+  });
+
+  app.post("/api/auth/logout", async (req, res) => {
+    try {
+      await store.revokeSession(sessionTokenFromRequest(req));
+      res.json({ ok: true });
+    } catch (error) { sendError(res, error, "Could not log out."); }
+  });
+
+  app.get("/api/profile", async (req, res) => {
+    try {
+      const session = await requireSession(req, res);
+      if (!session) return;
+      res.json({ user: session.user, expiresAt: session.expiresAt });
+    } catch (error) { sendError(res, error, "Could not load profile."); }
+  });
+
+  app.patch("/api/profile", async (req, res) => {
+    try {
+      const session = await requireSession(req, res);
+      if (!session) return;
+      const user = await store.updateProfile(session.user.id, profileUpdatePayload(req.body || {}));
+      user ? res.json({ user }) : res.status(404).json({ error: "User not found." });
+    } catch (error) { sendError(res, error, "Could not update profile."); }
+  });
+
   app.get("/api/admin/users", async (req, res) => {
-    if (!requireAdmin(req, res)) return;
+    const actor = await requireAdmin(req, res);
+    if (!actor) return;
     try { res.json({ users: await store.listUsers() }); }
     catch (error) { sendError(res, error, "Could not load users."); }
   });
 
   app.post("/api/admin/users", async (req, res) => {
-    if (!requireAdmin(req, res)) return;
-    try { res.status(201).json({ user: await store.createUser(createUserPayload(req.body || {})) }); }
+    const actor = await requireAdmin(req, res);
+    if (!actor) return;
+    try { res.status(201).json({ user: await store.createUser(createUserPayload(req.body || {}), actor.user?.id || null) }); }
     catch (error) { sendError(res, error, "Could not create user."); }
   });
 
   app.get("/api/admin/users/:userId", async (req, res) => {
-    if (!requireAdmin(req, res)) return;
+    const actor = await requireAdmin(req, res);
+    if (!actor) return;
     try {
       const user = await store.getUser(req.params.userId);
       user ? res.json({ user }) : res.status(404).json({ error: "User not found." });
@@ -303,31 +523,35 @@ function attachUserManagementRoutes(app, options = {}) {
   });
 
   app.patch("/api/admin/users/:userId", async (req, res) => {
-    if (!requireAdmin(req, res)) return;
+    const actor = await requireAdmin(req, res);
+    if (!actor) return;
     try {
-      const user = await store.updateUser(req.params.userId, updateUserPayload(req.body || {}));
+      const user = await store.updateUser(req.params.userId, updateUserPayload(req.body || {}), actor.user?.id || null);
       user ? res.json({ user }) : res.status(404).json({ error: "User not found." });
     } catch (error) { sendError(res, error, "Could not update user."); }
   });
 
   app.post("/api/admin/users/:userId/disable", async (req, res) => {
-    if (!requireAdmin(req, res)) return;
+    const actor = await requireAdmin(req, res);
+    if (!actor) return;
     try {
-      const user = await store.setUserStatus(req.params.userId, "disabled");
+      const user = await store.setUserStatus(req.params.userId, "disabled", actor.user?.id || null);
       user ? res.json({ user }) : res.status(404).json({ error: "User not found." });
     } catch (error) { sendError(res, error, "Could not disable user."); }
   });
 
   app.post("/api/admin/users/:userId/reactivate", async (req, res) => {
-    if (!requireAdmin(req, res)) return;
+    const actor = await requireAdmin(req, res);
+    if (!actor) return;
     try {
-      const user = await store.setUserStatus(req.params.userId, "active");
+      const user = await store.setUserStatus(req.params.userId, "active", actor.user?.id || null);
       user ? res.json({ user }) : res.status(404).json({ error: "User not found." });
     } catch (error) { sendError(res, error, "Could not reactivate user."); }
   });
 
   app.get("/api/admin/user-audit-events", async (req, res) => {
-    if (!requireAdmin(req, res)) return;
+    const actor = await requireAdmin(req, res);
+    if (!actor) return;
     try { res.json({ events: await store.listAuditEvents(req.query.targetUserId || "") }); }
     catch (error) { sendError(res, error, "Could not load user audit events."); }
   });
