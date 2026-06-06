@@ -4,6 +4,9 @@ const path = require("path");
 const { test } = require("node:test");
 
 const bubbleColorScript = fs.readFileSync(path.resolve(__dirname, "../public/bubble-color.js"), "utf8");
+const chatAdvancedScript = fs.readFileSync(path.resolve(__dirname, "../public/chat-advanced.js"), "utf8");
+const mediaFixScript = fs.readFileSync(path.resolve(__dirname, "../public/chat-media-fix.js"), "utf8");
+const appScript = fs.readFileSync(path.resolve(__dirname, "../public/app.js"), "utf8");
 
 test("chat identity is collected before creating a chat", () => {
   const createChatWrapper = bubbleColorScript.match(/createChat = async function identityCreateChat[\s\S]+?\n  };\n/);
@@ -25,8 +28,22 @@ test("starting a new chat clears stale stored identity", () => {
   assert.ok(resetIdentity, "new chat identity reset helper should exist");
   assert.match(resetIdentity[0], /selectedNickname = ""/);
   assert.match(resetIdentity[0], /selectedColor = ""/);
-  assert.match(resetIdentity[0], /removeStored\(nicknameKey\)/);
-  assert.match(resetIdentity[0], /removeStored\(colorKey\)/);
+  assert.match(resetIdentity[0], /clearLegacyIdentity\(\)/);
+  assert.match(resetIdentity[0], /removeStored\(scopedKey\(nicknameKey\)\)/);
+  assert.match(resetIdentity[0], /removeStored\(scopedKey\(colorKey\)\)/);
+});
+
+test("chat identity is scoped by conversation and share link", () => {
+  assert.match(bubbleColorScript, /function identityScope/);
+  assert.match(bubbleColorScript, /share-\$\{sharedLinkNumber\}/);
+  assert.match(bubbleColorScript, /function scopedKey/);
+  assert.doesNotMatch(bubbleColorScript, /let selectedColor = normalizeColor\(getStored\(colorKey\)/);
+  assert.match(chatAdvancedScript, /function participantScope/);
+  assert.match(chatAdvancedScript, /participantId\(chatId\)/);
+});
+
+test("message labels are rendered once", () => {
+  assert.match(bubbleColorScript, /bubble\.querySelectorAll\("\.participant-label"\)\.forEach\(\(label\) => label\.remove\(\)\)/);
 });
 
 test("empty-chat sends delegate identity prompting to createChat", () => {
@@ -46,4 +63,12 @@ test("identity prompt cannot be dismissed into a stuck chat start", () => {
   assert.match(bubbleColorScript, /event\.key !== "Escape"/);
   assert.match(bubbleColorScript, /modal\.querySelector\("#bubbleNicknameInput"\)\?\.focus\(\)/);
   assert.doesNotMatch(bubbleColorScript, /modal\.hidden = true;\n  }\);\n\}\)\(\);$/);
+});
+
+test("camera and image attachments use the media fix script", () => {
+  assert.match(appScript, /chat-media-fix\.js\?v=20260607-camera-fix/);
+  assert.match(mediaFixScript, /navigator\.mediaDevices\?\.getUserMedia/);
+  assert.match(mediaFixScript, /selectedAttachments\.push/);
+  assert.match(mediaFixScript, /renderSelectedAttachments\(\)/);
+  assert.match(mediaFixScript, /stopImmediatePropagation\(\)/);
 });
