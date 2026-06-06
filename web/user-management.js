@@ -8,6 +8,9 @@ const sessionTtlMs = 1000 * 60 * 60 * 12;
 const minPasswordLength = 12;
 const loginWindowMs = 1000 * 60 * 15;
 const maxLoginAttempts = 5;
+const maxPhotoUrlLength = 2000;
+const maxPhotoDataUrlLength = 750000;
+const photoDataUrlPattern = /^data:image\/(?:png|jpe?g|gif|webp);base64,[A-Za-z0-9+/=\s]+$/i;
 const loginAttempts = new Map();
 
 function publicUser(row) {
@@ -63,10 +66,18 @@ function isEmail(value) {
 }
 
 function cleanPhotoUrl(value) {
-  const photo = cleanString(value, 600);
+  const photo = typeof value === "string" ? value.trim() : "";
   if (!photo) return "";
-  if (!/^https?:\/\//i.test(photo)) throw appError(400, "Profile photo URL must start with http:// or https://.");
-  return photo;
+  if (/^https?:\/\//i.test(photo)) {
+    if (photo.length > maxPhotoUrlLength) throw appError(400, "Profile photo URL is too long.");
+    return photo;
+  }
+  if (photoDataUrlPattern.test(photo)) {
+    const compactPhoto = photo.replace(/\s/g, "");
+    if (compactPhoto.length > maxPhotoDataUrlLength) throw appError(400, "Uploaded profile photo is too large.");
+    return compactPhoto;
+  }
+  throw appError(400, "Profile photo must be an http:// or https:// URL, or an uploaded PNG, JPG, GIF, or WebP image.");
 }
 
 function cleanRole(value, fallback = "viewer") {
@@ -96,9 +107,7 @@ function hashPassword(password) {
   const salt = crypto.randomBytes(16).toString("hex");
   const hash = crypto.scryptSync(value, salt, 64).toString("hex");
   return `scrypt:${salt}:${hash}`;
-}
-
-function verifyPassword(password, storedHash) {
+}\nfunction verifyPassword(password, storedHash) {
   const value = typeof password === "string" ? password : "";
   if (!value || !storedHash) return false;
   const [scheme, salt, expectedHash] = String(storedHash).split(":");
