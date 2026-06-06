@@ -37,7 +37,7 @@ The `web/` directory contains a Render-ready Express app that serves a plain HTM
 - Admin top headers include a Mac-style current day/time display and a user profile menu with Update Profile and Logout actions.
 - Logout clears the browser-held admin session token and redirects to `/login.html`.
 - Admin pages no longer expose visible token-entry, Login, or Run Review controls; protected backend admin routes still require `ADMIN_TOKEN` for management-only data.
-- Protected user-management backend APIs support listing, creating, loading, updating, disabling, and reactivating users, plus user audit-event reads. The browser User page still needs a later UI phase to expose these records.
+- Protected user-management APIs and the `/user.html` admin UI support listing, searching, creating, editing, disabling, and reactivating users, plus recent user audit-event visibility when an admin session is available.
 - Knowledge base includes source-controlled project knowledge cards plus review-created backend knowledge when an admin session is available.
 - Chat and knowledge search controls filter cached management data, keep selected chats highlighted, and show clear loading and error states during admin actions.
 - Chat failure responses distinguish between saved messages awaiting review and storage failures that could not save the message.
@@ -67,7 +67,7 @@ For persistent PostgreSQL storage, set `DATABASE_URL`. The server creates these 
 - `knowledge_entries`
 - `review_runs`
 
-The `users` and `user_audit_events` tables back protected user-management CRUD APIs. They provide account identity fields, role and status constraints, case-insensitive email uniqueness, password hash storage, login/profile timestamps, and audit-event relationships. The current User page still needs a later frontend phase before real user records can be managed from the browser.
+The `users` and `user_audit_events` tables back protected user-management CRUD APIs and the `/user.html` admin UI. They provide account identity fields, role and status constraints, case-insensitive email uniqueness, password hash storage, login/profile timestamps, and audit-event relationships.
 
 Existing PostgreSQL databases are updated additively with `chats.archived_at` and user-management foundation tables so archived chats can be hidden without deleting chat history and account records can be stored without replacing existing chat data.
 
@@ -138,6 +138,7 @@ The review workflow is implemented as an idempotent backend route and optional b
 - Review-run creation of pending knowledge entries.
 - Admin approval of knowledge entries and approved knowledge retrieval.
 - Protected user-management routes, user creation/listing/loading/updating, duplicate email handling, disable/reactivate actions, and audit-event creation.
+- User page controls for search, create/edit fields, role/status selection, password entry, audit events, and backend API wiring.
 - Admin navigation routes, page ownership for Chat, Knowledge base, User, Settings, nested Attachments, nested Review runs, nested System health, Settings section structure, standardized Settings status badges, the profile dropdown, Update Profile form, Logout redirect, profile-menu-only admin logout, and the Mac-style clock wiring.
 
 ## GitHub Actions / auto-deploy
