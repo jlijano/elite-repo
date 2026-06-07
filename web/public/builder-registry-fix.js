@@ -3,7 +3,7 @@
   const adminKey = "switchboard-admin-token";
   const definitions = [
     ["Home", "home", "/"],
-    ["Chat", "chat", "/chat.html"],
+    ["Chat", "chat", "/", true],
     ["Knowledge base", "knowledge", "/knowledge.html"],
     ["Company", "company", "/company.html"],
     ["Department", "department", "/department.html"],
@@ -23,7 +23,7 @@
     ["User audit", "user-audit", "/user-audit.html"],
     ["Update profile", "update-profile", "/update-profile.html"],
     ["Login", "login", "/login.html"]
-  ].map(([title, slug, path]) => ({ title, slug, path }));
+  ].map(([title, slug, path, applicationOnly = false]) => ({ title, slug, path, applicationOnly }));
 
   let busy = false;
 
@@ -89,6 +89,7 @@
   }
 
   async function ensurePage(definition) {
+    if (definition.applicationOnly) return null;
     const existing = matchPage(await pages(), definition);
     if (existing) return existing;
     const data = await requestJson("/api/builder/pages", {
@@ -122,6 +123,13 @@
   }
 
   async function loadPage(definition, action) {
+    if (definition.applicationOnly) {
+      markRegistryActive(definition);
+      setStatus(`${definition.title} is an application page. Opening the live page instead of creating a Builder draft.`);
+      if (action === "preview") window.open(definition.path, "_blank", "noopener,noreferrer");
+      else window.location.assign(definition.path);
+      return;
+    }
     const page = await ensurePage(definition);
     if (!page?.id) throw new Error(`Could not create or load ${definition.title}.`);
     if (typeof window.loadDraft !== "function") throw new Error("Builder draft loader is not ready yet.");
@@ -141,10 +149,10 @@
       <article class="application-page-item" data-page-slug="${escapeHtml(definition.slug)}">
         <button class="builder-list-item application-page-select" type="button" data-registry-action="edit" data-page-slug="${escapeHtml(definition.slug)}">
           <strong>${escapeHtml(definition.title)}</strong>
-          <small>${escapeHtml(definition.path)}</small>
+          <small>${escapeHtml(definition.path)}${definition.applicationOnly ? " - live app page" : ""}</small>
         </button>
         <div class="application-page-actions" aria-label="${escapeHtml(definition.title)} actions">
-          <button type="button" data-registry-action="edit" data-page-slug="${escapeHtml(definition.slug)}">Edit</button>
+          <button type="button" data-registry-action="edit" data-page-slug="${escapeHtml(definition.slug)}">${definition.applicationOnly ? "Open" : "Edit"}</button>
           <button type="button" data-registry-action="preview" data-page-slug="${escapeHtml(definition.slug)}">Preview</button>
           <a href="${escapeHtml(definition.path)}" target="_blank" rel="noopener">Open</a>
         </div>
