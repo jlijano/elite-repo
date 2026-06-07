@@ -1,40 +1,208 @@
 (() => {
-  function createNavItem(href, icon, label, active) {
-    const item = document.createElement("a");
-    item.className = `nav-item${active ? " active" : ""}`;
-    item.href = href;
-    if (active) item.setAttribute("aria-current", "page");
-    item.innerHTML = `<span aria-hidden="true">${icon}</span>${label}`;
-    return item;
-  }
+  const navGroups = [
+    {
+      type: "link",
+      href: "/chat.html",
+      icon: "□",
+      label: "Chat"
+    },
+    {
+      type: "link",
+      href: "/knowledge.html",
+      icon: "◇",
+      label: "Knowledge base"
+    },
+    {
+      type: "details",
+      key: "entra",
+      icon: "◉",
+      label: "ENTRA",
+      childLabel: "ENTRA navigation",
+      children: [
+        { href: "/company.html", icon: "◌", label: "Company" },
+        { href: "/department.html", icon: "◇", label: "Department" },
+        { href: "/group.html", icon: "▦", label: "Groups" },
+        { href: "/user.html", icon: "◉", label: "Users" }
+      ]
+    },
+    {
+      type: "details",
+      key: "playground",
+      icon: "▦",
+      label: "PLAYGROUND",
+      childLabel: "Playground navigation",
+      children: [
+        { href: "/playground.html", icon: "▦", label: "Overview" },
+        { href: "/playground-projects.html", icon: "▣", label: "Projects" },
+        { href: "/playground-tasks.html", icon: "✓", label: "Tasks" },
+        { href: "/playground-notes.html", icon: "✎", label: "Notes" },
+        { href: "/playground-automation.html", icon: "⚙", label: "Automation" }
+      ]
+    },
+    {
+      type: "details",
+      key: "settings",
+      icon: "⚙",
+      label: "Settings",
+      childLabel: "Settings navigation",
+      children: [
+        { href: "/settings.html", icon: "⚙", label: "Settings" },
+        { href: "/builder.html", icon: "▣", label: "Builder" }
+      ]
+    },
+    {
+      type: "details",
+      key: "reports",
+      icon: "▣",
+      label: "REPORTS",
+      childLabel: "Reports navigation",
+      children: [
+        { href: "/reports.html", icon: "▣", label: "Overview" },
+        { href: "/logs.html", icon: "≡", label: "Logs" },
+        { href: "/review-runs.html", icon: "↻", label: "Review runs" },
+        { href: "/system-health.html", icon: "✚", label: "System health" },
+        { href: "/user-audit.html", icon: "◎", label: "User audit" }
+      ]
+    }
+  ];
 
-  function hasDirectLink(nav, href) {
-    return [...nav.children].some((child) => child.matches?.(`a.nav-item[href="${href}"]`));
-  }
-
-  function normalizeBuilderNavigation() {
-    const nav = document.querySelector(".primary-nav");
-    if (!nav) return;
-
+  function currentPath() {
     const pathname = window.location.pathname || "/";
-    const settingsDetails = nav.querySelector("details.settings-nav");
-    const playgroundLink = nav.querySelector('a.nav-item[href="/playground.html"]');
-    const reportsNav = nav.querySelector("details.reports-nav:not(.settings-nav)");
-
-    if (!hasDirectLink(nav, "/settings.html")) {
-      const settingsLink = createNavItem("/settings.html", "⚙", "Settings", pathname === "/settings.html");
-      nav.insertBefore(settingsLink, reportsNav || playgroundLink?.nextSibling || null);
-    }
-
-    if (!hasDirectLink(nav, "/builder.html")) {
-      const builderLink = createNavItem("/builder.html", "▣", "Builder", pathname === "/builder.html");
-      const settingsLink = nav.querySelector('a.nav-item[href="/settings.html"]');
-      nav.insertBefore(builderLink, reportsNav || settingsLink?.nextSibling || null);
-    }
-
-    if (settingsDetails) settingsDetails.remove();
+    return pathname === "/index.html" ? "/" : pathname;
   }
 
-  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", normalizeBuilderNavigation);
-  else normalizeBuilderNavigation();
+  function isActiveHref(href) {
+    return href === currentPath();
+  }
+
+  function createIcon(icon) {
+    const span = document.createElement("span");
+    span.setAttribute("aria-hidden", "true");
+    span.textContent = icon;
+    return span;
+  }
+
+  function createLink({ href, icon, label }, className = "nav-item") {
+    const link = document.createElement("a");
+    link.className = className;
+    link.href = href;
+    link.dataset.navKey = href;
+    link.append(createIcon(icon), document.createTextNode(label));
+    if (isActiveHref(href)) {
+      link.classList.add("active");
+      link.setAttribute("aria-current", "page");
+    }
+    return link;
+  }
+
+  function createBackLink(className = "nav-item") {
+    const link = document.createElement("a");
+    link.className = `${className} back-nav-item`;
+    link.href = "/";
+    link.dataset.navKey = "/";
+    link.setAttribute("aria-label", "Back to chat");
+    link.setAttribute("title", "Back to chat");
+    link.append(createIcon("←"));
+    const label = document.createElement("span");
+    label.className = "sr-only";
+    label.textContent = "Back to chat";
+    link.append(label);
+    return link;
+  }
+
+  function createDetails(group) {
+    const details = document.createElement("details");
+    details.className = `admin-section-list reports-nav module-nav ${group.key}-nav`;
+    const childActive = group.children.some((child) => isActiveHref(child.href));
+    if (childActive) {
+      details.open = true;
+      details.classList.add("active");
+    }
+
+    const summary = document.createElement("summary");
+    summary.className = `reports-summary module-summary${childActive ? " active" : ""}`;
+    summary.setAttribute("aria-label", `${group.label} module`);
+
+    const label = document.createElement("span");
+    label.className = "reports-summary-label";
+    label.append(createIcon(group.icon), document.createTextNode(group.label));
+
+    const chevron = document.createElement("span");
+    chevron.className = "reports-summary-chevron";
+    chevron.setAttribute("aria-hidden", "true");
+    chevron.textContent = "⌄";
+
+    summary.append(label, chevron);
+
+    const items = document.createElement("div");
+    items.className = `reports-nav-items ${group.key}-nav-items`;
+    items.setAttribute("aria-label", group.childLabel);
+    group.children.forEach((child) => items.appendChild(createLink(child)));
+
+    details.append(summary, items);
+    return details;
+  }
+
+  function normalizeBrand(sidebar) {
+    const topbar = sidebar.querySelector(".sidebar-topbar");
+    if (!topbar) return;
+    const brand = document.createElement("div");
+    brand.className = "brand-lockup sidebar-brand";
+    brand.setAttribute("aria-label", "Switchboard");
+    brand.append(createIcon("★"), document.createTextNode("Switchboard"));
+    brand.firstElementChild.className = "brand-mark";
+    topbar.replaceChildren(brand);
+  }
+
+  function buildNav(nav) {
+    const fragment = document.createDocumentFragment();
+    fragment.appendChild(createBackLink());
+    navGroups.forEach((group) => {
+      fragment.appendChild(group.type === "details" ? createDetails(group) : createLink(group));
+    });
+    nav.replaceChildren(fragment);
+  }
+
+  function buildMobileMenuList(list) {
+    const fragment = document.createDocumentFragment();
+    fragment.appendChild(createBackLink("mobile-admin-menu-link"));
+    navGroups.forEach((group) => {
+      if (group.type === "link") {
+        const item = createLink(group, "mobile-admin-menu-link");
+        item.setAttribute("role", "menuitem");
+        fragment.appendChild(item);
+        return;
+      }
+      group.children.forEach((child) => {
+        const item = createLink({ ...child, label: `${group.label}: ${child.label}` }, "mobile-admin-menu-link");
+        item.setAttribute("role", "menuitem");
+        fragment.appendChild(item);
+      });
+    });
+    list.replaceChildren(fragment);
+  }
+
+  function syncModuleState() {
+    document.querySelectorAll(".admin-shell .module-nav").forEach((details) => {
+      const active = Boolean(details.querySelector(".nav-item.active"));
+      details.classList.toggle("active", active);
+      const summary = details.querySelector(".module-summary");
+      summary?.classList.toggle("active", active);
+      if (active) details.open = true;
+    });
+  }
+
+  function normalizeSidebarNavigation() {
+    document.querySelectorAll(".admin-shell .sidebar").forEach(normalizeBrand);
+    document.querySelectorAll(".admin-shell .primary-nav").forEach(buildNav);
+    document.querySelectorAll(".mobile-admin-menu-list").forEach(buildMobileMenuList);
+    syncModuleState();
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", normalizeSidebarNavigation, { once: true });
+  } else {
+    normalizeSidebarNavigation();
+  }
+  window.addEventListener("pageshow", normalizeSidebarNavigation);
 })();
