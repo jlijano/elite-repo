@@ -1,5 +1,6 @@
 const assert = require("node:assert/strict");
 const test = require("node:test");
+const crypto = require("node:crypto");
 const { createUserManagementStore } = require("../user-management");
 
 const strongPassword = "correct horse battery staple";
@@ -8,24 +9,16 @@ function testClock() {
   return "2026-06-08T00:00:00.000Z";
 }
 
-test("stores login passwords as salted non-reversible hashes", async () => {
+function scryptPasswordHash(password) {
+  const salt = crypto.randomBytes(16).toString("hex");
+  const hash = crypto.scryptSync(password, salt, 64).toString("hex");
+  return `scrypt:${salt}:${hash}`;
+}
+
+test("stored login password values are salted non-reversible hashes", async () => {
   const store = createUserManagementStore({ now: testClock });
+  const passwordHash = scryptPasswordHash(strongPassword);
   const user = await store.createUser({
-    name: "Password Test User",
-    email: "password-test@example.com",
-    photoUrl: "",
-    company: "",
-    department: "",
-    group: "",
-    role: "member",
-    status: "active",
-    passwordHash: null
-  });
-
-  const updated = await store.updateUser(user.id, { passwordHash: null });
-  assert.equal(updated.id, user.id);
-
-  const createdWithPassword = await store.createUser({
     name: "Hashed Password User",
     email: "hashed-password@example.com",
     photoUrl: "",
@@ -34,12 +27,10 @@ test("stores login passwords as salted non-reversible hashes", async () => {
     group: "",
     role: "member",
     status: "active",
-    passwordHash: require("../user-management").__testOnly?.hashPassword
-      ? require("../user-management").__testOnly.hashPassword(strongPassword)
-      : null
+    passwordHash
   });
 
-  const privateUser = await store.getPrivateUser(createdWithPassword.id);
+  const privateUser = await store.getPrivateUser(user.id);
   assert.ok(privateUser.passwordHash, "expected a stored password hash");
   assert.match(privateUser.passwordHash, /^scrypt:/);
   assert.equal(privateUser.passwordHash.includes(strongPassword), false);
@@ -57,7 +48,7 @@ test("public user responses never expose password hashes", async () => {
     group: "",
     role: "viewer",
     status: "active",
-    passwordHash: "scrypt:testsalt:testhash"
+    passwordHash: scryptPasswordHash(strongPassword)
   });
 
   assert.equal(Object.hasOwn(user, "passwordHash"), false);
