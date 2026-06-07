@@ -16,6 +16,7 @@
     <link rel="stylesheet" href="style.css" />
     <link rel="stylesheet" href="admin.css" />
     <link rel="stylesheet" href="builder.css" />
+    <link rel="stylesheet" href="builder-application-pages.css" />
   </head>
   <body data-admin-page="builder">
     <main class="app-shell admin-shell builder-shell" aria-label="Manual website builder">
@@ -83,6 +84,30 @@
             <section class="builder-pane">
               <div class="builder-pane-head"><h2>Pages</h2><span id="pageCount">0</span></div>
               <div class="builder-list" id="pagesList"></div>
+              <div class="builder-list application-pages-list" aria-label="Application pages available for future editing">
+                <h3>Application pages</h3>
+                <a class="builder-list-item" href="/" target="_blank" rel="noopener"><strong>Home</strong><small>/</small></a>
+                <a class="builder-list-item" href="/chat.html" target="_blank" rel="noopener"><strong>Chat</strong><small>/chat.html</small></a>
+                <a class="builder-list-item" href="/knowledge.html" target="_blank" rel="noopener"><strong>Knowledge base</strong><small>/knowledge.html</small></a>
+                <a class="builder-list-item" href="/company.html" target="_blank" rel="noopener"><strong>Company</strong><small>/company.html</small></a>
+                <a class="builder-list-item" href="/department.html" target="_blank" rel="noopener"><strong>Department</strong><small>/department.html</small></a>
+                <a class="builder-list-item" href="/group.html" target="_blank" rel="noopener"><strong>Group</strong><small>/group.html</small></a>
+                <a class="builder-list-item" href="/user.html" target="_blank" rel="noopener"><strong>User management</strong><small>/user.html</small></a>
+                <a class="builder-list-item" href="/playground.html" target="_blank" rel="noopener"><strong>Board</strong><small>/playground.html</small></a>
+                <a class="builder-list-item" href="/playground-projects.html" target="_blank" rel="noopener"><strong>Projects</strong><small>/playground-projects.html</small></a>
+                <a class="builder-list-item" href="/playground-tasks.html" target="_blank" rel="noopener"><strong>Tasks</strong><small>/playground-tasks.html</small></a>
+                <a class="builder-list-item" href="/playground-notes.html" target="_blank" rel="noopener"><strong>Notes</strong><small>/playground-notes.html</small></a>
+                <a class="builder-list-item" href="/playground-automation.html" target="_blank" rel="noopener"><strong>Automation</strong><small>/playground-automation.html</small></a>
+                <a class="builder-list-item" href="/settings.html" target="_blank" rel="noopener"><strong>Settings</strong><small>/settings.html</small></a>
+                <a class="builder-list-item" href="/builder.html" target="_blank" rel="noopener"><strong>Builder</strong><small>/builder.html</small></a>
+                <a class="builder-list-item" href="/reports.html" target="_blank" rel="noopener"><strong>Reports overview</strong><small>/reports.html</small></a>
+                <a class="builder-list-item" href="/logs.html" target="_blank" rel="noopener"><strong>Logs</strong><small>/logs.html</small></a>
+                <a class="builder-list-item" href="/review-runs.html" target="_blank" rel="noopener"><strong>Review runs</strong><small>/review-runs.html</small></a>
+                <a class="builder-list-item" href="/system-health.html" target="_blank" rel="noopener"><strong>System health</strong><small>/system-health.html</small></a>
+                <a class="builder-list-item" href="/user-audit.html" target="_blank" rel="noopener"><strong>User audit</strong><small>/user-audit.html</small></a>
+                <a class="builder-list-item" href="/update-profile.html" target="_blank" rel="noopener"><strong>Update profile</strong><small>/update-profile.html</small></a>
+                <a class="builder-list-item" href="/login.html" target="_blank" rel="noopener"><strong>Login</strong><small>/login.html</small></a>
+              </div>
             </section>
             <section class="builder-pane">
               <div class="builder-pane-head"><h2>Templates</h2><span>Sections</span></div>
@@ -129,6 +154,7 @@
       </section>
     </main>
     <script src="admin-session.js"></script>
+    <script src="builder-compat.js"></script>
     <script src="builder.js"></script>
   </body>
 </html>
