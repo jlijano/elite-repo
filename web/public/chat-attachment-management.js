@@ -79,7 +79,7 @@
 
   function safeDataUrl(attachment = {}) {
     const content = typeof attachment.content === "string" ? attachment.content.trim() : "";
-    return /^data:(?:image|audio|video|application\/pdf)\//i.test(content) ? content : "";
+    return /^data:(?:(?:image|audio|video)\/|application\/pdf(?:[;,]|$))/i.test(content) ? content : "";
   }
 
   function attachmentKind(attachment = {}) {
