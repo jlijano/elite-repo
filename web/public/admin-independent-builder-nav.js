@@ -75,6 +75,86 @@
     return href === currentPath();
   }
 
+  function injectSidebarStyles() {
+    if (document.getElementById("switchboard-sidebar-nav-style")) return;
+    const style = document.createElement("style");
+    style.id = "switchboard-sidebar-nav-style";
+    style.textContent = `
+      .admin-shell .sidebar-brand {
+        cursor: default;
+        user-select: none;
+      }
+
+      .admin-shell .back-nav-item {
+        width: 42px;
+        min-height: 38px;
+        justify-content: center;
+        padding: 0;
+      }
+
+      .admin-shell .back-nav-item span:not(.sr-only) {
+        width: 22px;
+        flex: 0 0 22px;
+      }
+
+      .admin-shell .module-summary .reports-summary-label {
+        min-width: 0;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+
+      .admin-shell .module-summary .reports-summary-label span {
+        width: 22px;
+        flex: 0 0 22px;
+        color: var(--sidebar-muted);
+        text-align: center;
+        font-size: 1.08rem;
+      }
+
+      .admin-shell .module-nav.active > .module-summary {
+        color: var(--sidebar-text);
+        background: var(--sidebar-card);
+        box-shadow: inset 3px 0 0 var(--primary);
+      }
+
+      .admin-shell .module-nav.active > .module-summary .reports-summary-label span {
+        color: var(--primary);
+      }
+
+      .admin-shell .reports-nav-items {
+        margin-left: 16px;
+        padding-left: 10px;
+        border-left: 1px solid var(--sidebar-line);
+      }
+
+      .admin-shell .reports-nav-items .nav-item {
+        min-height: 38px;
+        margin-left: 0;
+        font-size: 0.92rem;
+      }
+
+      @media (max-width: 900px) {
+        .admin-shell .back-nav-item {
+          width: 38px;
+          min-width: 38px;
+          flex-basis: 38px;
+        }
+
+        .admin-shell .module-nav.active > .module-summary {
+          box-shadow: inset 0 -3px 0 var(--primary);
+        }
+
+        .admin-shell .reports-nav-items {
+          margin-left: 0;
+          padding-left: 0;
+          border-left: 0;
+        }
+      }
+    `;
+    document.head.appendChild(style);
+  }
+
   function createIcon(icon) {
     const span = document.createElement("span");
     span.setAttribute("aria-hidden", "true");
@@ -193,6 +273,7 @@
   }
 
   function normalizeSidebarNavigation() {
+    injectSidebarStyles();
     document.querySelectorAll(".admin-shell .sidebar").forEach(normalizeBrand);
     document.querySelectorAll(".admin-shell .primary-nav").forEach(buildNav);
     document.querySelectorAll(".mobile-admin-menu-list").forEach(buildMobileMenuList);
