@@ -4,7 +4,7 @@ const express = require("express");
 
 const originalStatic = express.static;
 const adminScript = '<script src="admin.js"></script>';
-const notificationBellScript = '<script src="admin-notification-bell.js?v=20260607-board-bell"></script>';
+const notificationBellScript = '<script src="admin-notification-bell.js?v=20260608-count-badge"></script>';
 
 function enhancePlaygroundHtml(source) {
   if (typeof source !== "string" || source.includes("admin-notification-bell.js")) return source;
