@@ -101,6 +101,10 @@ button:active:not(:disabled) {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
+  padding: 10px;
+  border: 1px dashed var(--line);
+  border-radius: var(--radius);
+  background: var(--panel-soft);
 }
 
 .button-style-summary {
@@ -108,6 +112,10 @@ button:active:not(:disabled) {
   font-size: 0.78rem;
   line-height: 1.35;
   text-align: right;
+}
+
+#saveButtonStyle:not(:disabled) {
+  border-color: var(--primary);
 }
 
 @media (max-width: 900px) {
