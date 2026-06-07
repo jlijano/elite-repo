@@ -332,6 +332,57 @@ body[data-admin-page^="playground"] .header-actions {
   color: var(--primary);
 }
 
+[data-theme="dark"] body[data-admin-page^="playground"] table,
+[data-theme="dark"] body[data-admin-page^="playground"] thead,
+[data-theme="dark"] body[data-admin-page^="playground"] tbody,
+[data-theme="dark"] body[data-admin-page^="playground"] tr,
+[data-theme="dark"] body[data-admin-page^="playground"] th,
+[data-theme="dark"] body[data-admin-page^="playground"] td {
+  background: var(--pg-row-bg) !important;
+  color: var(--pg-text) !important;
+  border-color: var(--pg-border) !important;
+}
+
+[data-theme="dark"] body[data-admin-page^="playground"] thead,
+[data-theme="dark"] body[data-admin-page^="playground"] th {
+  background: var(--pg-inner-bg) !important;
+  color: var(--pg-muted) !important;
+}
+
+[data-theme="dark"] body[data-admin-page^="playground"] tbody tr:nth-child(even) td {
+  background: #202020 !important;
+}
+
+[data-theme="dark"] body[data-admin-page^="playground"] tbody tr:hover td {
+  background: var(--pg-row-hover) !important;
+}
+
+[data-theme="dark"] body[data-admin-page^="playground"] td strong,
+[data-theme="dark"] body[data-admin-page^="playground"] td span:not(.status-badge):not(.priority),
+[data-theme="dark"] body[data-admin-page^="playground"] td button {
+  color: var(--pg-text) !important;
+}
+
+[data-theme="dark"] body[data-admin-page^="playground"] td small,
+[data-theme="dark"] body[data-admin-page^="playground"] td .muted-cell {
+  color: var(--pg-muted) !important;
+}
+
+[data-theme="dark"] body[data-admin-page^="playground"] table button,
+[data-theme="dark"] body[data-admin-page^="playground"] table .actions button,
+[data-theme="dark"] body[data-admin-page^="playground"] table .task-actions button {
+  border-color: var(--pg-border) !important;
+  background: var(--pg-control-bg) !important;
+  color: var(--pg-text) !important;
+  box-shadow: none !important;
+}
+
+[data-theme="dark"] body[data-admin-page^="playground"] table button:hover:not(:disabled),
+[data-theme="dark"] body[data-admin-page^="playground"] table button:focus-visible:not(:disabled) {
+  border-color: var(--primary) !important;
+  background: var(--pg-control-hover) !important;
+}
+
 .priority.low {
   color: var(--pg-muted);
   background: var(--pg-control-bg);
