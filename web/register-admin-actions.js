@@ -375,7 +375,7 @@ express.static = function patchedStatic(root, options = {}) {
         return sendEnhancedJavaScript(res, root, "entra-management.js", "entra-admin-enhancements.js", ["entra-company-save-error-polish.js", "action-icon-polish.js"]);
       }
       if (pathname === "/admin.js" && fs.existsSync(path.join(root, "admin.js"))) {
-        return sendEnhancedJavaScript(res, root, "admin.js", null, ["chat-purge-enhancements.js", "chat-attachment-management.js", "user-purge-enhancements.js", "user-management-polish.js", "action-icon-polish.js"]);
+        return sendEnhancedJavaScript(res, root, "admin.js", null, ["admin-notification-bell.js", "chat-purge-enhancements.js", "chat-attachment-management.js", "user-purge-enhancements.js", "user-management-polish.js", "action-icon-polish.js"]);
       }
     } catch (error) {
       return next(error);
