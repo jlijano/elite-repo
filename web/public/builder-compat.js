@@ -147,6 +147,233 @@
 })();
 
 (() => {
+  const fieldMarker = "phaseInspectorReady";
+
+  function safeBlock() {
+    const selected = document.querySelector(".canvas-block.selected") || document.querySelector(".layer-list .active[data-layer-id]");
+    const blockId = selected?.dataset.blockId || selected?.dataset.layerId || "";
+    return blockId && typeof window.findBlock === "function" ? window.findBlock(blockId) : null;
+  }
+
+  function escapeHtml(value) {
+    return String(value ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+  }
+
+  function validColor(value, fallback) {
+    return /^#[0-9a-f]{6}$/i.test(value || "") ? value : fallback;
+  }
+
+  function lines(value) {
+    return Array.isArray(value) ? value.map((item) => typeof item === "string" ? item : item?.label || item?.url || "").join("\n") : "";
+  }
+
+  function ensureResponsive(block) {
+    block.responsive = block.responsive && typeof block.responsive === "object" ? block.responsive : {};
+    ["desktop", "tablet", "mobile"].forEach((device) => {
+      block.responsive[device] = block.responsive[device] && typeof block.responsive[device] === "object" ? block.responsive[device] : {};
+    });
+    return block.responsive;
+  }
+
+  function enhanceInspector() {
+    const form = document.getElementById("inspectorForm");
+    const block = safeBlock();
+    if (!form || !block || form.dataset[fieldMarker] === block.id) return;
+
+    const responsive = ensureResponsive(block);
+    const imagesValue = Array.isArray(block.content?.images)
+      ? block.content.images.map((image) => typeof image === "string" ? image : `${image.url || ""}|${image.alt || ""}`).join("\n")
+      : "";
+    const linksValue = lines(block.content?.links);
+    const hidden = block.style?.hidden === true;
+
+    form.dataset[fieldMarker] = block.id;
+    form.insertAdjacentHTML("beforeend", `
+      <fieldset class="builder-inspector-group">
+        <legend>Images and links</legend>
+        <label>Images <small>One per line, use URL or URL|alt text.</small><textarea name="phaseImages">${escapeHtml(imagesValue)}</textarea></label>
+        <label>Links <small>One per line.</small><textarea name="phaseLinks">${escapeHtml(linksValue)}</textarea></label>
+        <div class="form-row">
+          <label>Primary URL<input name="phasePrimaryUrl" value="${escapeHtml(block.content?.primaryUrl || block.content?.buttonUrl || "#")}" /></label>
+          <label>Secondary URL<input name="phaseSecondaryUrl" value="${escapeHtml(block.content?.secondaryUrl || "#")}" /></label>
+        </div>
+      </fieldset>
+      <fieldset class="builder-inspector-group">
+        <legend>Spacing and layout</legend>
+        <div class="form-row">
+          <label>Top spacing<input name="phasePaddingTop" type="number" min="0" max="180" value="${Number(block.style?.paddingTop ?? 56)}" /></label>
+          <label>Bottom spacing<input name="phasePaddingBottom" type="number" min="0" max="180" value="${Number(block.style?.paddingBottom ?? 56)}" /></label>
+        </div>
+        <div class="form-row">
+          <label>Gap<input name="phaseGap" type="number" min="0" max="64" value="${Number(block.style?.gap ?? 14)}" /></label>
+          <label>Radius<input name="phaseRadius" type="number" min="0" max="48" value="${Number(block.style?.radius ?? 8)}" /></label>
+        </div>
+      </fieldset>
+      <fieldset class="builder-inspector-group">
+        <legend>Visibility and devices</legend>
+        <label><input name="phaseHidden" type="checkbox" ${hidden ? "checked" : ""} /> Hide this section</label>
+        <div class="form-row">
+          <label>Desktop columns<input name="phaseDesktopColumns" type="number" min="1" max="6" value="${Number(responsive.desktop.columns || block.style?.columns || 3)}" /></label>
+          <label>Tablet columns<input name="phaseTabletColumns" type="number" min="1" max="4" value="${Number(responsive.tablet.columns || 2)}" /></label>
+        </div>
+        <div class="form-row">
+          <label>Mobile columns<input name="phaseMobileColumns" type="number" min="1" max="2" value="${Number(responsive.mobile.columns || 1)}" /></label>
+          <label>Mobile align<select name="phaseMobileAlign"><option value="">Default</option><option value="left">Left</option><option value="center">Center</option><option value="right">Right</option></select></label>
+        </div>
+        <div class="form-row">
+          <label><input name="phaseHideTablet" type="checkbox" ${responsive.tablet.hidden ? "checked" : ""} /> Hide tablet</label>
+          <label><input name="phaseHideMobile" type="checkbox" ${responsive.mobile.hidden ? "checked" : ""} /> Hide mobile</label>
+        </div>
+      </fieldset>
+    `);
+    form.elements.phaseMobileAlign.value = responsive.mobile.align || "";
+    form.querySelectorAll("[name^='phase']").forEach((field) => {
+      field.addEventListener("input", updateEnhancedInspector);
+      field.addEventListener("change", updateEnhancedInspector);
+    });
+  }
+
+  function updateEnhancedInspector() {
+    const form = document.getElementById("inspectorForm");
+    const block = safeBlock();
+    if (!form || !block) return;
+    const data = new FormData(form);
+    if (typeof window.pushUndo === "function") window.pushUndo();
+
+    block.content = block.content && typeof block.content === "object" ? block.content : {};
+    block.style = block.style && typeof block.style === "object" ? block.style : {};
+    const responsive = ensureResponsive(block);
+
+    block.content.images = String(data.get("phaseImages") || "")
+      .split("\n")
+      .map((row) => row.trim())
+      .filter(Boolean)
+      .map((row) => {
+        const [url, alt = ""] = row.split("|");
+        return { url: url.trim(), alt: alt.trim() };
+      });
+    block.content.links = String(data.get("phaseLinks") || "").split("\n").map((item) => item.trim()).filter(Boolean);
+    block.content.primaryUrl = String(data.get("phasePrimaryUrl") || "#");
+    block.content.secondaryUrl = String(data.get("phaseSecondaryUrl") || "#");
+    block.content.buttonUrl = block.content.primaryUrl;
+
+    block.style.paddingTop = Number(data.get("phasePaddingTop") || 56);
+    block.style.paddingBottom = Number(data.get("phasePaddingBottom") || 56);
+    block.style.gap = Number(data.get("phaseGap") || 14);
+    block.style.radius = Number(data.get("phaseRadius") || 8);
+    block.style.hidden = data.get("phaseHidden") === "on";
+    responsive.desktop.columns = Number(data.get("phaseDesktopColumns") || 3);
+    responsive.tablet.columns = Number(data.get("phaseTabletColumns") || 2);
+    responsive.mobile.columns = Number(data.get("phaseMobileColumns") || 1);
+    responsive.mobile.align = String(data.get("phaseMobileAlign") || "");
+    responsive.tablet.hidden = data.get("phaseHideTablet") === "on";
+    responsive.mobile.hidden = data.get("phaseHideMobile") === "on";
+
+    if (typeof window.markDirty === "function") window.markDirty();
+  }
+
+  function currentDevice() {
+    const frame = document.getElementById("canvasFrame");
+    if (frame?.classList.contains("mobile")) return "mobile";
+    if (frame?.classList.contains("tablet")) return "tablet";
+    return "desktop";
+  }
+
+  function applyCanvasEnhancements() {
+    const device = currentDevice();
+    document.querySelectorAll(".canvas-block[data-block-id]").forEach((section) => {
+      const block = typeof window.findBlock === "function" ? window.findBlock(section.dataset.blockId) : null;
+      if (!block) return;
+      const responsive = ensureResponsive(block);
+      const deviceRules = responsive[device] || {};
+      const hidden = block.style?.hidden || deviceRules.hidden;
+      section.style.display = hidden ? "none" : "";
+      section.style.paddingTop = `${Number(block.style?.paddingTop ?? 56)}px`;
+      section.style.paddingBottom = `${Number(block.style?.paddingBottom ?? 56)}px`;
+      section.querySelector(".canvas-inner")?.style.setProperty("gap", `${Number(block.style?.gap ?? 14)}px`);
+      if (deviceRules.align) section.style.textAlign = deviceRules.align;
+      section.querySelectorAll(".canvas-card").forEach((card) => {
+        card.style.borderRadius = `${Number(block.style?.radius ?? 8)}px`;
+      });
+      const grid = section.querySelector(".canvas-grid");
+      if (grid && deviceRules.columns) grid.style.gridTemplateColumns = `repeat(${deviceRules.columns}, minmax(0, 1fr))`;
+      const inner = section.querySelector(".canvas-inner");
+      if (inner && block.type === "section.gallery" && Array.isArray(block.content?.images) && block.content.images.length && !inner.querySelector(".phase-gallery-images")) {
+        inner.insertAdjacentHTML("beforeend", `<div class="canvas-grid phase-gallery-images">${block.content.images.map((image) => `<article class="canvas-card"><img src="${escapeHtml(image.url || image)}" alt="${escapeHtml(image.alt || "")}" style="width:100%;height:150px;object-fit:cover;border-radius:${Number(block.style?.radius ?? 8)}px"><p>${escapeHtml(image.alt || "Image")}</p></article>`).join("")}</div>`);
+      }
+      if (inner && block.type === "section.cta" && block.content?.buttonLabel && !inner.querySelector(".phase-button-action")) {
+        inner.insertAdjacentHTML("beforeend", `<div class="canvas-actions phase-button-action"><a class="canvas-button" href="${escapeHtml(block.content.buttonUrl || block.content.primaryUrl || "#")}">${escapeHtml(block.content.buttonLabel)}</a></div>`);
+      }
+    });
+  }
+
+  function globalButtonVars() {
+    let style = {};
+    try { style = JSON.parse(localStorage.getItem("switchboard-button-design") || "{}"); } catch (error) { style = {}; }
+    const radius = Number(style.radius ?? 8);
+    const width = Number(style.width ?? 0);
+    const height = Number(style.height ?? 38);
+    const textSize = Number(style.textSize ?? 14);
+    const weight = style.textStyle === "heavy" ? 900 : ["bold", "uppercase"].includes(style.textStyle) ? 800 : 750;
+    return `
+      --global-button-radius:${radius}px;
+      --global-button-width:${width ? `${width}px` : "auto"};
+      --global-button-height:${height}px;
+      --global-button-text-size:${textSize}px;
+      --global-button-weight:${weight};
+      --global-button-transform:${style.textStyle === "uppercase" ? "uppercase" : "none"};
+      --global-button-bg:${validColor(style.background, "#202123")};
+      --global-button-text:${validColor(style.text, "#ffffff")};
+      --global-button-border:${validColor(style.border, "#202123")};
+      --global-button-hover-bg:${validColor(style.hoverBackground, "#2f3338")};
+      --global-button-hover-text:${validColor(style.hoverText, "#ffffff")};
+      --global-button-click-bg:${validColor(style.clickBackground, "#111111")};
+    `;
+  }
+
+  function renderPreviewBlock(block) {
+    const style = block.style || {};
+    if (style.hidden) return "";
+    const content = block.content || {};
+    const css = `background:${escapeHtml(style.background || "#ffffff")};color:${escapeHtml(style.text || "#202123")};text-align:${escapeHtml(style.align || "left")};padding:${Number(style.paddingTop ?? 72)}px max(24px,8vw) ${Number(style.paddingBottom ?? 72)}px`;
+    const heading = escapeHtml(content.heading || block.name || "Section");
+    const body = content.body ? `<p>${escapeHtml(content.body)}</p>` : "";
+    if (block.type === "section.hero") return `<section class="builder-public-section builder-public-hero" style="${css}"><p>${escapeHtml(content.eyebrow || "")}</p><h1>${heading}</h1>${body}<p><a href="${escapeHtml(content.primaryUrl || "#")}">${escapeHtml(content.primaryButton || "Action")}</a></p></section>`;
+    if (block.type === "section.gallery") return `<section class="builder-public-section" style="${css}"><h2>${heading}</h2><div class="builder-public-grid">${(content.images || []).map((image) => `<article><img src="${escapeHtml(image.url || image)}" alt="${escapeHtml(image.alt || "")}"><p>${escapeHtml(image.alt || "Image")}</p></article>`).join("")}</div></section>`;
+    if (block.type === "section.form") return `<section class="builder-public-section" style="${css}"><h2>${heading}</h2><form>${(content.fields || []).map((field) => `<label>${escapeHtml(field.label || field)}<input type="${escapeHtml(field.type || "text")}"></label>`).join("")}<button type="button">${escapeHtml(content.submitLabel || "Submit")}</button></form></section>`;
+    if (["section.services", "section.faq", "section.testimonials"].includes(block.type)) return `<section class="builder-public-section" style="${css}"><h2>${heading}</h2><div class="builder-public-grid">${(content.items || []).map((item) => `<article>${escapeHtml(item)}</article>`).join("")}</div></section>`;
+    if (block.type === "section.footer") return `<footer class="builder-public-section" style="${css}"><h2>${heading}</h2>${body}<div>${(content.links || []).map((link) => `<a href="#">${escapeHtml(link)}</a>`).join(" ")}</div></footer>`;
+    return `<section class="builder-public-section" style="${css}"><h2>${heading}</h2>${body}${content.buttonLabel ? `<p><a href="${escapeHtml(content.buttonUrl || "#")}">${escapeHtml(content.buttonLabel)}</a></p>` : ""}</section>`;
+  }
+
+  function enhancedPreview(event) {
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    const content = typeof window.currentContent === "function" ? window.currentContent() : { blocks: [] };
+    const title = document.getElementById("seoTitle")?.value || "Draft preview";
+    const html = `<!doctype html><html style="${globalButtonVars()}"><head><base href="${location.origin}/"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${escapeHtml(title)}</title><script src="/button-design-global-v2.js" defer></script><style>body{margin:0;font-family:Inter,Arial,sans-serif;color:#202123}.builder-public-section{padding:72px max(24px,8vw)}.builder-public-hero h1{font-size:clamp(2rem,4vw,4rem);margin:12px 0}.builder-public-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px}.builder-public-grid article{border:1px solid #ddd;padding:18px;border-radius:var(--global-button-radius,8px)}.builder-public-grid img{width:100%;height:180px;object-fit:cover;border-radius:var(--global-button-radius,8px)}a,button{display:inline-flex;align-items:center;justify-content:center;min-width:var(--global-button-width,auto);min-height:var(--global-button-height,38px);padding:0 16px;border:1px solid var(--global-button-border,#202123);border-radius:var(--global-button-radius,8px);background:var(--global-button-bg,#202123);color:var(--global-button-text,#fff);font-size:var(--global-button-text-size,14px);font-weight:var(--global-button-weight,800);text-transform:var(--global-button-transform,none);text-decoration:none}a:hover,button:hover{background:var(--global-button-hover-bg,#2f3338);color:var(--global-button-hover-text,#fff)}a:active,button:active{background:var(--global-button-click-bg,#111)}form{display:grid;gap:12px;max-width:640px}label{display:grid;gap:6px}input{padding:11px;border:1px solid #bbb;border-radius:8px}</style></head><body>${(content.blocks || []).map(renderPreviewBlock).join("")}</body></html>`;
+    const win = window.open("", "_blank", "noopener,noreferrer");
+    if (win) {
+      win.document.write(html);
+      win.document.close();
+    }
+  }
+
+  function bootPhaseInspector() {
+    const form = document.getElementById("inspectorForm");
+    const canvas = document.getElementById("builderCanvas");
+    const preview = document.getElementById("previewButton");
+    if (form) new MutationObserver(enhanceInspector).observe(form, { childList: true, subtree: true });
+    if (canvas) new MutationObserver(() => { enhanceInspector(); applyCanvasEnhancements(); }).observe(canvas, { childList: true, subtree: true, attributes: true });
+    preview?.addEventListener("click", enhancedPreview, true);
+    setInterval(() => { enhanceInspector(); applyCanvasEnhancements(); }, 900);
+  }
+
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", bootPhaseInspector);
+  else bootPhaseInspector();
+})();
+
+(() => {
   const sessionKey = "switchboard-session-token";
   const adminKey = "switchboard-admin-token";
   const pages = [
