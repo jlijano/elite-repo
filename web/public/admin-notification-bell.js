@@ -4,6 +4,7 @@
 
   const adminTokenStorageKey = "switchboard-admin-token";
   const sessionTokenStorageKey = "switchboard-session-token";
+  const maxVisibleNotifications = 12;
 
   const style = document.createElement("style");
   style.id = "notificationBellStyles";
@@ -49,15 +50,25 @@
     }
     .notification-bell-indicator {
       position: absolute;
-      top: 8px;
-      right: 9px;
-      width: 8px;
-      height: 8px;
+      top: -4px;
+      right: -6px;
+      min-width: 19px;
+      height: 19px;
+      display: inline-grid;
+      place-items: center;
+      padding: 0 5px;
       border: 2px solid var(--panel-soft);
-      border-radius: 50%;
+      border-radius: 999px;
       background: var(--primary);
+      color: var(--bg);
       box-shadow: 0 0 0 2px rgba(16, 163, 127, 0.18);
+      font-size: 0.62rem;
+      font-weight: 900;
+      line-height: 1;
       pointer-events: none;
+    }
+    .notification-bell-indicator[hidden] {
+      display: none;
     }
     .notification-bell-button:hover .notification-bell-indicator,
     .notification-bell-button:focus-visible .notification-bell-indicator,
@@ -164,8 +175,12 @@
         height: 16px;
       }
       .notification-bell-indicator {
-        top: 7px;
-        right: 8px;
+        top: -5px;
+        right: -7px;
+        min-width: 18px;
+        height: 18px;
+        padding-inline: 4px;
+        font-size: 0.58rem;
       }
     }
     @media (max-width: 340px), (max-height: 420px) and (max-width: 740px) {
@@ -180,8 +195,8 @@
         height: 15px;
       }
       .notification-bell-indicator {
-        width: 7px;
-        height: 7px;
+        min-width: 17px;
+        height: 17px;
       }
     }
   `;
@@ -217,15 +232,20 @@
     return `A new feature has been ${action} | ${module}`;
   }
 
+  function formatCount(value) {
+    const activeCount = Math.max(0, Number(value) || 0);
+    return activeCount > 99 ? "99+" : String(activeCount);
+  }
+
   const wrapper = document.createElement("div");
   wrapper.className = "notification-bell-wrap";
   wrapper.innerHTML = `
-    <button class="notification-bell-button" type="button" title="Notifications" aria-label="Open notifications" aria-haspopup="true" aria-expanded="false" aria-controls="notificationDropdown">
+    <button class="notification-bell-button" type="button" title="Notifications" aria-label="Open notifications, 0 active changes" aria-haspopup="true" aria-expanded="false" aria-controls="notificationDropdown">
       <svg viewBox="0 0 24 24" aria-hidden="true">
         <path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 7h18s-3 0-3-7"></path>
         <path d="M13.7 21a2 2 0 0 1-3.4 0"></path>
       </svg>
-      <span class="notification-bell-indicator" aria-hidden="true"></span>
+      <span class="notification-bell-indicator" id="notificationBellCount" aria-hidden="true" hidden>0</span>
     </button>
     <section class="notification-dropdown" id="notificationDropdown" aria-label="Notifications" hidden>
       <div class="notification-dropdown-head"><div><h2>Notifications</h2><small id="notificationCount">System changes</small></div></div>
@@ -235,17 +255,35 @@
   `;
 
   const button = wrapper.querySelector(".notification-bell-button");
+  const badge = wrapper.querySelector("#notificationBellCount");
   const dropdown = wrapper.querySelector(".notification-dropdown");
   const list = wrapper.querySelector("#notificationList");
   const count = wrapper.querySelector("#notificationCount");
 
+  function setBellCount(activeCount) {
+    const label = `${activeCount} active ${activeCount === 1 ? "change" : "changes"}`;
+    button.setAttribute("aria-label", `Open notifications, ${label}`);
+    count.textContent = label;
+
+    if (!badge) return;
+    if (activeCount > 0) {
+      badge.hidden = false;
+      badge.textContent = formatCount(activeCount);
+      return;
+    }
+    badge.hidden = true;
+    badge.textContent = "0";
+  }
+
   function renderNotifications(changes = []) {
-    count.textContent = `${changes.length} recent ${changes.length === 1 ? "change" : "changes"}`;
-    if (!changes.length) {
+    const activeChanges = Array.isArray(changes) ? changes : [];
+    const visibleChanges = activeChanges.slice(0, maxVisibleNotifications);
+    setBellCount(activeChanges.length);
+    if (!activeChanges.length) {
       list.innerHTML = '<p class="notification-empty">No system changes logged yet.</p>';
       return;
     }
-    list.innerHTML = changes.map((change) => `
+    list.innerHTML = visibleChanges.map((change) => `
       <article class="notification-item">
         <strong>${escapeText(formatNotification(change))}</strong>
         <span>${escapeText(change.summary || "System change")} | ${escapeText(formatDate(change.createdAt))}</span>
@@ -254,13 +292,16 @@
   }
 
   async function loadNotifications() {
-    list.innerHTML = '<p class="notification-empty">Loading notifications...</p>';
+    if (!dropdown.hidden) {
+      list.innerHTML = '<p class="notification-empty">Loading notifications...</p>';
+    }
     try {
-      const response = await fetch("/api/admin/system-change-log?limit=12", { headers: notificationHeaders() });
+      const response = await fetch("/api/admin/system-change-log?limit=100", { headers: notificationHeaders() });
       if (!response.ok) throw new Error("Notifications require an admin session.");
       const data = await response.json();
       renderNotifications(Array.isArray(data.changes) ? data.changes : []);
     } catch (error) {
+      setBellCount(0);
       count.textContent = "Unavailable";
       list.innerHTML = `<p class="notification-empty">${escapeText(error.message || "Notifications could not be loaded.")}</p>`;
     }
@@ -292,7 +333,11 @@
     if (event.key === "Escape") closeDropdown();
   });
 
+  window.addEventListener("focus", loadNotifications);
+
   const profileMenu = headerActions.querySelector(".profile-menu");
   if (profileMenu) headerActions.insertBefore(wrapper, profileMenu);
   else headerActions.appendChild(wrapper);
+
+  loadNotifications();
 })();
