@@ -33,7 +33,7 @@
     { href: "/playground-projects.html", label: "Projects", icon: "▣" },
     { href: "/playground-tasks.html", label: "Tasks", icon: "☑" },
     { href: "/playground-notes.html", label: "Notes", icon: "✎" },
-    { href: "/playground-automation.html", label: "Automation", icon: "⚙" }
+    { href: "/playground-automation.html", label: "Automations", icon: "⚙" }
   ];
 
   function storedSessionToken() {
@@ -106,6 +106,7 @@
       const link = document.createElement("a");
       link.className = `nav-item${page.href === path ? " active" : ""}`;
       link.href = page.href;
+      link.dataset.navKey = page.href;
       if (page.href === path) link.setAttribute("aria-current", "page");
       const icon = document.createElement("span");
       icon.setAttribute("aria-hidden", "true");
@@ -134,6 +135,78 @@
     if (!anchor) return;
     tasksLink?.remove();
     anchor.replaceWith(nestedAdminNav({ className: "playground-nav", summaryLabel: "Playground", itemLabel: "Playground navigation", pages: playgroundPages }));
+  }
+
+  function syncActiveNav() {
+    const path = currentPath();
+    document.querySelectorAll(".admin-shell .nav-item, .mobile-admin-menu-link").forEach((link) => {
+      const href = link.getAttribute("href") || link.dataset.navKey || "";
+      const active = href === path;
+      link.classList.toggle("active", active);
+      if (active) link.setAttribute("aria-current", "page");
+      else link.removeAttribute("aria-current");
+    });
+    document.querySelectorAll(".reports-summary").forEach((summary) => {
+      summary.classList.toggle("active", Boolean(summary.closest("details")?.querySelector(".nav-item.active")));
+    });
+  }
+
+  function protectRealPlaygroundLinks() {
+    document.addEventListener("click", (event) => {
+      const link = event.target?.closest?.('a[href="/playground.html"]');
+      if (!link || currentPath() === "/playground.html") return;
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      window.sessionStorage?.removeItem?.("switchboard-admin-clicked-nav");
+      window.location.assign(link.href);
+    }, true);
+  }
+
+  function resetAdminScrollPosition() {
+    if (!onAdminPage()) return;
+    if ("scrollRestoration" in window.history) window.history.scrollRestoration = "manual";
+    requestAnimationFrame(() => {
+      window.scrollTo(0, 0);
+      document.querySelectorAll(".admin-scroll, .builder-canvas-frame, .builder-list, .builder-form").forEach((element) => {
+        element.scrollTop = 0;
+        element.scrollLeft = 0;
+      });
+    });
+  }
+
+  function normalizeQuickActions() {
+    const adminPage = String(document.body?.dataset.adminPage || "");
+    if (!adminPage.startsWith("playground")) return;
+    const actions = document.querySelector(".admin-header .header-actions");
+    if (!actions || actions.dataset.normalizedPlaygroundActions === "true") return;
+    const profileMenu = actions.querySelector(".profile-menu");
+    actions.querySelectorAll("a.secondary-action").forEach((link) => {
+      if (playgroundPages.some((page) => page.href === link.getAttribute("href"))) link.remove();
+    });
+    for (const page of playgroundPages) {
+      const link = document.createElement("a");
+      link.className = "secondary-action";
+      link.href = page.href;
+      link.textContent = page.label;
+      link.title = page.label;
+      if (page.href === currentPath()) {
+        link.classList.add("active");
+        link.setAttribute("aria-current", "page");
+        link.setAttribute("aria-disabled", "true");
+      }
+      if (profileMenu) actions.insertBefore(link, profileMenu);
+      else actions.appendChild(link);
+    }
+    actions.dataset.normalizedPlaygroundActions = "true";
+  }
+
+  function annotateDisabledRefreshButtons() {
+    document.querySelectorAll('button:disabled').forEach((button) => {
+      if (!/refresh/i.test(button.textContent || "")) return;
+      const message = "Refresh is unavailable until this page has a live data source or pending request to reload.";
+      button.title = message;
+      button.setAttribute("aria-label", `${button.textContent.trim()}. ${message}`);
+    });
   }
 
   function updateRoleAwareMenu(user) {
@@ -192,8 +265,13 @@
   }
 
   const nativeFetch = window.fetch.bind(window);
+  protectRealPlaygroundLinks();
+  resetAdminScrollPosition();
   initPlaygroundNav();
   initEntraNav();
+  syncActiveNav();
+  normalizeQuickActions();
+  annotateDisabledRefreshButtons();
 
   window.fetch = async (input, options = {}) => {
     const url = typeof input === "string" ? input : input?.url || "";
@@ -223,6 +301,10 @@
     document.addEventListener("DOMContentLoaded", bootstrapSession, { once: true });
     document.addEventListener("DOMContentLoaded", initPlaygroundNav, { once: true });
     document.addEventListener("DOMContentLoaded", initEntraNav, { once: true });
+    document.addEventListener("DOMContentLoaded", syncActiveNav, { once: true });
+    document.addEventListener("DOMContentLoaded", resetAdminScrollPosition, { once: true });
+    document.addEventListener("DOMContentLoaded", normalizeQuickActions, { once: true });
+    document.addEventListener("DOMContentLoaded", annotateDisabledRefreshButtons, { once: true });
     document.addEventListener("DOMContentLoaded", loadUserOrgFields, { once: true });
     document.addEventListener("DOMContentLoaded", loadPlaygroundCrud, { once: true });
   } else {
