@@ -1,0 +1,25 @@
+.application-pages-list {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--line);
+}
+
+.application-pages-list h3 {
+  margin: 0 0 8px;
+  color: var(--muted);
+  font-size: 0.76rem;
+  line-height: 1.2;
+  text-transform: uppercase;
+}
+
+.application-pages-list .builder-list-item {
+  text-decoration: none;
+}
+
+.application-pages-list .builder-list-item strong {
+  color: var(--text);
+}
+
+.application-pages-list .builder-list-item small {
+  overflow-wrap: anywhere;
+}
