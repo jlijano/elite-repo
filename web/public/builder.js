@@ -12,7 +12,8 @@ const state = {
   undoStack: [],
   redoStack: [],
   autosaveTimer: null,
-  dirty: false
+  dirty: false,
+  inspectorUndoPrimed: false
 };
 
 const els = {
@@ -46,7 +47,7 @@ function setStatus(message, error = false) {
 }
 
 function escapeHtml(value) {
-  return String(value ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+  return String(value ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/\"/g, "&quot;");
 }
 
 function authHeaders() {
@@ -88,10 +89,15 @@ function pushUndo() {
   state.redoStack = [];
 }
 
-function markDirty() {
+function markDirty(options = {}) {
   state.dirty = true;
   scheduleAutosave();
-  renderAll();
+  if (options.render !== false) renderAll();
+}
+
+function renderEditorSurface() {
+  renderCanvas();
+  renderLayers();
 }
 
 function scheduleAutosave() {
@@ -101,6 +107,36 @@ function scheduleAutosave() {
 
 function blockLabel(block) {
   return block.name || block.type.replace("section.", "");
+}
+
+function itemLabel(item) {
+  if (typeof item === "string") return item;
+  return item?.label || item?.title || item?.name || item?.heading || item?.text || item?.id || "Item";
+}
+
+function fieldLabel(field) {
+  if (typeof field === "string") return field;
+  return field?.label || field?.name || field?.id || field?.type || "Field";
+}
+
+function slugify(value, fallback = "field") {
+  const slug = String(value || "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 48);
+  return slug || fallback;
+}
+
+function fieldsToTextarea(fields) {
+  return Array.isArray(fields) ? fields.map(fieldLabel).join("\n") : "";
+}
+
+function textareaToFields(value, existingFields = []) {
+  const existing = Array.isArray(existingFields) ? existingFields : [];
+  return String(value || "").split("\n").map((item) => item.trim()).filter(Boolean).map((label, index) => {
+    const current = existing.find((field) => fieldLabel(field) === label) || existing[index];
+    if (current && typeof current === "object") {
+      return { ...current, id: current.id || slugify(label, `field-${index + 1}`), label };
+    }
+    return { id: slugify(label, `field-${index + 1}`), label, type: "text", required: false };
+  });
 }
 
 function renderPages() {
@@ -117,7 +153,11 @@ function renderTemplates() {
 }
 
 function renderMedia() {
-  els.mediaList.innerHTML = state.media.map((asset) => `<button class="builder-list-item" type="button" data-media-id="${escapeHtml(asset.id)}"><strong>${escapeHtml(asset.fileName)}</strong><small>${escapeHtml(asset.mimeType)} - ${escapeHtml(asset.altText || "No alt text")}</small></button>`).join("");
+  els.mediaList.innerHTML = state.media.map((asset) => {
+    const name = asset.fileName || asset.name || asset.title || "Media asset";
+    const type = asset.mimeType || asset.type || asset.metadata?.mimeType || "Asset";
+    return `<button class="builder-list-item" type="button" data-media-id="${escapeHtml(asset.id)}"><strong>${escapeHtml(name)}</strong><small>${escapeHtml(type)} - ${escapeHtml(asset.altText || "No alt text")}</small></button>`;
+  }).join("");
 }
 
 function renderCanvas() {
@@ -141,10 +181,10 @@ function renderCanvasBlock(block) {
   const body = escapeHtml(block.content?.body || "");
   const items = Array.isArray(block.content?.items) ? block.content.items : [];
   const cardGrid = ["section.services", "section.gallery", "section.testimonials", "section.faq"].includes(block.type)
-    ? `<div class="canvas-grid">${items.map((item) => `<article class="canvas-card"><strong>${escapeHtml(item)}</strong><p>${block.type === "section.faq" ? "Answer placeholder" : "Reusable block content"}</p></article>`).join("")}</div>`
+    ? `<div class="canvas-grid">${items.map((item) => `<article class="canvas-card"><strong>${escapeHtml(itemLabel(item))}</strong><p>${block.type === "section.faq" ? "Answer placeholder" : "Reusable block content"}</p></article>`).join("")}</div>`
     : "";
   const form = block.type === "section.form"
-    ? `<div class="canvas-grid">${(block.content.fields || []).map((field) => `<article class="canvas-card"><strong>${escapeHtml(field)}</strong><p>Form field</p></article>`).join("")}</div>`
+    ? `<div class="canvas-grid">${(block.content.fields || []).map((field) => `<article class="canvas-card"><strong>${escapeHtml(fieldLabel(field))}</strong><p>Form field</p></article>`).join("")}</div>`
     : "";
   const actions = block.content?.primaryButton || block.content?.secondaryButton
     ? `<div class="canvas-actions">${block.content.primaryButton ? `<a class="canvas-button" href="#">${escapeHtml(block.content.primaryButton)}</a>` : ""}${block.content.secondaryButton ? `<a class="canvas-button" href="#">${escapeHtml(block.content.secondaryButton)}</a>` : ""}</div>`
@@ -164,25 +204,37 @@ function renderLayers() {
 
 function renderInspector() {
   const block = findBlock(state.selectedBlockId);
+  state.inspectorUndoPrimed = false;
   if (!block) {
     els.selectedBlockType.textContent = "Page";
     els.inspectorForm.innerHTML = `<p class="empty">Select a section on the canvas or layer tree.</p>`;
     return;
   }
   els.selectedBlockType.textContent = block.type;
-  const itemsValue = Array.isArray(block.content.items) ? block.content.items.join("\n") : Array.isArray(block.content.fields) ? block.content.fields.join("\n") : "";
+  const itemsValue = block.type === "section.form"
+    ? fieldsToTextarea(block.content.fields)
+    : Array.isArray(block.content.items) ? block.content.items.map(itemLabel).join("\n") : "";
   els.inspectorForm.innerHTML = `
     <label>Section name<input name="name" value="${escapeHtml(block.name)}" /></label>
     <label>Heading<input name="heading" value="${escapeHtml(block.content.heading || "")}" /></label>
     <label>Body<textarea name="body">${escapeHtml(block.content.body || "")}</textarea></label>
     <label>Eyebrow<input name="eyebrow" value="${escapeHtml(block.content.eyebrow || "")}" /></label>
     <div class="form-row"><label>Primary button<input name="primaryButton" value="${escapeHtml(block.content.primaryButton || "")}" /></label><label>Secondary button<input name="secondaryButton" value="${escapeHtml(block.content.secondaryButton || "")}" /></label></div>
-    <label>Items or fields<textarea name="items">${escapeHtml(itemsValue)}</textarea></label>
+    <label>${block.type === "section.form" ? "Form fields" : "Items"}<textarea name="items">${escapeHtml(itemsValue)}</textarea></label>
     <div class="form-row"><label>Background<input name="background" type="color" value="${escapeHtml(validColor(block.style.background, "#ffffff"))}" /></label><label>Text<input name="text" type="color" value="${escapeHtml(validColor(block.style.text, "#202123"))}" /></label></div>
     <label>Alignment<select name="align"><option value="left">Left</option><option value="center">Center</option><option value="right">Right</option></select></label>
   `;
   els.inspectorForm.elements.align.value = block.style.align || "left";
-  els.inspectorForm.querySelectorAll("input, textarea, select").forEach((field) => field.addEventListener("input", updateSelectedBlockFromInspector));
+  els.inspectorForm.querySelectorAll("input, textarea, select").forEach((field) => {
+    field.addEventListener("focus", beginInspectorEdit);
+    field.addEventListener("input", updateSelectedBlockFromInspector);
+  });
+}
+
+function beginInspectorEdit() {
+  if (state.inspectorUndoPrimed) return;
+  pushUndo();
+  state.inspectorUndoPrimed = true;
 }
 
 function validColor(value, fallback) {
@@ -198,9 +250,14 @@ function renderSeo() {
   els.pageSlug.value = state.currentPage.slug || "";
 }
 
+function warningMessage(warning) {
+  if (typeof warning === "string") return warning;
+  return warning?.message || warning?.error || JSON.stringify(warning);
+}
+
 function renderWarnings(warnings = []) {
   els.warningCount.textContent = String(warnings.length);
-  els.warnings.innerHTML = warnings.length ? warnings.map((warning) => `<div class="warning-item">${escapeHtml(warning)}</div>`).join("") : `<div class="builder-list-item"><strong>No publish warnings</strong><small>Validation runs again when publishing.</small></div>`;
+  els.warnings.innerHTML = warnings.length ? warnings.map((warning) => `<div class="warning-item">${escapeHtml(warningMessage(warning))}</div>`).join("") : `<div class="builder-list-item"><strong>No publish warnings</strong><small>Validation runs again when publishing.</small></div>`;
 }
 
 function renderAll() {
@@ -221,7 +278,6 @@ function selectBlock(blockId) {
 function updateSelectedBlockFromInspector() {
   const block = findBlock(state.selectedBlockId);
   if (!block) return;
-  pushUndo();
   const form = new FormData(els.inspectorForm);
   block.name = String(form.get("name") || block.name).trim() || block.name;
   block.content.heading = String(form.get("heading") || "");
@@ -229,13 +285,16 @@ function updateSelectedBlockFromInspector() {
   block.content.eyebrow = String(form.get("eyebrow") || "");
   block.content.primaryButton = String(form.get("primaryButton") || "");
   block.content.secondaryButton = String(form.get("secondaryButton") || "");
-  const items = String(form.get("items") || "").split("\n").map((item) => item.trim()).filter(Boolean);
-  if (block.type === "section.form") block.content.fields = items;
+  const itemText = String(form.get("items") || "");
+  const items = itemText.split("\n").map((item) => item.trim()).filter(Boolean);
+  if (block.type === "section.form") block.content.fields = textareaToFields(itemText, block.content.fields);
   else block.content.items = items;
   block.style.background = String(form.get("background") || block.style.background);
   block.style.text = String(form.get("text") || block.style.text);
   block.style.align = String(form.get("align") || "left");
-  markDirty();
+  state.dirty = true;
+  scheduleAutosave();
+  renderEditorSurface();
 }
 
 function updatePageSeoFromForm() {
@@ -307,6 +366,7 @@ async function loadDraft(pageId) {
   state.undoStack = [];
   state.redoStack = [];
   state.dirty = false;
+  state.inspectorUndoPrimed = false;
   renderWarnings([]);
   renderAll();
   setStatus(`Loaded draft: ${state.currentPage.title}`);
@@ -341,11 +401,14 @@ async function publishPage() {
   await saveDraft();
   const result = await requestJson(`/api/builder/pages/${encodeURIComponent(state.currentPage.id)}/publish`, { method: "POST", body: "{}" });
   renderWarnings(result.warnings || []);
-  const index = state.pages.findIndex((page) => page.id === result.page.id);
-  if (index >= 0) state.pages[index] = result.page;
-  state.currentPage = result.page;
+  if (result.page) {
+    const index = state.pages.findIndex((page) => page.id === result.page.id);
+    if (index >= 0) state.pages[index] = result.page;
+    state.currentPage = result.page;
+  }
   renderAll();
-  setStatus(`Published version ${result.version.versionNumber}.`);
+  if (result.version?.versionNumber) setStatus(`Published version ${result.version.versionNumber}.`);
+  else setStatus(result.published === false ? "Publish validation found warnings. Review them before publishing." : "Publish request completed.", result.published === false);
 }
 
 function previewPage() {
@@ -362,7 +425,20 @@ async function addMedia() {
   if (!contentUrl || !contentUrl.trim()) return;
   const fileName = window.prompt("File name", contentUrl.split("/").pop() || "Media asset") || "Media asset";
   const altText = window.prompt("Alt text", "") || "";
-  const data = await requestJson("/api/builder/media", { method: "POST", body: JSON.stringify({ contentUrl: contentUrl.trim(), fileName, altText, mimeType: "image/*", fileSize: 0 }) });
+  const data = await requestJson("/api/builder/media", {
+    method: "POST",
+    body: JSON.stringify({
+      url: contentUrl.trim(),
+      name: fileName,
+      type: "image",
+      altText,
+      metadata: { mimeType: "image/*", fileSize: 0 },
+      contentUrl: contentUrl.trim(),
+      fileName,
+      mimeType: "image/*",
+      fileSize: 0
+    })
+  });
   state.media.unshift(data.asset);
   renderMedia();
   setStatus("Media asset added.");
@@ -405,7 +481,7 @@ document.getElementById("addMediaButton").addEventListener("click", () => addMed
 document.getElementById("undoButton").addEventListener("click", undo);
 document.getElementById("redoButton").addEventListener("click", redo);
 els.pageSelect.addEventListener("change", () => loadDraft(els.pageSelect.value).catch((error) => setStatus(error.message, true)));
-els.seoForm.addEventListener("input", () => { updatePageSeoFromForm(); markDirty(); });
+els.seoForm.addEventListener("input", () => { updatePageSeoFromForm(); markDirty({ render: false }); });
 document.querySelectorAll("[data-viewport]").forEach((button) => button.addEventListener("click", () => setViewport(button.dataset.viewport)));
 els.profileMenuButton?.addEventListener("click", toggleProfileDropdown);
 document.querySelectorAll(".profile-logout").forEach((button) => button.addEventListener("click", () => { sessionStorage.removeItem(sessionTokenStorageKey); sessionStorage.removeItem(adminTokenStorageKey); window.location.href = "/login.html"; }));
