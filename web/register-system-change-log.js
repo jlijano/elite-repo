@@ -136,6 +136,19 @@ async function listSystemChanges(limit = 50, options = {}) {
   return result.rows.map(changeRow);
 }
 
+async function countSystemChanges(options = {}) {
+  const includeArchived = Boolean(options.includeArchived);
+  const db = await ensureSchema();
+  if (!db) {
+    return memoryChanges.filter((change) => includeArchived || !change.archivedAt).length;
+  }
+  const sql = includeArchived
+    ? "SELECT COUNT(*)::int AS total FROM system_change_log"
+    : "SELECT COUNT(*)::int AS total FROM system_change_log WHERE archived_at IS NULL";
+  const result = await db.query(sql);
+  return Number(result.rows[0]?.total) || 0;
+}
+
 async function markSystemChange(changeId, field) {
   const allowedFields = new Set(["archived_at", "implemented_at", "revert_requested_at"]);
   if (!allowedFields.has(field)) return null;
@@ -209,14 +222,20 @@ function attachSystemChangeRoutes(app) {
       console.warn("System change log write failed:", error.message);
       return null;
     }),
-    list: listSystemChanges
+    list: listSystemChanges,
+    count: countSystemChanges
   };
 
   attachSystemChangeCapture(app);
 
   app.get("/api/admin/system-change-log", requireAdmin, async (req, res, next) => {
     try {
-      res.json({ changes: await listSystemChanges(req.query.limit, { includeArchived: req.query.includeArchived === "true" }) });
+      const options = { includeArchived: req.query.includeArchived === "true" };
+      const [changes, total] = await Promise.all([
+        listSystemChanges(req.query.limit, options),
+        countSystemChanges(options)
+      ]);
+      res.json({ changes, total });
     } catch (error) {
       next(error);
     }
