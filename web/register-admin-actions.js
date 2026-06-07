@@ -149,6 +149,24 @@ function databaseRequired(res) {
   res.status(501).json({ error: "Permanent delete and company logo storage require persistent database storage." });
 }
 
+function attachmentIndexFromRequest(req) {
+  const index = Number(req.params.attachmentIndex);
+  return Number.isInteger(index) && index >= 0 ? index : -1;
+}
+
+function safeMessageContext(row = {}) {
+  const context = row.context && typeof row.context === "object" && !Array.isArray(row.context) ? row.context : {};
+  return { ...context };
+}
+
+function attachmentSummary(attachment = {}) {
+  return {
+    name: attachment.name || "Attachment",
+    type: attachment.type || "",
+    size: Number(attachment.size || 0)
+  };
+}
+
 function attachAdminActionRoutes(app) {
   app.get("/api/admin/entra/company-logos", requireAdmin, async (req, res, next) => {
     try {
@@ -208,6 +226,44 @@ function attachAdminActionRoutes(app) {
         ok: true,
         deleted: { id: result.rows[0].id, title: result.rows[0].title }
       });
+    } catch (error) {
+      return next(error);
+    }
+  });
+
+  app.delete("/api/admin/chats/:chatId/messages/:messageId/attachments/:attachmentIndex", requireAdmin, async (req, res, next) => {
+    try {
+      const db = await ensureSchema();
+      if (!db) return databaseRequired(res);
+      const attachmentIndex = attachmentIndexFromRequest(req);
+      if (attachmentIndex < 0) return res.status(400).json({ error: "A valid attachment index is required." });
+
+      const existing = await db.query(
+        "SELECT id, chat_id, context FROM chat_messages WHERE chat_id = $1 AND id = $2",
+        [req.params.chatId, req.params.messageId]
+      );
+      if (!existing.rowCount) return res.status(404).json({ error: "Message not found." });
+
+      const context = safeMessageContext(existing.rows[0]);
+      const attachments = Array.isArray(context.attachments) ? [...context.attachments] : [];
+      if (attachmentIndex >= attachments.length) return res.status(404).json({ error: "Attachment not found." });
+
+      const [deleted] = attachments.splice(attachmentIndex, 1);
+      context.attachments = attachments;
+      await db.query(
+        "UPDATE chat_messages SET context = $3 WHERE chat_id = $1 AND id = $2",
+        [req.params.chatId, req.params.messageId, context]
+      );
+      await db.query("UPDATE chats SET updated_at = NOW() WHERE id = $1", [req.params.chatId]);
+      await writeAuditSafely(db, "chat.attachment.deleted", {
+        ...actorDetails(req),
+        targetName: deleted?.name || "Attachment",
+        chatId: req.params.chatId,
+        messageId: req.params.messageId,
+        attachmentIndex,
+        source: "chat-admin-attachments"
+      });
+      return res.json({ ok: true, deleted: attachmentSummary(deleted) });
     } catch (error) {
       return next(error);
     }
@@ -319,7 +375,7 @@ express.static = function patchedStatic(root, options = {}) {
         return sendEnhancedJavaScript(res, root, "entra-management.js", "entra-admin-enhancements.js", ["entra-company-save-error-polish.js", "action-icon-polish.js"]);
       }
       if (pathname === "/admin.js" && fs.existsSync(path.join(root, "admin.js"))) {
-        return sendEnhancedJavaScript(res, root, "admin.js", null, ["chat-purge-enhancements.js", "user-purge-enhancements.js", "user-management-polish.js", "action-icon-polish.js"]);
+        return sendEnhancedJavaScript(res, root, "admin.js", null, ["chat-purge-enhancements.js", "chat-attachment-management.js", "user-purge-enhancements.js", "user-management-polish.js", "action-icon-polish.js"]);
       }
     } catch (error) {
       return next(error);
