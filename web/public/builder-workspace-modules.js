@@ -15,8 +15,8 @@
   if (modules.length < 3) return;
 
   let layout = readLayout();
-  let dragModuleId = "";
   let resizeState = null;
+  let panelDragState = null;
   let toastTimer = null;
 
   function clamp(value, min, max) {
@@ -27,7 +27,7 @@
 
   function defaultLayout() {
     return {
-      enabled: false,
+      enabled: true,
       order: ["library", "canvas", "settings"],
       widths: { library: 280, canvas: 0, settings: 330 }
     };
@@ -52,7 +52,7 @@
     const order = Array.isArray(value.order) ? value.order.filter((id) => validIds.includes(id)) : [];
     validIds.forEach((id) => { if (!order.includes(id)) order.push(id); });
     return {
-      enabled: Boolean(value.enabled),
+      enabled: value.enabled !== false,
       order: order.slice(0, validIds.length),
       widths: {
         library: clamp(value.widths?.library ?? fallback.widths.library, 220, 520),
@@ -79,6 +79,10 @@
     return modules.find((item) => item.id === moduleId) || null;
   }
 
+  function orderedModules() {
+    return layout.order.map(moduleById).filter(Boolean);
+  }
+
   function setupModules() {
     modules.forEach((item) => {
       item.element.dataset.workspaceModule = item.id;
@@ -89,10 +93,10 @@
         bar.className = "workspace-module-bar";
         bar.innerHTML = `
           <span class="workspace-module-title">${item.label}</span>
-          <button class="workspace-module-handle" type="button" aria-label="Drag ${item.label}" title="Drag and snap">⇅</button>
-          <button class="workspace-module-action" type="button" data-module-action="left" aria-label="Move ${item.label} left" title="Move left">←</button>
-          <button class="workspace-module-action" type="button" data-module-action="right" aria-label="Move ${item.label} right" title="Move right">→</button>
-          <button class="workspace-module-resize" type="button" aria-label="Resize ${item.label}" title="Drag to resize">↔</button>
+          <button class="workspace-module-handle" type="button" aria-label="Drag ${item.label}" title="Drag and snap">Drag</button>
+          <button class="workspace-module-action" type="button" data-module-action="left" aria-label="Move ${item.label} left" title="Move left">Left</button>
+          <button class="workspace-module-action" type="button" data-module-action="right" aria-label="Move ${item.label} right" title="Move right">Right</button>
+          <button class="workspace-module-resize" type="button" aria-label="Resize ${item.label}" title="Drag to resize">Resize</button>
         `;
         item.element.appendChild(bar);
       }
@@ -105,7 +109,7 @@
     control.className = "builder-workspace-template-control";
     control.id = "builderWorkspaceControl";
     control.innerHTML = `
-      <button id="toggleWorkspaceCustomize" type="button" aria-pressed="false">Customize layout</button>
+      <button id="toggleWorkspaceCustomize" type="button" aria-pressed="true">Customize layout</button>
       <button id="saveWorkspaceTemplate" type="button">Save space template</button>
       <select id="workspaceTemplateSelect" aria-label="Apply builder space template"><option value="">Templates</option></select>
       <button id="applyWorkspaceTemplate" type="button">Apply</button>
@@ -127,7 +131,7 @@
   }
 
   function escapeOption(value) {
-    return String(value || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+    return String(value || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/\"/g, "&quot;");
   }
 
   function applyLayout(nextLayout = layout) {
@@ -139,19 +143,18 @@
       const item = moduleById(moduleId);
       if (item) item.element.style.order = String(index + 1);
     }
-    const orderedModules = layout.order.map(moduleById).filter(Boolean);
-    orderedModules.forEach((item, index) => {
+    const nextOrderedModules = orderedModules();
+    nextOrderedModules.forEach((item, index) => {
       const width = item.id === "canvas" && !layout.widths.canvas ? "minmax(360px, 1fr)" : `${layout.widths[item.id] || item.defaultWidth || 320}px`;
       workbench.style.setProperty(`--builder-module-col-${index + 1}`, width);
     });
-    modules.forEach((item) => { item.element.draggable = layout.enabled; });
   }
 
   function toggleCustomizeMode() {
     layout.enabled = !layout.enabled;
     saveLayout(layout);
     applyLayout(layout);
-    showToast(layout.enabled ? "Customize layout enabled. Drag panels to snap them into place." : "Customize layout disabled.");
+    showToast(layout.enabled ? "Customize layout enabled. Drag panel handles to snap them into place." : "Customize layout disabled.");
   }
 
   function moveModule(moduleId, direction) {
@@ -217,48 +220,85 @@
 
   function setupEvents() {
     modules.forEach((item) => {
-      item.element.addEventListener("dragstart", (event) => {
-        if (!layout.enabled) return event.preventDefault();
-        dragModuleId = item.id;
-        item.element.classList.add("builder-module-dragging");
-        event.dataTransfer.effectAllowed = "move";
-        event.dataTransfer.setData("text/plain", item.id);
-      });
-      item.element.addEventListener("dragend", () => {
-        dragModuleId = "";
-        item.element.classList.remove("builder-module-dragging");
-        modules.forEach((moduleItem) => moduleItem.element.classList.remove("builder-module-drop-target"));
-      });
-      item.element.addEventListener("dragover", (event) => {
-        if (!layout.enabled || !dragModuleId || dragModuleId === item.id) return;
-        event.preventDefault();
-        item.element.classList.add("builder-module-drop-target");
-      });
-      item.element.addEventListener("dragleave", () => item.element.classList.remove("builder-module-drop-target"));
-      item.element.addEventListener("drop", (event) => {
-        if (!layout.enabled || !dragModuleId || dragModuleId === item.id) return;
-        event.preventDefault();
-        item.element.classList.remove("builder-module-drop-target");
-        const from = layout.order.indexOf(dragModuleId);
-        const to = layout.order.indexOf(item.id);
-        if (from < 0 || to < 0) return;
-        layout.order.splice(from, 1);
-        layout.order.splice(to, 0, dragModuleId);
-        saveLayout(layout);
-        applyLayout(layout);
-        flashModule(dragModuleId);
-        showToast("Panel snapped into place.");
-      });
-      item.element.querySelector(".workspace-module-handle")?.addEventListener("pointerdown", () => {
-        if (layout.enabled) item.element.draggable = true;
-      });
+      item.element.querySelector(".workspace-module-handle")?.addEventListener("pointerdown", (event) => startPanelDrag(event, item.id));
       item.element.querySelectorAll("[data-module-action]").forEach((button) => {
         button.addEventListener("click", () => moveModule(item.id, button.dataset.moduleAction));
       });
       item.element.querySelector(".workspace-module-resize")?.addEventListener("pointerdown", (event) => startResize(event, item.id));
     });
-    window.addEventListener("pointermove", resizeMove);
-    window.addEventListener("pointerup", stopResize);
+    window.addEventListener("pointermove", (event) => {
+      panelDragMove(event);
+      resizeMove(event);
+    });
+    window.addEventListener("pointerup", () => {
+      stopPanelDrag();
+      stopResize();
+    });
+  }
+
+  function startPanelDrag(event, moduleId) {
+    if (!layout.enabled) {
+      layout.enabled = true;
+      applyLayout(layout);
+    }
+    const item = moduleById(moduleId);
+    if (!item) return;
+    event.preventDefault();
+    event.currentTarget.setPointerCapture?.(event.pointerId);
+    panelDragState = {
+      moduleId,
+      currentTargetId: moduleId,
+      startX: event.clientX,
+      startY: event.clientY
+    };
+    item.element.classList.add("builder-module-dragging");
+    document.body.classList.add("builder-module-drag-active");
+  }
+
+  function panelDragMove(event) {
+    if (!panelDragState) return;
+    const target = closestModuleFromPoint(event.clientX, event.clientY);
+    modules.forEach((moduleItem) => moduleItem.element.classList.remove("builder-module-drop-target"));
+    if (!target || target.id === panelDragState.moduleId) return;
+    target.element.classList.add("builder-module-drop-target");
+    panelDragState.currentTargetId = target.id;
+  }
+
+  function stopPanelDrag() {
+    if (!panelDragState) return;
+    const sourceId = panelDragState.moduleId;
+    const targetId = panelDragState.currentTargetId;
+    const source = moduleById(sourceId);
+    modules.forEach((moduleItem) => moduleItem.element.classList.remove("builder-module-drop-target", "builder-module-dragging"));
+    document.body.classList.remove("builder-module-drag-active");
+    panelDragState = null;
+    if (!targetId || targetId === sourceId) return;
+    const from = layout.order.indexOf(sourceId);
+    const to = layout.order.indexOf(targetId);
+    if (from < 0 || to < 0) return;
+    layout.order.splice(from, 1);
+    layout.order.splice(to, 0, sourceId);
+    saveLayout(layout);
+    applyLayout(layout);
+    flashModule(sourceId);
+    showToast(`${source?.label || "Panel"} snapped into place.`);
+  }
+
+  function closestModuleFromPoint(x, y) {
+    let best = null;
+    let bestDistance = Number.POSITIVE_INFINITY;
+    modules.forEach((item) => {
+      const rect = item.element.getBoundingClientRect();
+      const inside = x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom;
+      const centerX = rect.left + rect.width / 2;
+      const centerY = rect.top + rect.height / 2;
+      const distance = Math.hypot(x - centerX, y - centerY);
+      if (inside || distance < bestDistance) {
+        best = item;
+        bestDistance = inside ? 0 : distance;
+      }
+    });
+    return best;
   }
 
   function startResize(event, moduleId) {
@@ -267,6 +307,7 @@
       applyLayout(layout);
     }
     event.preventDefault();
+    event.currentTarget.setPointerCapture?.(event.pointerId);
     resizeState = {
       moduleId,
       startX: event.clientX,
