@@ -470,3 +470,180 @@ body[data-admin-page^="playground"] .header-actions {
     border-radius: 6px;
   }
 }
+
+body[data-admin-page^="playground"] table {
+  width: 100%;
+  border-collapse: collapse;
+  color: var(--pg-text);
+  font-size: 0.88rem;
+}
+
+body[data-admin-page^="playground"] table th,
+body[data-admin-page^="playground"] table td,
+body[data-admin-page^="playground"] .playground-task-table th,
+body[data-admin-page^="playground"] .playground-task-table td {
+  padding: 12px;
+  border-bottom: 1px solid var(--pg-border);
+  text-align: left;
+  vertical-align: middle;
+}
+
+body[data-admin-page^="playground"] table th {
+  background: var(--pg-inner-bg) !important;
+  color: var(--pg-muted) !important;
+  font-size: 0.76rem;
+  font-weight: 900;
+  line-height: 1.2;
+  text-transform: uppercase;
+}
+
+body[data-admin-page^="playground"] table td {
+  background: var(--pg-row-bg) !important;
+  color: var(--pg-text) !important;
+  font-size: 0.88rem;
+  font-weight: 400;
+  line-height: 1.4;
+}
+
+body[data-admin-page^="playground"] table tbody tr:nth-child(even) td {
+  background: color-mix(in srgb, var(--pg-row-bg) 88%, var(--pg-inner-bg)) !important;
+}
+
+body[data-admin-page^="playground"] table tbody tr:hover td {
+  background: var(--pg-row-hover) !important;
+}
+
+body[data-admin-page^="playground"] table td:first-child,
+body[data-admin-page^="playground"] .playground-task-table td:first-child,
+body[data-admin-page^="playground"] .playground-task-table th:first-child {
+  padding-left: 12px;
+}
+
+body[data-admin-page^="playground"] table td strong {
+  display: block;
+  color: var(--pg-text) !important;
+  font-size: 0.9rem;
+  font-weight: 900;
+  line-height: 1.25;
+}
+
+body[data-admin-page^="playground"] table td small,
+body[data-admin-page^="playground"] table td p,
+body[data-admin-page^="playground"] table .muted-cell {
+  display: block;
+  margin-top: 3px;
+  color: var(--pg-muted) !important;
+  font-size: 0.78rem;
+  font-weight: 650;
+  line-height: 1.35;
+}
+
+body[data-admin-page^="playground"] table .status-badge {
+  min-height: 26px;
+  padding: 0 9px;
+  border-color: rgba(16, 163, 127, 0.24) !important;
+  background: rgba(16, 163, 127, 0.12) !important;
+  color: var(--primary) !important;
+  font-size: 0.76rem;
+  font-weight: 900;
+}
+
+body[data-admin-page^="playground"] table .status-ready {
+  border-color: rgba(25, 195, 125, 0.28) !important;
+  background: rgba(25, 195, 125, 0.14) !important;
+  color: var(--success) !important;
+}
+
+body[data-admin-page^="playground"] table .status-storage {
+  border-color: rgba(242, 166, 13, 0.3) !important;
+  background: rgba(242, 166, 13, 0.14) !important;
+  color: var(--warning) !important;
+}
+
+body[data-admin-page^="playground"] table .status-public {
+  border-color: var(--pg-border) !important;
+  background: var(--pg-control-bg) !important;
+  color: var(--pg-muted) !important;
+}
+
+body[data-admin-page^="playground"] table .priority {
+  min-height: 26px;
+  padding: 0 9px;
+  border-width: 1px;
+  border-style: solid;
+  font-size: 0.76rem;
+  font-weight: 900;
+}
+
+body[data-admin-page^="playground"] table .priority.high {
+  border-color: var(--error-line);
+  background: var(--error-bg);
+  color: var(--error);
+}
+
+body[data-admin-page^="playground"] table .priority.medium {
+  border-color: rgba(242, 166, 13, 0.3);
+  background: rgba(242, 166, 13, 0.14);
+  color: var(--warning);
+}
+
+body[data-admin-page^="playground"] table .priority.low {
+  border-color: var(--pg-border);
+  background: var(--pg-control-bg);
+  color: var(--pg-muted);
+}
+
+body[data-admin-page^="playground"] table .actions,
+body[data-admin-page^="playground"] table .task-actions,
+body[data-admin-page^="playground"] table td:has(> button) {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: nowrap;
+}
+
+body[data-admin-page^="playground"] table button,
+body[data-admin-page^="playground"] table .actions button,
+body[data-admin-page^="playground"] table .task-actions button {
+  min-height: 34px;
+  padding: 0 10px;
+  border: 1px solid var(--pg-border) !important;
+  border-radius: var(--radius);
+  background: var(--pg-control-bg) !important;
+  color: var(--pg-text) !important;
+  box-shadow: none !important;
+  font-size: 0.86rem;
+  font-weight: 800;
+}
+
+body[data-admin-page^="playground"] table button:hover:not(:disabled),
+body[data-admin-page^="playground"] table button:focus-visible:not(:disabled) {
+  border-color: var(--primary) !important;
+  background: var(--pg-control-hover) !important;
+  color: var(--pg-text) !important;
+}
+
+body[data-admin-page^="playground"] table button:disabled {
+  opacity: 0.58;
+}
+
+@media (max-width: 760px) {
+  body[data-admin-page^="playground"] table th,
+  body[data-admin-page^="playground"] table td,
+  body[data-admin-page^="playground"] .playground-task-table th,
+  body[data-admin-page^="playground"] .playground-task-table td {
+    padding: 10px;
+  }
+
+  body[data-admin-page^="playground"] table .actions,
+  body[data-admin-page^="playground"] table .task-actions,
+  body[data-admin-page^="playground"] table td:has(> button) {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  body[data-admin-page^="playground"] table button {
+    width: 100%;
+  }
+}
