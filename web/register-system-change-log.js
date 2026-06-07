@@ -35,7 +35,9 @@ function titleCase(value) {
 }
 
 function singularResource(value) {
-  return titleCase(String(value || "system").replace(/s$/, ""));
+  const resource = String(value || "system");
+  const singular = resource.endsWith("ies") ? `${resource.slice(0, -3)}y` : resource.replace(/s$/, "");
+  return titleCase(singular);
 }
 
 function changeRow(row = {}) {
