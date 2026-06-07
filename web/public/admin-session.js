@@ -174,6 +174,20 @@
     });
   }
 
+  function normalizePlaygroundLabels() {
+    document.querySelectorAll('a[href="/playground-automation.html"]').forEach((link) => {
+      const label = "Automations";
+      const icon = link.querySelector('span[aria-hidden="true"]');
+      if (icon) {
+        link.textContent = "";
+        link.append(icon, label);
+      } else {
+        link.textContent = label;
+      }
+      link.title = label;
+    });
+  }
+
   function normalizeQuickActions() {
     const adminPage = String(document.body?.dataset.adminPage || "");
     if (!adminPage.startsWith("playground")) return;
@@ -207,6 +221,79 @@
       button.title = message;
       button.setAttribute("aria-label", `${button.textContent.trim()}. ${message}`);
     });
+  }
+
+  function polishUserManagementLayout() {
+    if (document.body?.dataset.adminPage !== "user") return;
+    const search = document.getElementById("userSearch");
+    if (search) {
+      search.placeholder = "Search name, email, or username";
+      search.title = "Search name, email, or username";
+    }
+    if (document.getElementById("userManagementResponsivePatch")) return;
+    const style = document.createElement("style");
+    style.id = "userManagementResponsivePatch";
+    style.textContent = `
+      body[data-admin-page="user"] .user-toolbar input {
+        min-width: 240px;
+        text-overflow: ellipsis;
+      }
+      body[data-admin-page="user"] .users-table-wrap {
+        width: 100%;
+        overflow-x: auto;
+        scrollbar-width: thin;
+      }
+      body[data-admin-page="user"] .users-table {
+        min-width: 0 !important;
+        table-layout: fixed;
+      }
+      body[data-admin-page="user"] .users-table th,
+      body[data-admin-page="user"] .users-table td {
+        overflow-wrap: anywhere;
+      }
+      body[data-admin-page="user"] .users-table th:nth-child(1),
+      body[data-admin-page="user"] .users-table td:nth-child(1) { width: 20%; }
+      body[data-admin-page="user"] .users-table th:nth-child(2),
+      body[data-admin-page="user"] .users-table td:nth-child(2) { width: 27%; }
+      body[data-admin-page="user"] .users-table th:nth-child(3),
+      body[data-admin-page="user"] .users-table td:nth-child(3) { width: 12%; }
+      body[data-admin-page="user"] .users-table th:nth-child(4),
+      body[data-admin-page="user"] .users-table td:nth-child(4) { width: 12%; }
+      body[data-admin-page="user"] .users-table th:nth-child(5),
+      body[data-admin-page="user"] .users-table td:nth-child(5) { width: 14%; }
+      body[data-admin-page="user"] .users-table th:nth-child(6),
+      body[data-admin-page="user"] .users-table td:nth-child(6) { width: 15%; }
+      body[data-admin-page="user"] .users-table td:last-child {
+        min-width: 140px;
+        padding-left: 12px;
+      }
+      body[data-admin-page="user"] .users-table .actions {
+        justify-content: flex-end;
+        flex-wrap: wrap !important;
+        gap: 8px;
+      }
+      @media (max-width: 900px) {
+        body[data-admin-page="user"] .users-table {
+          min-width: 720px !important;
+          table-layout: auto;
+        }
+      }
+      @media (max-width: 720px) {
+        body[data-admin-page="user"] .users-table td:last-child {
+          min-width: 0;
+          padding-left: 0;
+        }
+      }
+    `;
+    document.head.appendChild(style);
+  }
+
+  function runLayoutPolish() {
+    syncActiveNav();
+    normalizePlaygroundLabels();
+    normalizeQuickActions();
+    annotateDisabledRefreshButtons();
+    polishUserManagementLayout();
   }
 
   function updateRoleAwareMenu(user) {
@@ -269,9 +356,7 @@
   resetAdminScrollPosition();
   initPlaygroundNav();
   initEntraNav();
-  syncActiveNav();
-  normalizeQuickActions();
-  annotateDisabledRefreshButtons();
+  runLayoutPolish();
 
   window.fetch = async (input, options = {}) => {
     const url = typeof input === "string" ? input : input?.url || "";
@@ -301,15 +386,14 @@
     document.addEventListener("DOMContentLoaded", bootstrapSession, { once: true });
     document.addEventListener("DOMContentLoaded", initPlaygroundNav, { once: true });
     document.addEventListener("DOMContentLoaded", initEntraNav, { once: true });
-    document.addEventListener("DOMContentLoaded", syncActiveNav, { once: true });
+    document.addEventListener("DOMContentLoaded", runLayoutPolish, { once: true });
     document.addEventListener("DOMContentLoaded", resetAdminScrollPosition, { once: true });
-    document.addEventListener("DOMContentLoaded", normalizeQuickActions, { once: true });
-    document.addEventListener("DOMContentLoaded", annotateDisabledRefreshButtons, { once: true });
     document.addEventListener("DOMContentLoaded", loadUserOrgFields, { once: true });
     document.addEventListener("DOMContentLoaded", loadPlaygroundCrud, { once: true });
   } else {
     bootstrapSession();
     loadUserOrgFields();
     loadPlaygroundCrud();
+    runLayoutPolish();
   }
 })();
