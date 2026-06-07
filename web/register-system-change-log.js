@@ -199,11 +199,29 @@ function injectNotificationBell(html) {
   return html.replace("</body>", `    ${notificationBellScript}\n  </body>`);
 }
 
+function sendEnhancedReportsScript(res, root) {
+  const reportsPath = path.join(root, "reports.js");
+  const systemUiPath = path.join(root, "system-change-log-ui.js");
+  const parts = [fs.readFileSync(reportsPath, "utf8")];
+  if (fs.existsSync(systemUiPath)) parts.push(fs.readFileSync(systemUiPath, "utf8"));
+  res.type("application/javascript");
+  res.set("Cache-Control", "public, max-age=0, must-revalidate");
+  res.send(parts.join("\n\n"));
+}
+
 express.static = function patchedStatic(root, options) {
   const staticMiddleware = originalStatic.call(this, root, options);
 
   return function systemChangeStatic(req, res, next) {
     const requestPath = (req.path || req.url.split("?")[0] || "").replace(/^\//, "");
+    if (["GET", "HEAD"].includes(req.method) && requestPath === "reports.js") {
+      try {
+        return sendEnhancedReportsScript(res, root);
+      } catch (error) {
+        return next(error);
+      }
+    }
+
     const shouldEnhanceHtml = ["GET", "HEAD"].includes(req.method) && requestPath.endsWith(".html");
     if (!shouldEnhanceHtml) return staticMiddleware(req, res, next);
 
