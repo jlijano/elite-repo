@@ -15,6 +15,179 @@
   backdrop-filter: none;
 }
 
+.sidebar,
+.mobile-admin-menu-panel {
+  max-width: 100vw;
+  overflow-x: hidden;
+  scrollbar-gutter: stable;
+}
+
+.sidebar .primary-nav,
+.mobile-admin-menu-list {
+  min-width: 0;
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+.sidebar .nav-item,
+.mobile-admin-menu-link,
+.sidebar .agent-pill,
+.sidebar .chat-list-item,
+.sidebar .workspace-card,
+.sidebar .directory-card {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.sidebar .nav-item,
+.mobile-admin-menu-link {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding-right: 12px;
+  overflow: hidden;
+}
+
+.sidebar .nav-item > span[aria-hidden="true"],
+.mobile-admin-menu-link > span[aria-hidden="true"],
+.sidebar .reports-summary-label > span[aria-hidden="true"] {
+  position: relative;
+  width: 22px;
+  height: 22px;
+  flex: 0 0 22px;
+  display: inline-grid;
+  place-items: center;
+  color: var(--sidebar-muted);
+  font-size: 0;
+  line-height: 1;
+  text-align: center;
+}
+
+.sidebar .nav-item.active > span[aria-hidden="true"],
+.mobile-admin-menu-link.active > span[aria-hidden="true"],
+.sidebar .reports-summary.active .reports-summary-label > span[aria-hidden="true"] {
+  color: var(--primary);
+}
+
+.sidebar .nav-item > span[aria-hidden="true"]::before,
+.mobile-admin-menu-link > span[aria-hidden="true"]::before,
+.sidebar .reports-summary-label > span[aria-hidden="true"]::before {
+  content: "";
+  width: 13px;
+  height: 13px;
+  display: block;
+  border: 2px solid currentColor;
+  border-radius: 3px;
+}
+
+.sidebar .nav-item[href="/"] > span[aria-hidden="true"]::before,
+.mobile-admin-menu-link[href="/"] > span[aria-hidden="true"]::before {
+  width: 11px;
+  height: 11px;
+  border-top: 0;
+  border-right: 0;
+  border-radius: 0;
+  transform: rotate(45deg);
+}
+
+.sidebar .nav-item[href="/knowledge.html"] > span[aria-hidden="true"]::before,
+.mobile-admin-menu-link[href="/knowledge.html"] > span[aria-hidden="true"]::before,
+.sidebar .nav-item[href="/department.html"] > span[aria-hidden="true"]::before,
+.mobile-admin-menu-link[href="/department.html"] > span[aria-hidden="true"]::before {
+  border-radius: 2px;
+  transform: rotate(45deg) scale(0.82);
+}
+
+.sidebar .nav-item[href="/user.html"] > span[aria-hidden="true"]::before,
+.mobile-admin-menu-link[href="/user.html"] > span[aria-hidden="true"]::before,
+.sidebar .reports-summary-label > span[aria-hidden="true"]::before {
+  border-radius: 50%;
+}
+
+.sidebar .nav-item[href="/group.html"] > span[aria-hidden="true"]::before,
+.mobile-admin-menu-link[href="/group.html"] > span[aria-hidden="true"]::before,
+.sidebar .nav-item[href="/playground.html"] > span[aria-hidden="true"]::before,
+.mobile-admin-menu-link[href="/playground.html"] > span[aria-hidden="true"]::before {
+  width: 14px;
+  height: 14px;
+  border-width: 1px;
+  background-image:
+    linear-gradient(currentColor 1px, transparent 1px),
+    linear-gradient(90deg, currentColor 1px, transparent 1px);
+  background-size: 5px 5px;
+}
+
+.sidebar .nav-item[href="/playground-tasks.html"] > span[aria-hidden="true"]::after,
+.mobile-admin-menu-link[href="/playground-tasks.html"] > span[aria-hidden="true"]::after {
+  content: "";
+  position: absolute;
+  width: 8px;
+  height: 4px;
+  border-left: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+  transform: rotate(-45deg) translate(1px, -1px);
+}
+
+.sidebar .nav-item[href="/playground-notes.html"] > span[aria-hidden="true"]::before,
+.mobile-admin-menu-link[href="/playground-notes.html"] > span[aria-hidden="true"]::before {
+  width: 14px;
+  height: 4px;
+  border-radius: 2px;
+  transform: rotate(45deg);
+  background: currentColor;
+}
+
+.sidebar .nav-item[href="/playground-automation.html"] > span[aria-hidden="true"]::before,
+.mobile-admin-menu-link[href="/playground-automation.html"] > span[aria-hidden="true"]::before,
+.sidebar .nav-item[href="/settings.html"] > span[aria-hidden="true"]::before,
+.mobile-admin-menu-link[href="/settings.html"] > span[aria-hidden="true"]::before {
+  border-radius: 50%;
+  outline: 2px dotted currentColor;
+  outline-offset: 2px;
+}
+
+.sidebar .nav-item[href="/logs.html"] > span[aria-hidden="true"]::before,
+.mobile-admin-menu-link[href="/logs.html"] > span[aria-hidden="true"]::before {
+  width: 14px;
+  height: 10px;
+  border-left: 0;
+  border-right: 0;
+  border-radius: 0;
+}
+
+.sidebar .nav-item[href="/review-runs.html"] > span[aria-hidden="true"]::before,
+.mobile-admin-menu-link[href="/review-runs.html"] > span[aria-hidden="true"]::before {
+  border-radius: 50%;
+  border-right-color: transparent;
+}
+
+.sidebar .nav-item[href="/system-health.html"] > span[aria-hidden="true"]::before,
+.mobile-admin-menu-link[href="/system-health.html"] > span[aria-hidden="true"]::before {
+  width: 14px;
+  height: 3px;
+  border: 0;
+  border-radius: 1px;
+  background: currentColor;
+}
+
+.sidebar .nav-item[href="/system-health.html"] > span[aria-hidden="true"]::after,
+.mobile-admin-menu-link[href="/system-health.html"] > span[aria-hidden="true"]::after {
+  content: "";
+  position: absolute;
+  width: 3px;
+  height: 14px;
+  border-radius: 1px;
+  background: currentColor;
+}
+
+.sidebar .nav-item[href="/user-audit.html"] > span[aria-hidden="true"]::before,
+.mobile-admin-menu-link[href="/user-audit.html"] > span[aria-hidden="true"]::before {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  box-shadow: inset 0 0 0 3px var(--sidebar-bg);
+}
+
 .sidebar .nav-item span,
 .sidebar .agent-pill span:first-child {
   color: var(--sidebar-muted);
@@ -25,9 +198,11 @@
 .sidebar .agent-pill:hover,
 .sidebar .agent-pill:focus-visible,
 .sidebar .chat-list-row:hover .chat-list-item,
-.sidebar .chat-list-row:focus-within .chat-list-item {
+.sidebar .chat-list-row:focus-within .chat-list-item,
+.mobile-admin-menu-link:hover,
+.mobile-admin-menu-link:focus-visible {
   border-color: transparent;
-  background: var(--sidebar-card);
+  background: rgba(255, 255, 255, 0.055);
   box-shadow: none;
   color: var(--sidebar-text);
   transform: none;
@@ -35,12 +210,13 @@
 
 .sidebar .nav-item.active,
 .sidebar .agent-pill.active,
-.sidebar .chat-list-row.active .chat-list-item {
+.sidebar .chat-list-row.active .chat-list-item,
+.mobile-admin-menu-link.active {
   border-color: transparent;
-  background: rgba(16, 163, 127, 0.12);
+  background: rgba(16, 163, 127, 0.14);
   box-shadow: inset 3px 0 0 var(--primary);
   color: var(--sidebar-text);
-  font-weight: 400;
+  font-weight: 650;
   transform: none;
 }
 
@@ -59,15 +235,88 @@
   transform: none;
 }
 
+.sidebar .reports-summary {
+  min-width: 0;
+  padding-inline: 6px 10px;
+  border: 1px solid transparent;
+}
+
+.sidebar .reports-summary-label {
+  min-width: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sidebar .reports-summary-chevron {
+  position: relative;
+  width: 18px;
+  height: 18px;
+  flex: 0 0 18px;
+  color: var(--sidebar-subtle);
+  font-size: 0;
+}
+
+.sidebar .reports-summary-chevron::before {
+  content: "";
+  position: absolute;
+  inset: 4px 5px 6px;
+  border-right: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+  transform: rotate(45deg);
+  transition: transform 160ms ease;
+}
+
+.sidebar .reports-nav:not([open]) .reports-summary-chevron::before {
+  transform: rotate(-45deg);
+}
+
 .sidebar .reports-summary:hover,
 .sidebar .reports-summary:focus-visible,
 .sidebar details > summary:hover,
 .sidebar details > summary:focus-visible {
-  background: var(--sidebar-card);
+  border-color: transparent;
+  background: rgba(255, 255, 255, 0.055);
+  box-shadow: none;
+}
+
+.sidebar .reports-summary.active {
+  background: transparent;
+  color: var(--sidebar-subtle);
   box-shadow: none;
 }
 
 .sidebar .workspace-card,
 .sidebar .directory-card {
   box-shadow: none;
+  overflow: hidden;
+}
+
+.sidebar .workspace-card strong,
+.sidebar .workspace-card small,
+.sidebar .directory-card p,
+.sidebar .status-row span:last-child,
+.sidebar .nav-item,
+.mobile-admin-menu-link {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 900px) {
+  .mobile-admin-menu-panel {
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+  }
+
+  .mobile-admin-menu-list {
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .mobile-admin-menu-link.active {
+    box-shadow: inset 3px 0 0 var(--primary) !important;
+  }
 }
