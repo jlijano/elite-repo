@@ -5,6 +5,7 @@ const originalReadFile = fs.readFile;
 const indexPath = path.join(__dirname, "public", "index.html");
 const voiceButtonMarkup = '<button type="button" id="voiceMessageButton" role="menuitem"><span aria-hidden="true">●</span>Send voice message</button>';
 const playgroundButtonMarkup = `${voiceButtonMarkup}\n              <button type="button" id="playgroundMenuButton" role="menuitem"><span aria-hidden="true">▦</span>Add playground</button>`;
+const guestAccessScript = '<script src="/guest-access.js?v=20260607-guest-access" defer></script>';
 const playgroundScript = `
     <script id="chatPlaygroundMenuScript">
       (() => {
@@ -45,6 +46,9 @@ function enhanceIndexHtml(source) {
   let html = source;
   if (!html.includes('id="playgroundMenuButton"') && html.includes(voiceButtonMarkup)) {
     html = html.replace(voiceButtonMarkup, playgroundButtonMarkup);
+  }
+  if (!html.includes("guest-access.js")) {
+    html = html.replace("</body>", `  ${guestAccessScript}\n</body>`);
   }
   if (!html.includes('id="chatPlaygroundMenuScript"')) {
     html = html.replace("</body>", `${playgroundScript}\n  </body>`);
