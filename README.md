@@ -59,7 +59,7 @@ The `web/` directory contains a Render-ready Express app that serves a plain HTM
 - Admin Settings Access and security summarizes current browser access, protected-route behavior, secret-handling policy, and safe links to login, profile, and audit pages without displaying secret values.
 - Admin Settings Review runs shows protected/empty states plus summary cards for last run, messages reviewed, knowledge entries created, and failed runs before the detailed run history.
 - Admin Settings System health and Diagnostics show actionable health hints, live refresh/theme/access diagnostics, and secret-display guardrails.
-- Admin top headers include a Mac-style current day/time display and a user profile menu with Update Profile and Logout actions.
+- Admin top headers include a Mac-style current day/time display, a notification bell icon, and a user profile menu with Update Profile and Logout actions.
 - Logout clears browser-held auth tokens, calls backend session logout when a user session is present, and redirects to `/login.html`.
 - Admin pages no longer expose visible token-entry, Login, or Run Review controls; protected backend admin routes accept either `ADMIN_TOKEN` or an active owner/admin user session.
 - Protected user-management APIs and the `/user.html` admin UI support table-based user listing and searching, Add user modal creation, drag-and-drop or click-to-select profile photo upload with preview, hosted profile photo URLs, user editing, disabling, and reactivating when `ADMIN_TOKEN` or an active owner/admin user session is available.
