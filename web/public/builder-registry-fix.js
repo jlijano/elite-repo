@@ -56,6 +56,10 @@
     }
   }
 
+  function escapeHtml(value) {
+    return String(value ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/\"/g, "&quot;");
+  }
+
   function makeBlock(type, name, content, style = {}) {
     return { id: crypto.randomUUID(), type, name, content, style, responsive: {}, children: [] };
   }
@@ -111,18 +115,45 @@
     select.value = page.id;
   }
 
+  function markRegistryActive(definition) {
+    document.querySelectorAll("[data-page-slug]").forEach((item) => {
+      item.classList.toggle("active", item.dataset.pageSlug === definition.slug);
+    });
+  }
+
   async function loadPage(definition, action) {
     const page = await ensurePage(definition);
     if (!page?.id) throw new Error(`Could not create or load ${definition.title}.`);
     if (typeof window.loadDraft !== "function") throw new Error("Builder draft loader is not ready yet.");
     await window.loadDraft(page.id);
     syncToolbarSelection(page);
+    markRegistryActive(definition);
     if (action === "preview" && typeof window.previewPage === "function") window.previewPage();
     if (action === "publish" && typeof window.publishPage === "function") await window.publishPage();
     setStatus(`${action === "preview" ? "Previewing" : action === "publish" ? "Publishing" : "Editing"} draft: ${definition.title}`);
   }
 
+  function renderApplicationRegistry() {
+    const container = document.querySelector(".application-pages-list");
+    if (!container || container.dataset.registryReady === "true") return;
+    container.dataset.registryReady = "true";
+    container.innerHTML = `<h3>Application pages</h3>${definitions.map((definition) => `
+      <article class="application-page-item" data-page-slug="${escapeHtml(definition.slug)}">
+        <button class="builder-list-item application-page-select" type="button" data-registry-action="edit" data-page-slug="${escapeHtml(definition.slug)}">
+          <strong>${escapeHtml(definition.title)}</strong>
+          <small>${escapeHtml(definition.path)}</small>
+        </button>
+        <div class="application-page-actions" aria-label="${escapeHtml(definition.title)} actions">
+          <button type="button" data-registry-action="edit" data-page-slug="${escapeHtml(definition.slug)}">Edit</button>
+          <button type="button" data-registry-action="preview" data-page-slug="${escapeHtml(definition.slug)}">Preview</button>
+          <a href="${escapeHtml(definition.path)}" target="_blank" rel="noopener">Open</a>
+        </div>
+      </article>
+    `).join("")}`;
+  }
+
   function installRegistryClickFix() {
+    renderApplicationRegistry();
     document.addEventListener("click", (event) => {
       const button = event.target.closest("[data-registry-action][data-page-slug]");
       if (!button || !document.body.contains(button)) return;
