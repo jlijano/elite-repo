@@ -45,6 +45,7 @@
   const textStyles = new Set(["normal", "bold", "heavy", "uppercase"]);
   const animations = new Set(["none", "subtle", "lift", "press"]);
   let currentStyle = readStoredStyle();
+  let draftStyle = { ...currentStyle };
 
   function clampNumber(value, fallback, min, max) {
     const number = Number(value);
@@ -88,12 +89,41 @@
     } catch (error) {}
   }
 
-  function setRootVar(name, value) {
+  function sameStyle(left, right) {
+    return fields.every((field) => left[field] === right[field]);
+  }
+
+  function setScopedVar(target, name, value) {
+    if (!target) return;
     if (value === "" || value === null || value === undefined) {
-      document.documentElement.style.removeProperty(name);
+      target.style.removeProperty(name);
       return;
     }
-    document.documentElement.style.setProperty(name, value);
+    target.style.setProperty(name, value);
+  }
+
+  function setButtonVars(target, style) {
+    const normalized = normalizeStyle(style);
+    const animation = animationTokens(normalized.animation);
+    const text = textStyleTokens(normalized.textStyle);
+
+    setScopedVar(target, "--global-button-radius", `${normalized.radius}px`);
+    setScopedVar(target, "--global-button-min-width", normalized.width > 0 ? `${normalized.width}px` : "0px");
+    setScopedVar(target, "--global-button-min-height", `${normalized.height}px`);
+    setScopedVar(target, "--global-button-padding-x", `${Math.max(10, Math.round(normalized.height * 0.32))}px`);
+    setScopedVar(target, "--global-button-font-size", `${normalized.textSize}px`);
+    setScopedVar(target, "--global-button-font-weight", text.weight);
+    setScopedVar(target, "--global-button-text-transform", text.transform);
+    setScopedVar(target, "--global-button-bg", normalized.background);
+    setScopedVar(target, "--global-button-text", normalized.text);
+    setScopedVar(target, "--global-button-border", normalized.border);
+    setScopedVar(target, "--global-button-hover-bg", normalized.hoverBackground);
+    setScopedVar(target, "--global-button-hover-text", normalized.hoverText);
+    setScopedVar(target, "--global-button-active-bg", normalized.clickBackground);
+    setScopedVar(target, "--global-button-transition", animation.transition);
+    setScopedVar(target, "--global-button-hover-transform", animation.hoverTransform);
+    setScopedVar(target, "--global-button-active-transform", animation.activeTransform);
+    setScopedVar(target, "--global-button-hover-shadow", animation.hoverShadow);
   }
 
   function animationTokens(animation) {
@@ -137,62 +167,67 @@
   }
 
   function applyButtonStyle(style = currentStyle) {
-    const normalized = normalizeStyle(style);
-    currentStyle = normalized;
-    const animation = animationTokens(normalized.animation);
-    const text = textStyleTokens(normalized.textStyle);
+    currentStyle = normalizeStyle(style);
+    setButtonVars(document.documentElement, currentStyle);
+    syncControls(draftStyle);
+  }
 
-    setRootVar("--global-button-radius", `${normalized.radius}px`);
-    setRootVar("--global-button-min-width", normalized.width > 0 ? `${normalized.width}px` : "0px");
-    setRootVar("--global-button-min-height", `${normalized.height}px`);
-    setRootVar("--global-button-padding-x", `${Math.max(10, Math.round(normalized.height * 0.32))}px`);
-    setRootVar("--global-button-font-size", `${normalized.textSize}px`);
-    setRootVar("--global-button-font-weight", text.weight);
-    setRootVar("--global-button-text-transform", text.transform);
-    setRootVar("--global-button-bg", normalized.background);
-    setRootVar("--global-button-text", normalized.text);
-    setRootVar("--global-button-border", normalized.border);
-    setRootVar("--global-button-hover-bg", normalized.hoverBackground);
-    setRootVar("--global-button-hover-text", normalized.hoverText);
-    setRootVar("--global-button-active-bg", normalized.clickBackground);
-    setRootVar("--global-button-transition", animation.transition);
-    setRootVar("--global-button-hover-transform", animation.hoverTransform);
-    setRootVar("--global-button-active-transform", animation.activeTransform);
-    setRootVar("--global-button-hover-shadow", animation.hoverShadow);
-    syncControls(normalized);
+  function applyPreviewStyle(style = draftStyle) {
+    setButtonVars(document.getElementById("buttonStylePreviewActions"), style);
+    updateSummary(style);
+    updateSaveState();
   }
 
   function controlFor(field) {
     return document.querySelector(`[data-button-style-field="${field}"]`);
   }
 
-  function syncControls(style = currentStyle) {
+  function updateSummary(style = draftStyle, saved = false) {
+    const summary = document.getElementById("buttonStyleSummary");
+    if (!summary) return;
+    const width = style.width > 0 ? `${style.width}px wide` : "auto width";
+    const state = saved || sameStyle(style, currentStyle) ? "Saved" : "Unsaved preview";
+    summary.textContent = `${state}: ${style.height}px tall, ${width}, ${style.radius}px corners, ${style.animation} animation`;
+  }
+
+  function updateSaveState() {
+    const saveButton = document.getElementById("saveButtonStyle");
+    if (!saveButton) return;
+    const hasChanges = !sameStyle(draftStyle, currentStyle);
+    saveButton.disabled = !hasChanges;
+    saveButton.textContent = hasChanges ? "Save button design" : "Button design saved";
+  }
+
+  function syncControls(style = draftStyle) {
     for (const field of fields) {
       const control = controlFor(field);
       if (!control) continue;
       if (control.type === "color") control.value = style[field] || colorFallbacks[field] || "#10a37f";
       else control.value = style[field];
     }
-    const summary = document.getElementById("buttonStyleSummary");
-    if (summary) {
-      const width = style.width > 0 ? `${style.width}px wide` : "auto width";
-      summary.textContent = `${style.height}px tall, ${width}, ${style.radius}px corners, ${style.animation} animation`;
-    }
+    updateSummary(style);
+    updateSaveState();
   }
 
   function updateField(field, value) {
     if (!fields.includes(field)) return;
-    currentStyle = normalizeStyle({ ...currentStyle, [field]: value });
+    draftStyle = normalizeStyle({ ...draftStyle, [field]: value });
+    syncControls(draftStyle);
+    applyPreviewStyle(draftStyle);
+  }
+
+  function saveButtonStyle() {
+    currentStyle = normalizeStyle(draftStyle);
     writeStoredStyle(currentStyle);
     applyButtonStyle(currentStyle);
+    applyPreviewStyle(currentStyle);
+    updateSummary(currentStyle, true);
   }
 
   function resetButtonStyle() {
-    currentStyle = { ...defaults };
-    try {
-      localStorage.removeItem(storageKey);
-    } catch (error) {}
-    applyButtonStyle(currentStyle);
+    draftStyle = { ...defaults };
+    syncControls(draftStyle);
+    applyPreviewStyle(draftStyle);
   }
 
   function initControls() {
@@ -201,8 +236,10 @@
       const eventName = control.tagName === "SELECT" ? "change" : "input";
       control.addEventListener(eventName, () => updateField(control.dataset.buttonStyleField, control.value));
     });
+    document.getElementById("saveButtonStyle")?.addEventListener("click", saveButtonStyle);
     document.getElementById("resetButtonStyle")?.addEventListener("click", resetButtonStyle);
-    syncControls(currentStyle);
+    syncControls(draftStyle);
+    applyPreviewStyle(draftStyle);
   }
 
   applyButtonStyle(currentStyle);
