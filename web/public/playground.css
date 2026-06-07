@@ -3,10 +3,10 @@
 .playground-header .header-actions { flex-wrap: wrap; }
 .playground-layout { gap: 16px; }
 .playground-metrics { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; }
-.metric-card { min-width: 0; display: grid; gap: 8px; padding: 14px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel); }
-.metric-card span { color: var(--muted); font-size: 0.78rem; font-weight: 850; text-transform: uppercase; }
-.metric-card strong { color: var(--text); font-size: 1.75rem; line-height: 1; }
-.metric-card p { margin: 0; color: var(--muted); font-size: 0.82rem; line-height: 1.35; }
+.playground-metrics .metric-card { min-width: 0; display: grid; gap: 8px; padding: 14px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel); }
+.playground-metrics .metric-card span { color: var(--muted); font-size: 0.78rem; font-weight: 850; text-transform: uppercase; }
+.playground-metrics .metric-card strong { color: var(--text); font-size: 1.75rem; line-height: 1; }
+.playground-metrics .metric-card p { margin: 0; color: var(--muted); font-size: 0.82rem; line-height: 1.35; }
 .playground-board-card { min-height: auto; }
 .projects-card-head { align-items: end; flex-wrap: wrap; }
 .project-view-switcher { display: inline-grid; grid-template-columns: repeat(3, minmax(86px, 1fr)); gap: 4px; padding: 4px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel-soft); }
