@@ -15,9 +15,9 @@
   const pathLabels = {
     "/company.html": "Company",
     "/department.html": "Department",
-    "/group.html": "Group",
-    "/user.html": "User",
-    "/playground.html": "Playground",
+    "/group.html": "Groups",
+    "/user.html": "Users",
+    "/playground.html": "Overview",
     "/builder.html": "Builder",
     "/settings.html": "Settings"
   };
@@ -92,15 +92,10 @@
         background: var(--sidebar-card) !important;
       }
 
-      .admin-shell .nav-item[data-playground-placeholder="true"],
-      .mobile-admin-menu-link[data-playground-placeholder="true"] {
-        cursor: pointer;
-      }
-
       @media (max-width: 720px) {
         body[data-admin-page="company"] .entra-table .actions,
         body[data-admin-page="department"] .entra-table .actions,
-        body[data-admin-page="group"] .entra-table .actions,
+        body[data-admin-page="group"] .actions,
         body[data-admin-page="user"] .users-table .actions {
           justify-content: flex-start;
         }
@@ -149,40 +144,9 @@
     return item?.dataset?.navKey || item?.getAttribute("href") || item?.textContent?.trim() || "";
   }
 
-  function playgroundItem(className = "nav-item") {
-    const link = document.createElement("a");
-    link.className = className;
-    link.href = "/playground.html";
-    link.dataset.playgroundPlaceholder = "true";
-    link.dataset.navKey = "/playground.html";
-    link.innerHTML = `<span aria-hidden="true">▦</span>Playground`;
-    return link;
-  }
-
-  function ensurePlaygroundOption() {
-    document.querySelectorAll(".admin-shell .primary-nav").forEach((nav) => {
-      if (!nav.querySelector('[href="/playground.html"], [data-playground-placeholder="true"]')) {
-        const userItem = nav.querySelector('[href="/user.html"]');
-        const item = playgroundItem("nav-item");
-        if (userItem) userItem.insertAdjacentElement("afterend", item);
-        else nav.appendChild(item);
-      }
-    });
-
-    document.querySelectorAll(".mobile-admin-menu-list").forEach((list) => {
-      if (list.querySelector('[href="/playground.html"], [data-playground-placeholder="true"]')) return;
-      const userItem = list.querySelector('[href="/user.html"]');
-      const item = playgroundItem("mobile-admin-menu-link");
-      item.setAttribute("role", "menuitem");
-      if (userItem) userItem.insertAdjacentElement("afterend", item);
-      else list.appendChild(item);
-    });
-  }
-
   function normalizeNavKeys() {
     document.querySelectorAll(".admin-shell .nav-item, .mobile-admin-menu-link").forEach((item) => {
       if (!item.dataset.navKey) item.dataset.navKey = item.getAttribute("href") || item.textContent.trim();
-      if (item.getAttribute("href") === "/playground.html") item.dataset.playgroundPlaceholder = "true";
     });
   }
 
@@ -207,6 +171,12 @@
         item.setAttribute("aria-current", "page");
       }
     });
+    document.querySelectorAll(".admin-shell .module-nav").forEach((details) => {
+      const active = Boolean(details.querySelector(".nav-item.active"));
+      details.classList.toggle("active", active);
+      details.querySelector(".module-summary")?.classList.toggle("active", active);
+      if (active) details.open = true;
+    });
   }
 
   function wireNav() {
@@ -214,7 +184,7 @@
       if (item.dataset.clickHighlightWired === "true") return;
       item.dataset.clickHighlightWired = "true";
       item.addEventListener("click", (event) => {
-        if (item.dataset.playgroundPlaceholder === "true" || item.getAttribute("href") === "/playground.html") {
+        if (item.dataset.playgroundPlaceholder === "true") {
           event.preventDefault();
           const status = document.getElementById("status");
           if (status) {
@@ -230,7 +200,6 @@
   }
 
   function refresh() {
-    ensurePlaygroundOption();
     normalizeNavKeys();
     setActiveNavFromPath();
     wireNav();
