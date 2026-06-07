@@ -1,65 +1,317 @@
+body[data-admin-page^="playground"] {
+  --pg-page-bg: #f7f7f4;
+  --pg-card-bg: #ffffff;
+  --pg-inner-bg: #f2f2ee;
+  --pg-row-bg: #ffffff;
+  --pg-row-hover: #f7f9f8;
+  --pg-control-bg: #ffffff;
+  --pg-control-hover: #f2f7f5;
+  --pg-border: rgba(32, 33, 35, 0.14);
+  --pg-border-strong: rgba(32, 33, 35, 0.2);
+  --pg-text: var(--text);
+  --pg-muted: #5f6671;
+  --pg-muted-soft: #717986;
+  --pg-shadow: 0 14px 34px rgba(32, 33, 35, 0.08);
+}
+
+[data-theme="dark"] body[data-admin-page^="playground"] {
+  --bg: #070707;
+  --panel: #101010;
+  --panel-soft: #171717;
+  --panel-overlay: rgba(12, 12, 12, 0.94);
+  --composer: #1e1e1e;
+  --composer-border: #343434;
+  --line: rgba(255, 255, 255, 0.16);
+  --text: #f5f5f5;
+  --muted: #c4c4c4;
+  --sidebar-bg: #060606;
+  --sidebar-card: rgba(255, 255, 255, 0.1);
+  --sidebar-line: rgba(255, 255, 255, 0.16);
+  --pg-page-bg: #070707;
+  --pg-card-bg: #101010;
+  --pg-inner-bg: #171717;
+  --pg-row-bg: #1d1d1d;
+  --pg-row-hover: #252525;
+  --pg-control-bg: #202020;
+  --pg-control-hover: #2a2a2a;
+  --pg-border: rgba(255, 255, 255, 0.16);
+  --pg-border-strong: rgba(255, 255, 255, 0.24);
+  --pg-text: #f5f5f5;
+  --pg-muted: #c4c4c4;
+  --pg-muted-soft: #a8a8a8;
+  --pg-shadow: 0 18px 48px rgba(0, 0, 0, 0.38);
+}
+
+body[data-admin-page^="playground"] .admin-panel,
+body[data-admin-page^="playground"] .admin-scroll {
+  background: var(--pg-page-bg);
+}
+
+body[data-admin-page^="playground"] .admin-layout {
+  gap: 16px;
+}
+
+body[data-admin-page^="playground"] .admin-status,
 .playground-board-card,
+.projects-card,
 .projects-view-card,
+.todos-card,
 .playground-task-list-card,
-.notes-card {
-  background: var(--panel);
-  color: var(--text);
+.notes-card,
+.playground-modal,
+.playground-task-drawer {
+  border-color: var(--pg-border-strong);
+  background: var(--pg-card-bg);
+  color: var(--pg-text);
+  box-shadow: var(--pg-shadow);
+}
+
+body[data-admin-page^="playground"] .card-head,
+.project-view-switcher,
+.project-view-panels,
+.playground-task-controls,
+.playground-task-table-wrap,
+.playground-task-list-footer,
+.project-list,
+.todo-list,
+.notes-list,
+.playground-drawer-body {
+  background: var(--pg-inner-bg);
+  color: var(--pg-text);
+}
+
+body[data-admin-page^="playground"] .card-head,
+.playground-task-controls,
+.playground-task-list-footer {
+  border-color: var(--pg-border);
+}
+
+.metric-card,
+.kanban-column,
+.task-card,
+.project-card,
+.todo-item,
+.notes-list .item,
+.project-placeholder,
+.drawer-section,
+.common-field-card,
+.custom-field-row,
+.task-custom-fields span,
+.project-placeholder-grid span,
+.project-calendar-preview span,
+.project-calendar-preview b,
+.playground-form-message {
+  border-color: var(--pg-border);
+  background: var(--pg-row-bg);
+  color: var(--pg-text);
+}
+
+.metric-card,
+.task-card,
+.project-card,
+.todo-item,
+.notes-list .item,
+.kanban-column {
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.03), 0 10px 22px rgba(0, 0, 0, 0.12);
+}
+
+.kanban-board {
+  background: var(--pg-inner-bg);
+  border-top: 1px solid var(--pg-border);
+}
+
+.kanban-column {
+  min-height: 220px;
+  gap: 12px;
+}
+
+.task-card:hover,
+.project-card:hover,
+.todo-item:hover,
+.notes-list .item:hover {
+  border-color: var(--pg-border-strong);
+  background: var(--pg-row-hover);
+}
+
+.task-card p,
+.project-card p,
+.notes-list .item p,
+.todo-item small,
+.task-meta,
+.project-meta,
+.task-extra,
+.activity-change-list,
+.playground-task-list-footer,
+.playground-task-controls label,
+.playground-form-grid label,
+.common-field-card small,
+.custom-field-help,
+.file-field-preview,
+.muted-cell,
+.project-placeholder p,
+.metric-card p,
+.metric-card span,
+body[data-admin-page^="playground"] .card-subtitle,
+body[data-admin-page^="playground"] .admin-status,
+body[data-admin-page^="playground"] .row small,
+body[data-admin-page^="playground"] .item p {
+  color: var(--pg-muted);
+}
+
+.task-card .row,
+.project-card .row,
+.notes-list .row,
+.todo-item span,
+.project-meta strong,
+.task-detail-grid dd,
+.common-field-card strong,
+.field-type-pill strong,
+.task-custom-fields strong,
+body[data-admin-page^="playground"] .card-head h2,
+body[data-admin-page^="playground"] .row {
+  color: var(--pg-text);
+}
+
+.playground-task-controls input,
+.playground-task-controls select,
+.playground-modal input,
+.playground-modal select,
+.playground-modal textarea,
+.drawer-update-form textarea,
+.project-view-switcher button,
+.playground-page-actions button,
+.task-actions button,
+.playground-modal-actions button,
+.icon-button,
+body[data-admin-page^="playground"] .secondary-action,
+body[data-admin-page^="playground"] .profile-settings,
+.playground-add-dropdown,
+.playground-add-dropdown button,
+.playground-add-dropdown a {
+  border-color: var(--pg-border);
+  background: var(--pg-control-bg);
+  color: var(--pg-text);
+}
+
+.playground-task-controls input::placeholder,
+.playground-modal input::placeholder,
+.playground-modal textarea::placeholder {
+  color: var(--pg-muted-soft);
+}
+
+.playground-task-controls input:hover,
+.playground-task-controls select:hover,
+.playground-modal input:hover,
+.playground-modal select:hover,
+.playground-modal textarea:hover,
+.drawer-update-form textarea:hover,
+.project-view-switcher button:hover,
+.project-view-switcher button:focus-visible,
+.playground-page-actions button:hover:not(:disabled),
+.playground-page-actions button:focus-visible:not(:disabled),
+.task-actions button:hover:not(:disabled),
+.task-actions button:focus-visible:not(:disabled),
+.playground-modal-actions button:hover:not(:disabled),
+.playground-modal-actions button:focus-visible:not(:disabled),
+.icon-button:hover:not(:disabled),
+.icon-button:focus-visible:not(:disabled),
+body[data-admin-page^="playground"] .secondary-action:hover,
+body[data-admin-page^="playground"] .secondary-action:focus-visible,
+body[data-admin-page^="playground"] .profile-settings:hover,
+body[data-admin-page^="playground"] .profile-settings:focus-visible,
+.playground-add-dropdown button:hover,
+.playground-add-dropdown button:focus-visible,
+.playground-add-dropdown a:hover,
+.playground-add-dropdown a:focus-visible {
+  border-color: var(--primary);
+  background: var(--pg-control-hover);
+  color: var(--pg-text);
+}
+
+.project-view-switcher button.active {
+  border: 1px solid var(--pg-border-strong);
+  background: var(--pg-row-bg);
+  color: var(--pg-text);
+  box-shadow: inset 0 0 0 1px rgba(16, 163, 127, 0.22);
+}
+
+.playground-page-actions,
+.task-actions,
+.playground-modal-actions,
+body[data-admin-page^="playground"] .header-actions {
+  gap: 8px;
 }
 
 .playground-task-table-wrap {
-  background: var(--panel);
-  color: var(--text);
+  border-top: 1px solid var(--pg-border);
+  color: var(--pg-text);
 }
 
 .playground-task-table {
-  background: var(--panel);
-  color: var(--text);
+  width: 100%;
+  min-width: 900px;
+  border-collapse: separate;
+  border-spacing: 0;
+  background: var(--pg-card-bg);
+  color: var(--pg-text);
 }
 
 .playground-task-table thead,
 .playground-task-table th {
-  background: var(--panel-soft) !important;
-  color: var(--muted) !important;
+  background: var(--pg-inner-bg) !important;
+  color: var(--pg-muted) !important;
 }
 
-.playground-task-table tbody,
-.playground-task-table tr,
+.playground-task-table th,
 .playground-task-table td {
-  background: var(--panel) !important;
-  color: var(--text) !important;
+  border-bottom: 1px solid var(--pg-border);
+}
+
+.playground-task-table th:first-child,
+.playground-task-table td:first-child {
+  padding-left: 16px;
+}
+
+.playground-task-table tbody tr,
+.playground-task-table tbody td {
+  background: var(--pg-row-bg) !important;
+  color: var(--pg-text) !important;
 }
 
 .playground-task-table tbody tr:nth-child(even) td {
-  background: var(--panel-soft) !important;
+  background: color-mix(in srgb, var(--pg-row-bg) 88%, var(--pg-inner-bg)) !important;
+}
+
+.playground-task-table tbody tr:hover td {
+  background: var(--pg-row-hover) !important;
 }
 
 .playground-task-table td strong,
-.playground-task-table td span:not(.status-badge):not(.priority) {
-  color: var(--text) !important;
+.playground-task-table td span:not(.status-badge):not(.priority),
+.playground-task-table td button {
+  color: var(--pg-text) !important;
 }
 
 .playground-task-table td small,
 .playground-task-table .muted-cell {
-  color: var(--muted) !important;
-}
-
-.playground-task-table a {
-  color: var(--primary);
+  color: var(--pg-muted) !important;
 }
 
 .playground-task-table .actions,
-.playground-task-table .task-actions {
+.playground-task-table .task-actions,
+.playground-task-table td:last-child {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
+  align-items: center;
 }
 
 .playground-task-table button,
 .playground-task-table .actions button,
 .playground-task-table .task-actions button {
-  border-color: var(--line) !important;
-  background: var(--panel-soft) !important;
-  color: var(--text) !important;
+  border-color: var(--pg-border) !important;
+  background: var(--pg-control-bg) !important;
+  color: var(--pg-text) !important;
   box-shadow: none !important;
 }
 
@@ -68,8 +320,7 @@
 .playground-task-table .actions button:hover:not(:disabled),
 .playground-task-table .actions button:focus-visible:not(:disabled) {
   border-color: var(--primary) !important;
-  background: var(--sidebar-card) !important;
-  color: var(--text) !important;
+  background: var(--pg-control-hover) !important;
 }
 
 .playground-task-table button:disabled,
@@ -77,20 +328,94 @@
   opacity: 0.48;
 }
 
-[data-theme="dark"] .playground-task-table-wrap,
-[data-theme="dark"] .playground-task-table,
-[data-theme="dark"] .playground-task-table tbody,
-[data-theme="dark"] .playground-task-table tr,
-[data-theme="dark"] .playground-task-table td {
-  background: #000000 !important;
-  color: var(--text) !important;
+.playground-task-table a {
+  color: var(--primary);
 }
 
-[data-theme="dark"] .playground-task-table tbody tr:nth-child(even) td {
-  background: #121212 !important;
+.priority.low {
+  color: var(--pg-muted);
+  background: var(--pg-control-bg);
+  border-color: var(--pg-border);
 }
 
-[data-theme="dark"] .playground-task-table thead,
-[data-theme="dark"] .playground-task-table th {
-  background: #121212 !important;
+.progress-track {
+  background: var(--pg-inner-bg);
+  border-color: var(--pg-border);
+}
+
+.empty,
+.action-empty,
+.project-placeholder {
+  border-color: var(--pg-border-strong);
+  background: var(--pg-inner-bg);
+  color: var(--pg-muted);
+}
+
+.empty strong,
+.action-empty strong,
+.project-placeholder strong {
+  color: var(--pg-text);
+}
+
+@media (max-width: 900px) {
+  body[data-admin-page^="playground"] .admin-scroll {
+    background: var(--pg-page-bg);
+  }
+
+  body[data-admin-page^="playground"] .header-actions {
+    width: 100%;
+    justify-content: flex-start;
+    flex-wrap: wrap;
+  }
+
+  body[data-admin-page^="playground"] .header-actions > a,
+  body[data-admin-page^="playground"] .header-actions > button,
+  .playground-page-actions button,
+  .playground-page-actions .primary-action,
+  .playground-page-actions .secondary-action {
+    flex: 1 1 132px;
+  }
+}
+
+@media (max-width: 760px) {
+  .kanban-column {
+    min-height: 0;
+  }
+
+  .playground-task-table {
+    min-width: 760px;
+  }
+
+  .playground-task-table th,
+  .playground-task-table td {
+    padding: 10px;
+  }
+
+  .task-actions,
+  .playground-task-table td:last-child {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .task-actions button,
+  .playground-task-table td:last-child button {
+    width: 100%;
+  }
+}
+
+@media (max-width: 520px) {
+  .project-list,
+  .todo-list,
+  .notes-list,
+  .kanban-board {
+    padding: 10px;
+  }
+
+  .task-card,
+  .project-card,
+  .todo-item,
+  .notes-list .item,
+  .kanban-column {
+    border-radius: 6px;
+  }
 }
