@@ -74,7 +74,7 @@ body[data-admin-page^="playground"] .card-head,
   border-color: var(--pg-border);
 }
 
-.metric-card,
+.playground-metrics .metric-card,
 .kanban-column,
 .task-card,
 .project-card,
@@ -94,7 +94,7 @@ body[data-admin-page^="playground"] .card-head,
   color: var(--pg-text);
 }
 
-.metric-card,
+.playground-metrics .metric-card,
 .task-card,
 .project-card,
 .todo-item,
@@ -137,8 +137,8 @@ body[data-admin-page^="playground"] .card-head,
 .file-field-preview,
 .muted-cell,
 .project-placeholder p,
-.metric-card p,
-.metric-card span,
+.playground-metrics .metric-card p,
+.playground-metrics .metric-card span,
 body[data-admin-page^="playground"] .card-subtitle,
 body[data-admin-page^="playground"] .admin-status,
 body[data-admin-page^="playground"] .row small,
