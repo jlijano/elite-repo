@@ -573,7 +573,11 @@ setInterval(() => refreshCurrentSession().catch(() => {}), refreshIntervalMs);
 resizeInput();
 
 window.addEventListener("load", () => {
-  for (const src of ["bubble-color.js?v=20260607-chat-scope", "chat-media-fix.js?v=20260607-camera-fix"]) {
+  for (const src of [
+    "bubble-color.js?v=20260607-chat-scope",
+    "chat-media-fix.js?v=20260607-camera-fix",
+    "start-page-polish.js?v=20260608-secure-room-ui"
+  ]) {
     const script = document.createElement("script");
     script.src = src;
     document.body.appendChild(script);
