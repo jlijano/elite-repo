@@ -24,6 +24,18 @@
       super(guardedCallback);
       observer = this;
     }
+
+    observe(target, options = {}) {
+      const nextOptions = { ...options };
+      if (target === document.body && nextOptions.subtree) {
+        nextOptions.subtree = false;
+        nextOptions.childList = true;
+        delete nextOptions.attributes;
+        delete nextOptions.attributeFilter;
+        delete nextOptions.characterData;
+      }
+      return super.observe(target, nextOptions);
+    }
   };
 
   window.MutationObserver.prototype = NativeMutationObserver.prototype;
