@@ -28,7 +28,8 @@ const playgroundState = {
   taskPage: { cursor: "0", nextCursor: null, limit: 100, total: 0 },
   filters: { search: "", status: "", priority: "", projectId: "", assigneeId: "", cursor: "0", limit: "100" },
   editingTaskId: "",
-  selectedTaskId: ""
+  selectedTaskId: "",
+  boardTitle: "Kanban Board"
 };
 
 const playgroundHtml = (value) => String(value ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
@@ -128,8 +129,8 @@ function renderTaskControls() {
   const board = boardCard.querySelector(".kanban-board");
   boardCard.insertBefore(controls, board);
   ["playgroundTaskSearch", "playgroundTaskStatus", "playgroundTaskPriority", "playgroundTaskProject", "playgroundTaskAssignee"].forEach((id) => {
-    document.getElementById(id)?.addEventListener("input", () => applyTaskFilters());
-    document.getElementById(id)?.addEventListener("change", () => applyTaskFilters());
+    document.getElementById(id)?.addEventListener("input", applyTaskFilters);
+    document.getElementById(id)?.addEventListener("change", applyTaskFilters);
   });
   document.getElementById("playgroundPrevPage")?.addEventListener("click", () => changeTaskPage(-1));
   document.getElementById("playgroundNextPage")?.addEventListener("click", () => changeTaskPage(1));
@@ -138,8 +139,14 @@ function renderTaskControls() {
 function updateTaskControls() {
   const projectSelect = document.getElementById("playgroundTaskProject");
   const assigneeSelect = document.getElementById("playgroundTaskAssignee");
+  const statusSelect = document.getElementById("playgroundTaskStatus");
+  const prioritySelect = document.getElementById("playgroundTaskPriority");
+  const searchInput = document.getElementById("playgroundTaskSearch");
   if (projectSelect) projectSelect.innerHTML = optionList(playgroundState.projects, playgroundState.filters.projectId, "All projects");
   if (assigneeSelect) assigneeSelect.innerHTML = optionList(playgroundState.users, playgroundState.filters.assigneeId, "All assignees");
+  if (statusSelect) statusSelect.value = playgroundState.filters.status || "";
+  if (prioritySelect) prioritySelect.value = playgroundState.filters.priority || "";
+  if (searchInput) searchInput.value = playgroundState.filters.search || "";
   const page = playgroundState.taskPage || {};
   const prev = document.getElementById("playgroundPrevPage");
   const next = document.getElementById("playgroundNextPage");
@@ -177,7 +184,9 @@ function queryString() {
 }
 
 function renderPlaygroundBoard(tasks = []) {
+  const boardTitle = document.getElementById("kanbanTitle");
   const board = document.querySelector(".kanban-board");
+  if (boardTitle) boardTitle.textContent = playgroundState.boardTitle || "Kanban Board";
   if (!board) return;
   board.innerHTML = playgroundStatusOrder.map((status) => {
     const columnTasks = tasks.filter((task) => task.status === status);
@@ -257,6 +266,17 @@ function injectTaskSurfaces() {
         <div class="playground-modal-actions"><button type="button" id="playgroundTaskCancel">Cancel</button><button class="primary-action" id="playgroundTaskSave" type="button">Save Task</button></div>
       </form>
     </div>
+    <div class="playground-modal-backdrop" id="playgroundBoardModal" hidden>
+      <form class="playground-modal" id="playgroundBoardForm" aria-labelledby="playgroundBoardModalTitle">
+        <div class="playground-modal-head"><div><p class="section-kicker">Board view</p><h2 id="playgroundBoardModalTitle">Add Board</h2></div><button type="button" class="icon-button" id="playgroundBoardModalClose" aria-label="Close board form">x</button></div>
+        <p class="playground-form-message" id="playgroundBoardFormMessage" hidden></p>
+        <div class="playground-form-grid">
+          <label>Board name<input id="playgroundBoardTitle" name="title" required maxlength="80" placeholder="Kanban Board" /></label>
+          <label>Default status<select id="playgroundBoardStatus" name="status"><option value="">All statuses</option>${playgroundStatusOrder.map((status) => `<option value="${status}">${playgroundStatusLabels[status]}</option>`).join("")}</select></label>
+        </div>
+        <div class="playground-modal-actions"><button type="button" id="playgroundBoardCancel">Cancel</button><button class="primary-action" id="playgroundBoardSave" type="submit">Save Board View</button></div>
+      </form>
+    </div>
     <aside class="playground-task-drawer" id="playgroundTaskDrawer" aria-label="Task details" hidden>
       <div class="playground-drawer-head"><div><p class="section-kicker">Task detail</p><h2 id="playgroundDrawerTitle">Task</h2></div><button type="button" class="icon-button" id="playgroundTaskDrawerClose" aria-label="Close task details">x</button></div>
       <div id="playgroundTaskDrawerBody" class="playground-drawer-body"></div>
@@ -273,6 +293,12 @@ function injectTaskSurfaces() {
     setTaskFormMessage(error.message, true);
     playgroundSetStatus(error.message, true);
   }));
+  document.getElementById("playgroundBoardModalClose")?.addEventListener("click", closeBoardModal);
+  document.getElementById("playgroundBoardCancel")?.addEventListener("click", closeBoardModal);
+  document.getElementById("playgroundBoardModal")?.addEventListener("click", (event) => {
+    if (event.target.id === "playgroundBoardModal") closeBoardModal();
+  });
+  document.getElementById("playgroundBoardForm")?.addEventListener("submit", saveBoardView);
   document.getElementById("playgroundTaskDrawerClose")?.addEventListener("click", closeTaskDetail);
 }
 
@@ -308,6 +334,37 @@ function closeTaskModal() {
   if (modal) modal.hidden = true;
   setTaskFormBusy(false);
   playgroundState.editingTaskId = "";
+}
+
+function openBoardModal() {
+  injectTaskSurfaces();
+  document.getElementById("playgroundBoardTitle").value = playgroundState.boardTitle || "Kanban Board";
+  document.getElementById("playgroundBoardStatus").value = playgroundState.filters.status || "";
+  const message = document.getElementById("playgroundBoardFormMessage");
+  if (message) {
+    message.textContent = "Create a saved board view by naming the board and choosing a default status filter.";
+    message.hidden = false;
+    message.classList.remove("error");
+  }
+  document.getElementById("playgroundBoardModal").hidden = false;
+  document.getElementById("playgroundBoardTitle")?.focus();
+}
+
+function closeBoardModal() {
+  const modal = document.getElementById("playgroundBoardModal");
+  if (modal) modal.hidden = true;
+}
+
+function saveBoardView(event) {
+  event.preventDefault();
+  const title = document.getElementById("playgroundBoardTitle")?.value?.trim() || "Kanban Board";
+  const status = document.getElementById("playgroundBoardStatus")?.value || "";
+  playgroundState.boardTitle = title;
+  playgroundState.filters.status = status;
+  playgroundState.filters.cursor = "0";
+  closeBoardModal();
+  loadStoredPlayground().catch((error) => playgroundSetStatus(error.message, true));
+  playgroundSetStatus(`Board view "${title}" applied${status ? ` for ${playgroundStatusLabels[status] || status}` : ""}.`);
 }
 
 function taskFormPayload() {
@@ -396,13 +453,28 @@ function closeTaskDetail() {
   playgroundState.selectedTaskId = "";
 }
 
+function interceptBoardMenuClicks() {
+  document.addEventListener("click", (event) => {
+    const boardAction = event.target.closest('.playground-add-dropdown a[href="/playground.html"]');
+    if (!boardAction || !boardAction.textContent.trim().toLowerCase().includes("board")) return;
+    event.preventDefault();
+    const menu = boardAction.closest(".playground-add-dropdown");
+    const button = boardAction.closest(".playground-add-menu")?.querySelector(".playground-add-button");
+    if (menu) menu.hidden = true;
+    if (button) button.setAttribute("aria-expanded", "false");
+    openBoardModal();
+  });
+}
+
 function initStoredPlayground() {
   injectTaskSurfaces();
   document.querySelector('[aria-label="Create a new task"]')?.addEventListener("click", () => openTaskModal());
   document.querySelector('[aria-label="Create a new project"]')?.addEventListener("click", () => createStoredProject().catch((error) => playgroundSetStatus(error.message, true)));
+  interceptBoardMenuClicks();
   document.addEventListener("keydown", (event) => {
     if (event.key === "Escape") {
       closeTaskModal();
+      closeBoardModal();
       closeTaskDetail();
     }
   });
