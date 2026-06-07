@@ -28,6 +28,16 @@ function normalizeAction(value) {
   return "Updated";
 }
 
+function titleCase(value) {
+  return cleanString(value, "System", 80)
+    .replace(/[-_]/g, " ")
+    .replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
+
+function singularResource(value) {
+  return titleCase(String(value || "system").replace(/s$/, ""));
+}
+
 function changeRow(row = {}) {
   return {
     id: row.id,
@@ -117,6 +127,40 @@ async function requireAdmin(req, res, next) {
   }
 }
 
+function mutationChangeFromRequest(req) {
+  if (!req.path.startsWith("/api/admin/") || req.path.startsWith("/api/admin/system-change-log")) return null;
+  if (!["POST", "PATCH", "PUT", "DELETE"].includes(req.method)) return null;
+
+  const parts = req.path.split("/").filter(Boolean);
+  if (parts[2] === "playground") {
+    const resource = parts[3] || "playground";
+    const actionSegment = parts[5] || "";
+    const action = req.method === "POST" && !parts[4] ? "Added" : actionSegment === "archive" ? "Deleted" : "Updated";
+    const summary = req.body?.title || req.body?.label || req.body?.content || req.body?.trigger || parts[4] || singularResource(resource);
+    return { action, module: singularResource(resource), summary };
+  }
+
+  const moduleName = parts[2] === "entra" ? singularResource(parts[3]) : singularResource(parts[2]);
+  const summary = req.body?.name || req.body?.title || req.body?.email || req.params?.userId || moduleName;
+  const action = req.method === "DELETE" ? "Deleted" : req.method === "POST" ? "Added" : "Updated";
+  return { action, module: moduleName, summary };
+}
+
+function attachSystemChangeCapture(app) {
+  app.use((req, res, next) => {
+    const change = mutationChangeFromRequest(req);
+    if (!change) return next();
+    res.on("finish", () => {
+      if (res.statusCode < 200 || res.statusCode >= 400) return;
+      const actor = req.adminActor?.name || req.adminActor?.email || "Admin";
+      recordSystemChange({ ...change, actor }).catch((error) => {
+        console.warn("System change log write failed:", error.message);
+      });
+    });
+    return next();
+  });
+}
+
 function attachSystemChangeRoutes(app) {
   app.locals.systemChangeLog = {
     record: (change) => recordSystemChange(change).catch((error) => {
@@ -125,6 +169,8 @@ function attachSystemChangeRoutes(app) {
     }),
     list: listSystemChanges
   };
+
+  attachSystemChangeCapture(app);
 
   app.get("/api/admin/system-change-log", requireAdmin, async (req, res, next) => {
     try {
