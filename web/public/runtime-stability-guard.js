@@ -4,7 +4,7 @@
 
   const NativeMutationObserver = window.MutationObserver;
 
-  window.MutationObserver = class StableMutationObserver extends NativeMutationObserver {
+  class StableMutationObserver extends NativeMutationObserver {
     constructor(callback) {
       let scheduled = false;
       let queuedRecords = [];
@@ -36,7 +36,8 @@
       }
       return super.observe(target, nextOptions);
     }
-  };
+  }
 
-  window.MutationObserver.prototype = NativeMutationObserver.prototype;
+  Object.setPrototypeOf(StableMutationObserver, NativeMutationObserver);
+  window.MutationObserver = StableMutationObserver;
 })();
