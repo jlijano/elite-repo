@@ -2,6 +2,7 @@
 
 ## [Unreleased]
 
+- Added a notification bell icon to the admin top header next to the profile menu across admin pages.
 - Added a Kanban/List/Calendar view switcher to Playground Projects, keeping Kanban as the default and staging responsive placeholders for future List and Calendar views.
 - Reordered the Playground navigation hierarchy to Board, Projects, Tasks, Notes, and Automation across the Playground pages.
 - Changed Company, Department, Group, and User management action controls from text buttons to compact icon-only buttons with accessible labels and hover titles.
