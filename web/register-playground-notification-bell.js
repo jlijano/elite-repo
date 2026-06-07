@@ -1,18 +1,10 @@
 const fs = require("fs");
 const path = require("path");
+const express = require("express");
 
-const originalReadFile = fs.readFile;
-const playgroundPath = path.join(__dirname, "public", "playground.html");
+const originalStatic = express.static;
 const adminScript = '<script src="admin.js"></script>';
 const notificationBellScript = '<script src="admin-notification-bell.js?v=20260607-board-bell"></script>';
-
-function isPlaygroundHtml(filePath) {
-  try {
-    return path.resolve(String(filePath)) === playgroundPath;
-  } catch (error) {
-    return false;
-  }
-}
 
 function enhancePlaygroundHtml(source) {
   if (typeof source !== "string" || source.includes("admin-notification-bell.js")) return source;
@@ -22,17 +14,22 @@ function enhancePlaygroundHtml(source) {
   return source.replace("</body>", `    ${notificationBellScript}\n  </body>`);
 }
 
-fs.readFile = function patchedReadFile(filePath, options, callback) {
-  if (typeof options === "function") {
-    callback = options;
-    options = undefined;
-  }
-  if (typeof callback !== "function") return originalReadFile.call(this, filePath, options);
+express.static = function patchedStatic(root, options) {
+  const staticMiddleware = originalStatic.call(this, root, options);
 
-  return originalReadFile.call(this, filePath, options, (error, data) => {
-    if (error || !isPlaygroundHtml(filePath)) return callback(error, data);
-    const wasBuffer = Buffer.isBuffer(data);
-    const enhanced = enhancePlaygroundHtml(wasBuffer ? data.toString("utf8") : data);
-    return callback(null, wasBuffer ? Buffer.from(enhanced) : enhanced);
-  });
+  return function playgroundNotificationStatic(req, res, next) {
+    const requestPath = (req.path || req.url.split("?")[0] || "").replace(/^\//, "");
+    const shouldEnhancePlayground =
+      (req.method === "GET" || req.method === "HEAD") &&
+      requestPath === "playground.html";
+
+    if (!shouldEnhancePlayground) return staticMiddleware(req, res, next);
+
+    fs.readFile(path.join(root, "playground.html"), "utf8", (error, html) => {
+      if (error) return staticMiddleware(req, res, next);
+      res.type("html");
+      res.set("Cache-Control", "public, max-age=0, must-revalidate");
+      res.send(enhancePlaygroundHtml(html));
+    });
+  };
 };
