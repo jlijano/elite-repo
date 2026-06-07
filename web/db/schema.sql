@@ -197,6 +197,18 @@ CREATE TABLE IF NOT EXISTS review_runs (
   context JSONB NOT NULL DEFAULT '{}'::jsonb
 );
 
+CREATE TABLE IF NOT EXISTS system_change_log (
+  id UUID PRIMARY KEY,
+  action TEXT NOT NULL CHECK (action IN ('Added', 'Updated', 'Deleted')),
+  module TEXT NOT NULL,
+  summary TEXT NOT NULL,
+  actor TEXT NOT NULL DEFAULT 'System',
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS system_change_log_created_at_idx
+  ON system_change_log(created_at DESC);
+
 CREATE TABLE IF NOT EXISTS playground_boards (
   id UUID PRIMARY KEY,
   title TEXT NOT NULL,
