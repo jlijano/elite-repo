@@ -259,35 +259,54 @@ function attachSystemChangeRoutes(app) {
   });
 }
 
+function shouldInjectBell(html) {
+  return typeof html === "string" && html.includes("admin-header") && html.includes("profile-menu") && !html.includes("admin-notification-bell.js");
+}
+
 function injectNotificationBell(html) {
-  if (typeof html !== "string" || html.includes("admin-notification-bell.js")) return html;
+  if (!shouldInjectBell(html)) return html;
   return html.replace("</body>", `    ${notificationBellScript}\n  </body>`);
 }
 
-function attachSystemChangeStaticInjection() {
-  express.static = function patchedSystemChangeStatic(root, options) {
-    const staticMiddleware = originalStatic.call(this, root, options);
-
-    return function systemChangeStatic(req, res, next) {
-      const requestPath = (req.path || req.url.split("?")[0] || "").replace(/^\//, "");
-      const isHtml = (req.method === "GET" || req.method === "HEAD") && /\.html$/.test(requestPath);
-      if (!isHtml) return staticMiddleware(req, res, next);
-
-      fs.readFile(path.join(root, requestPath), "utf8", (error, html) => {
-        if (error) return staticMiddleware(req, res, next);
-        res.type("html");
-        res.set("Cache-Control", "public, max-age=0, must-revalidate");
-        res.send(injectNotificationBell(html));
-      });
-    };
-  };
+function sendEnhancedReportsScript(res, root) {
+  const reportsPath = path.join(root, "reports.js");
+  const systemUiPath = path.join(root, "system-change-log-ui.js");
+  const parts = [fs.readFileSync(reportsPath, "utf8")];
+  if (fs.existsSync(systemUiPath)) parts.push(fs.readFileSync(systemUiPath, "utf8"));
+  res.type("application/javascript");
+  res.set("Cache-Control", "public, max-age=0, must-revalidate");
+  res.send(parts.join("\n\n"));
 }
+
+express.static = function patchedStatic(root, options) {
+  const staticMiddleware = originalStatic.call(this, root, options);
+
+  return function systemChangeStatic(req, res, next) {
+    const requestPath = (req.path || req.url.split("?")[0] || "").replace(/^\//, "");
+    if (["GET", "HEAD"].includes(req.method) && requestPath === "reports.js") {
+      try {
+        return sendEnhancedReportsScript(res, root);
+      } catch (error) {
+        return next(error);
+      }
+    }
+
+    const shouldEnhanceHtml = ["GET", "HEAD"].includes(req.method) && requestPath.endsWith(".html");
+    if (!shouldEnhanceHtml) return staticMiddleware(req, res, next);
+
+    fs.readFile(path.join(root, requestPath), "utf8", (error, html) => {
+      if (error) return staticMiddleware(req, res, next);
+      res.type("html");
+      res.set("Cache-Control", "public, max-age=0, must-revalidate");
+      res.send(injectNotificationBell(html));
+    });
+  };
+};
 
 express.application.listen = function patchedListen(...args) {
   if (!attachedApps.has(this)) {
-    attachedApps.add(this);
     attachSystemChangeRoutes(this);
-    attachSystemChangeStaticInjection();
+    attachedApps.add(this);
   }
   return originalListen.apply(this, args);
 };
