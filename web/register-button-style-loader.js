@@ -3,7 +3,7 @@ const path = require("path");
 const express = require("express");
 
 const originalStatic = express.static;
-const scriptTag = '<script src="/button-design-global.js" defer></script>';
+const scriptTag = '<script src="/button-design-global-v2.js" defer></script>';
 
 function requestPath(req) {
   const pathname = new URL(req.originalUrl || req.url || "/", "http://localhost").pathname;
@@ -23,7 +23,7 @@ function htmlFilePath(root, req) {
 }
 
 function injectButtonDesignScript(html) {
-  if (html.includes("button-design-global.js")) return html;
+  if (html.includes("button-design-global")) return html;
   if (html.includes("</body>")) return html.replace("</body>", `  ${scriptTag}\n  </body>`);
   return `${html}\n${scriptTag}\n`;
 }
