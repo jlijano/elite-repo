@@ -206,8 +206,16 @@ CREATE TABLE IF NOT EXISTS system_change_log (
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+ALTER TABLE system_change_log
+  ADD COLUMN IF NOT EXISTS archived_at TIMESTAMPTZ,
+  ADD COLUMN IF NOT EXISTS implemented_at TIMESTAMPTZ,
+  ADD COLUMN IF NOT EXISTS revert_requested_at TIMESTAMPTZ;
+
 CREATE INDEX IF NOT EXISTS system_change_log_created_at_idx
   ON system_change_log(created_at DESC);
+
+CREATE INDEX IF NOT EXISTS system_change_log_active_created_at_idx
+  ON system_change_log(archived_at, created_at DESC);
 
 CREATE TABLE IF NOT EXISTS playground_boards (
   id UUID PRIMARY KEY,
