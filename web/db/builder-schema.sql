@@ -39,19 +39,19 @@ CREATE TABLE IF NOT EXISTS builder_templates (
   name TEXT NOT NULL,
   category TEXT NOT NULL,
   content JSONB NOT NULL,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 CREATE TABLE IF NOT EXISTS builder_media_assets (
   id UUID PRIMARY KEY,
-  file_name TEXT NOT NULL,
-  alt_text TEXT,
-  mime_type TEXT NOT NULL,
-  file_size INTEGER NOT NULL DEFAULT 0,
-  content_url TEXT NOT NULL,
+  name TEXT NOT NULL,
+  url TEXT NOT NULL,
+  type TEXT NOT NULL DEFAULT 'image',
+  alt_text TEXT NOT NULL DEFAULT '',
   metadata JSONB NOT NULL DEFAULT '{}'::jsonb,
-  usage_refs JSONB NOT NULL DEFAULT '[]'::jsonb,
-  created_by_user_id UUID,
+  used_by_page_ids UUID[] NOT NULL DEFAULT '{}',
+  uploaded_by_user_id UUID,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   deleted_at TIMESTAMPTZ
@@ -60,9 +60,11 @@ CREATE TABLE IF NOT EXISTS builder_media_assets (
 CREATE TABLE IF NOT EXISTS builder_forms (
   id UUID PRIMARY KEY,
   name TEXT NOT NULL,
-  form_type TEXT NOT NULL DEFAULT 'contact',
-  settings JSONB NOT NULL DEFAULT '{}'::jsonb,
+  notification_email TEXT NOT NULL DEFAULT '',
+  captcha_enabled BOOLEAN NOT NULL DEFAULT TRUE,
   status TEXT NOT NULL DEFAULT 'draft' CHECK (status IN ('draft', 'active', 'archived')),
+  created_by_user_id UUID,
+  updated_by_user_id UUID,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
@@ -89,18 +91,21 @@ CREATE TABLE IF NOT EXISTS builder_navigation_items (
   id UUID PRIMARY KEY,
   label TEXT NOT NULL,
   page_id UUID REFERENCES builder_pages(id) ON DELETE SET NULL,
-  href TEXT,
+  url TEXT NOT NULL DEFAULT '',
   parent_id UUID,
   sort_order INTEGER NOT NULL DEFAULT 0,
-  visibility TEXT NOT NULL DEFAULT 'published'
+  visible BOOLEAN NOT NULL DEFAULT TRUE,
+  updated_by_user_id UUID,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 CREATE TABLE IF NOT EXISTS builder_audit_events (
   id UUID PRIMARY KEY,
-  actor_user_id UUID,
   action TEXT NOT NULL,
-  target_type TEXT NOT NULL,
-  target_id TEXT,
+  actor_user_id UUID,
+  actor_name TEXT,
+  actor_email TEXT,
   details JSONB NOT NULL DEFAULT '{}'::jsonb,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
@@ -108,4 +113,6 @@ CREATE TABLE IF NOT EXISTS builder_audit_events (
 CREATE INDEX IF NOT EXISTS builder_pages_status_updated_idx ON builder_pages(status, updated_at DESC);
 CREATE INDEX IF NOT EXISTS builder_versions_page_created_idx ON builder_page_versions(page_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS builder_media_active_idx ON builder_media_assets(deleted_at, updated_at DESC);
+CREATE INDEX IF NOT EXISTS builder_navigation_sort_idx ON builder_navigation_items(sort_order ASC);
+CREATE INDEX IF NOT EXISTS builder_form_submissions_created_idx ON builder_form_submissions(form_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS builder_audit_created_idx ON builder_audit_events(created_at DESC);
