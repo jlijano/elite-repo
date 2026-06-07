@@ -43,6 +43,7 @@ const els = {
 
 function setStatus(message, error = false) {
   els.status.textContent = message;
+  els.status.title = message;
   els.status.classList.toggle("error", error);
 }
 
@@ -141,14 +142,22 @@ function textareaToFields(value, existingFields = []) {
 
 function renderPages() {
   els.pageCount.textContent = String(state.pages.length);
-  els.pageSelect.innerHTML = state.pages.map((page) => `<option value="${escapeHtml(page.id)}">${escapeHtml(page.title)}</option>`).join("");
+  els.pageSelect.innerHTML = state.pages.map((page) => `<option value="${escapeHtml(page.id)}" title="${escapeHtml(page.title)}">${escapeHtml(page.title)}</option>`).join("");
   if (state.currentPage) els.pageSelect.value = state.currentPage.id;
-  els.pagesList.innerHTML = state.pages.map((page) => `<button class="builder-list-item${page.id === state.currentPage?.id ? " active" : ""}" type="button" data-page-id="${escapeHtml(page.id)}"><strong>${escapeHtml(page.title)}</strong><small>/${escapeHtml(page.slug)} - ${escapeHtml(page.status)}</small></button>`).join("");
+  els.pagesList.innerHTML = state.pages.map((page) => {
+    const title = escapeHtml(page.title);
+    const detail = `/${escapeHtml(page.slug)} - ${escapeHtml(page.status)}`;
+    return `<button class="builder-list-item${page.id === state.currentPage?.id ? " active" : ""}" type="button" data-page-id="${escapeHtml(page.id)}" title="${title} ${detail}"><strong>${title}</strong><small>${detail}</small></button>`;
+  }).join("");
   els.pagesList.querySelectorAll("[data-page-id]").forEach((button) => button.addEventListener("click", () => loadDraft(button.dataset.pageId)));
 }
 
 function renderTemplates() {
-  els.templatesList.innerHTML = state.templates.map((template) => `<button class="builder-list-item" type="button" data-template-id="${escapeHtml(template.id)}"><strong>${escapeHtml(template.name)}</strong><small>${escapeHtml(template.category)}</small></button>`).join("");
+  els.templatesList.innerHTML = state.templates.map((template) => {
+    const name = escapeHtml(template.name);
+    const category = escapeHtml(template.category);
+    return `<button class="builder-list-item" type="button" data-template-id="${escapeHtml(template.id)}" title="${name} ${category}"><strong>${name}</strong><small>${category}</small></button>`;
+  }).join("");
   els.templatesList.querySelectorAll("[data-template-id]").forEach((button) => button.addEventListener("click", () => insertTemplate(button.dataset.templateId)));
 }
 
@@ -156,7 +165,8 @@ function renderMedia() {
   els.mediaList.innerHTML = state.media.map((asset) => {
     const name = asset.fileName || asset.name || asset.title || "Media asset";
     const type = asset.mimeType || asset.type || asset.metadata?.mimeType || "Asset";
-    return `<button class="builder-list-item" type="button" data-media-id="${escapeHtml(asset.id)}"><strong>${escapeHtml(name)}</strong><small>${escapeHtml(type)} - ${escapeHtml(asset.altText || "No alt text")}</small></button>`;
+    const detail = `${type} - ${asset.altText || "No alt text"}`;
+    return `<button class="builder-list-item" type="button" data-media-id="${escapeHtml(asset.id)}" title="${escapeHtml(name)} ${escapeHtml(detail)}"><strong>${escapeHtml(name)}</strong><small>${escapeHtml(detail)}</small></button>`;
   }).join("");
 }
 
@@ -195,7 +205,11 @@ function renderCanvasBlock(block) {
 function renderLayers() {
   const blockList = blocks();
   els.layerCount.textContent = String(blockList.length);
-  els.layerList.innerHTML = blockList.map((block, index) => `<div class="builder-list-item${block.id === state.selectedBlockId ? " active" : ""}" data-layer-id="${escapeHtml(block.id)}"><span><strong>${escapeHtml(blockLabel(block))}</strong><small>${escapeHtml(block.type)}</small></span><span class="layer-actions"><button type="button" data-action="up" data-index="${index}">Up</button><button type="button" data-action="down" data-index="${index}">Down</button><button type="button" data-action="copy" data-index="${index}">Copy</button><button type="button" data-action="delete" data-index="${index}">Delete</button></span></div>`).join("");
+  els.layerList.innerHTML = blockList.map((block, index) => {
+    const label = escapeHtml(blockLabel(block));
+    const type = escapeHtml(block.type);
+    return `<div class="builder-list-item${block.id === state.selectedBlockId ? " active" : ""}" data-layer-id="${escapeHtml(block.id)}" title="${label} ${type}"><span><strong>${label}</strong><small>${type}</small></span><span class="layer-actions"><button type="button" data-action="up" data-index="${index}">Up</button><button type="button" data-action="down" data-index="${index}">Down</button><button type="button" data-action="copy" data-index="${index}">Copy</button><button type="button" data-action="delete" data-index="${index}">Delete</button></span></div>`;
+  }).join("");
   els.layerList.querySelectorAll("[data-layer-id]").forEach((row) => row.addEventListener("click", (event) => {
     if (event.target.tagName !== "BUTTON") selectBlock(row.dataset.layerId);
   }));
@@ -354,7 +368,7 @@ async function loadBuilder() {
     state.pages = [created.page];
   }
   await loadDraft(state.pages[0].id);
-  setStatus("Builder loaded. Draft changes autosave after edits.");
+  setStatus("Builder loaded. Draft changes are saved automatically after each edit.");
 }
 
 async function loadDraft(pageId) {
@@ -370,6 +384,10 @@ async function loadDraft(pageId) {
   renderWarnings([]);
   renderAll();
   setStatus(`Loaded draft: ${state.currentPage.title}`);
+  requestAnimationFrame(() => {
+    els.canvasFrame.scrollTop = 0;
+    els.canvasFrame.scrollLeft = 0;
+  });
 }
 
 async function createPage() {
