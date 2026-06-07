@@ -275,10 +275,11 @@
     badge.textContent = "0";
   }
 
-  function renderNotifications(changes = []) {
+  function renderNotifications(changes = [], totalCount = changes.length) {
     const activeChanges = Array.isArray(changes) ? changes : [];
+    const activeCount = Math.max(activeChanges.length, Number(totalCount) || 0);
     const visibleChanges = activeChanges.slice(0, maxVisibleNotifications);
-    setBellCount(activeChanges.length);
+    setBellCount(activeCount);
     if (!activeChanges.length) {
       list.innerHTML = '<p class="notification-empty">No system changes logged yet.</p>';
       return;
@@ -296,10 +297,11 @@
       list.innerHTML = '<p class="notification-empty">Loading notifications...</p>';
     }
     try {
-      const response = await fetch("/api/admin/system-change-log?limit=100", { headers: notificationHeaders() });
+      const response = await fetch("/api/admin/system-change-log?limit=12", { headers: notificationHeaders() });
       if (!response.ok) throw new Error("Notifications require an admin session.");
       const data = await response.json();
-      renderNotifications(Array.isArray(data.changes) ? data.changes : []);
+      const changes = Array.isArray(data.changes) ? data.changes : [];
+      renderNotifications(changes, data.total);
     } catch (error) {
       setBellCount(0);
       count.textContent = "Unavailable";
