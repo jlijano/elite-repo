@@ -2,6 +2,7 @@
 
 ## [Unreleased]
 
+- Made the Builder Application pages registry editable by rendering every listed app page with Edit, Preview, and Open actions that create or load the page draft in the existing Builder canvas.
 - Polished the admin Chat page with a dedicated scoped stylesheet for reference-matched dark spacing, card surfaces, chat rows, search controls, and attachment empty states while preserving the existing page structure and scripts.
 - Added a notification bell icon to the admin top header next to the profile menu across admin pages.
 - Added a Kanban/List/Calendar view switcher to Playground Projects, keeping Kanban as the default and staging responsive placeholders for future List and Calendar views.
