@@ -45,8 +45,8 @@ CREATE TABLE IF NOT EXISTS builder_templates (
 
 CREATE TABLE IF NOT EXISTS builder_media_assets (
   id UUID PRIMARY KEY,
-  name TEXT NOT NULL,
-  url TEXT NOT NULL,
+  name TEXT NOT NULL DEFAULT 'Asset',
+  url TEXT NOT NULL DEFAULT '',
   type TEXT NOT NULL DEFAULT 'image',
   alt_text TEXT NOT NULL DEFAULT '',
   metadata JSONB NOT NULL DEFAULT '{}'::jsonb,
@@ -106,9 +106,37 @@ CREATE TABLE IF NOT EXISTS builder_audit_events (
   actor_user_id UUID,
   actor_name TEXT,
   actor_email TEXT,
+  target_type TEXT NOT NULL DEFAULT 'builder',
+  target_id TEXT,
   details JSONB NOT NULL DEFAULT '{}'::jsonb,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+ALTER TABLE builder_templates ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+
+ALTER TABLE builder_media_assets ADD COLUMN IF NOT EXISTS name TEXT NOT NULL DEFAULT 'Asset';
+ALTER TABLE builder_media_assets ADD COLUMN IF NOT EXISTS url TEXT NOT NULL DEFAULT '';
+ALTER TABLE builder_media_assets ADD COLUMN IF NOT EXISTS type TEXT NOT NULL DEFAULT 'image';
+ALTER TABLE builder_media_assets ADD COLUMN IF NOT EXISTS alt_text TEXT NOT NULL DEFAULT '';
+ALTER TABLE builder_media_assets ADD COLUMN IF NOT EXISTS metadata JSONB NOT NULL DEFAULT '{}'::jsonb;
+ALTER TABLE builder_media_assets ADD COLUMN IF NOT EXISTS used_by_page_ids UUID[] NOT NULL DEFAULT '{}';
+ALTER TABLE builder_media_assets ADD COLUMN IF NOT EXISTS uploaded_by_user_id UUID;
+
+ALTER TABLE builder_forms ADD COLUMN IF NOT EXISTS notification_email TEXT NOT NULL DEFAULT '';
+ALTER TABLE builder_forms ADD COLUMN IF NOT EXISTS captcha_enabled BOOLEAN NOT NULL DEFAULT TRUE;
+ALTER TABLE builder_forms ADD COLUMN IF NOT EXISTS created_by_user_id UUID;
+ALTER TABLE builder_forms ADD COLUMN IF NOT EXISTS updated_by_user_id UUID;
+
+ALTER TABLE builder_navigation_items ADD COLUMN IF NOT EXISTS url TEXT NOT NULL DEFAULT '';
+ALTER TABLE builder_navigation_items ADD COLUMN IF NOT EXISTS visible BOOLEAN NOT NULL DEFAULT TRUE;
+ALTER TABLE builder_navigation_items ADD COLUMN IF NOT EXISTS updated_by_user_id UUID;
+ALTER TABLE builder_navigation_items ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+ALTER TABLE builder_navigation_items ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+
+ALTER TABLE builder_audit_events ADD COLUMN IF NOT EXISTS actor_name TEXT;
+ALTER TABLE builder_audit_events ADD COLUMN IF NOT EXISTS actor_email TEXT;
+ALTER TABLE builder_audit_events ADD COLUMN IF NOT EXISTS target_type TEXT NOT NULL DEFAULT 'builder';
+ALTER TABLE builder_audit_events ADD COLUMN IF NOT EXISTS target_id TEXT;
 
 CREATE INDEX IF NOT EXISTS builder_pages_status_updated_idx ON builder_pages(status, updated_at DESC);
 CREATE INDEX IF NOT EXISTS builder_versions_page_created_idx ON builder_page_versions(page_id, created_at DESC);
