@@ -6,6 +6,7 @@ const originalStatic = express.static;
 const scriptTags = [
   '<script src="/button-design-global-v2.js" defer></script>',
   '<script src="/admin-independent-builder-nav.js" defer></script>',
+  '<script src="/admin-ux-stability.js" defer></script>',
   '<script src="/user-create-modal-reference.js" defer></script>'
 ];
 
