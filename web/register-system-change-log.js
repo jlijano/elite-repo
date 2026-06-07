@@ -1,19 +1,19 @@
 const fs = require("fs");
 const path = require("path");
+const crypto = require("crypto");
 const express = require("express");
 const { Pool } = require("pg");
 
 const originalListen = express.application.listen;
 const originalStatic = express.static;
 const attachedApps = new WeakSet();
-const publicDir = path.join(__dirname, "public");
 const notificationBellScript = '<script src="admin-notification-bell.js?v=20260607-system-log"></script>';
 const memoryChanges = [];
 let pool = null;
 let schemaReady = null;
 
 function makeId() {
-  return typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+  return crypto.randomUUID();
 }
 
 function cleanString(value, fallback = "", maxLength = 240) {
