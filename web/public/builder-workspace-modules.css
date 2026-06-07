@@ -55,7 +55,7 @@
 }
 
 .workspace-module-title {
-  max-width: 96px;
+  max-width: 88px;
   overflow: hidden;
   color: var(--muted);
   font-size: 0.72rem;
@@ -68,19 +68,22 @@
 .workspace-module-handle,
 .workspace-module-action,
 .workspace-module-resize {
-  min-width: 30px !important;
+  min-width: auto !important;
   min-height: 30px !important;
-  padding: 0 7px !important;
+  padding: 0 8px !important;
   border-radius: calc(var(--radius) - 2px) !important;
-  font-size: 0.78rem !important;
+  font-size: 0.72rem !important;
   line-height: 1 !important;
+  white-space: nowrap !important;
 }
 
 .workspace-module-handle {
   cursor: grab;
+  font-weight: 900 !important;
 }
 
-.workspace-module-handle:active {
+.workspace-module-handle:active,
+.builder-module-drag-active .workspace-module-handle {
   cursor: grabbing;
 }
 
