@@ -2,6 +2,7 @@
 
 ## [Unreleased]
 
+- Fixed the admin left sidebar navigation on narrow screens by removing text-glyph icon fallbacks, stabilizing accordion chevrons, reducing hover emphasis, and preventing right-edge clipping in the sidebar and mobile menu.
 - Made the Builder Application pages registry editable by rendering every listed app page with Edit, Preview, and Open actions that create or load the page draft in the existing Builder canvas.
 - Polished the admin Chat page with a dedicated scoped stylesheet for reference-matched dark spacing, card surfaces, chat rows, search controls, and attachment empty states while preserving the existing page structure and scripts.
 - Added a notification bell icon to the admin top header next to the profile menu across admin pages.
@@ -58,34 +59,3 @@
 - Added a top-header user profile settings person icon and a Mac-style current day/time display to admin pages.
 - Updated admin frontend contract tests and the web validation script for the new shared admin JavaScript file.
 - Added Chat Review to the admin Settings visible-widget controls as a default-off option, preserving the cleaned Knowledge Queue default view while letting admins show Chat Review when needed.
-- Removed the generic admin Dashboard/Overview landing block so the admin side starts directly into actionable sections, and updated frontend contract tests to protect the cleanup.
-- Finalized admin dashboard frontend contract tests for navigation targets, active states, hidden Chat Review behavior, Settings theme toggling, visible labels, and configurable widget markup before drag-and-drop work begins.
-- Added admin dashboard frontend contract tests and replaced the static admin grid with configurable widgets for Overview, Chat Review, Knowledge Queue, Review Runs, Attachments, Admin Access, System Health, and Settings.
-- Cleaned the admin dashboard navigation labels, clarified the file-related sections, relabeled the workspace identity area, added active navigation states, and introduced a Settings section for application-wide preferences.
-- Changed the admin dashboard so the Chat Review and Chat Detail cards stay hidden until the Chat review navigation item is selected.
-- Fixed the admin dashboard layout so the left sidebar stays fixed on desktop and the right dashboard panel scrolls independently to reveal lower sections.
-- Refined the admin navigation so section links sit in a compact top nav bar and Logout renders as a normal-sized sidebar option.
-- Added source-controlled project knowledge cards to the admin Knowledge section covering the admin-token UI cleanup, Chat Review loading behavior, Knowledge section purpose, and GitHub/Render deployment rule.
-- Changed the admin Chat Review section so recent chats load into the highlighted review list through the normal chat APIs, while protected management-only data still requires backend admin access.
-- Removed the visible admin dashboard login token controls and manual Run Review button so the admin screen opens directly into the review sections.
-- Fixed the admin dashboard cleanup so chat and knowledge search controls render, filtering works from cached dashboard data, selected chats stay highlighted, and loading/error states are shown during admin actions.
-- Expanded the admin dashboard sidebar with Chat Review, User Management, File Management, Logs, Files Management, and Logout navigation.
-- Added honest placeholder admin sections for user and broader file management where backend endpoints are not configured yet.
-- Restyled the admin dashboard so it shares the Switchboard chat UI shell, theme tokens, dark/light mode behavior, and denser operational layout.
-- Added chat archiving so users can hide finished chats without deleting stored message history.
-- Added text file attachments in the chat composer, including selected-file chips, size/count limits, storage in message context, and AI context inclusion.
-- Added an additive `archived_at` chat schema field and archive API route.
-- Added focused backend integration tests for chat archiving, archived-chat write protection, and attachment storage/redaction.
-- Removed inactive chat UI controls for search, library, apps, sidebar collapse, and voice input so the interface only shows wired behavior.
-- Added focused backend integration tests for health/status, chat storage, `/api/chat` storage-only fallback, review route protection, admin auth, review runs, and knowledge approval.
-- Expanded `routing-rules.md` so it aligns with the Active agents, specialist routing map, risk escalation rules, and handoff format in `agent-directory.md`.
-- Corrected the PostgreSQL review-run changelog note so it no longer claims transaction handling that is not implemented in `web/server.js`.
-- Updated the Switchboard Agent web app with a ChatGPT-inspired full-height sidebar, centered conversation stream, and rounded bottom composer.
-- Added a 40-second frontend refresh for status, chat lists, and active chat history.
-- Added protected admin routes and `/admin.html` backend management dashboard for chats, knowledge entries, and review runs.
-- Changed review-created knowledge entries to `pending_review` so admins approve them before reuse.
-- Added an optional backend scheduled review runner controlled by `REVIEW_RUN_INTERVAL_MS`.
-- Fixed the chat UI so the active chat title refreshes after the first user message renames a new chat.
-- Hardened `/api/chat` fallback responses so storage failures no longer claim an unsaved message was saved for review.
-- Added PostgreSQL-backed Switchboard chat storage with `chats`, `chat_messages`, `knowledge_entries`, and `review_runs` tables.
-- Added separate chat sessions, New Chat behavior, timestamped messages, chat history loading, knowledge reading, and review run API routes.
