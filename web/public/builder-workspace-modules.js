@@ -93,10 +93,10 @@
         bar.className = "workspace-module-bar";
         bar.innerHTML = `
           <span class="workspace-module-title">${item.label}</span>
-          <button class="workspace-module-handle" type="button" aria-label="Drag ${item.label}" title="Drag and snap">Drag</button>
-          <button class="workspace-module-action" type="button" data-module-action="left" aria-label="Move ${item.label} left" title="Move left">Left</button>
-          <button class="workspace-module-action" type="button" data-module-action="right" aria-label="Move ${item.label} right" title="Move right">Right</button>
-          <button class="workspace-module-resize" type="button" aria-label="Resize ${item.label}" title="Drag to resize">Resize</button>
+          <button class="workspace-module-handle" type="button" aria-label="Drag ${item.label}" title="Drag and snap">⠿</button>
+          <button class="workspace-module-action" type="button" data-module-action="left" aria-label="Move ${item.label} left" title="Move left">←</button>
+          <button class="workspace-module-action" type="button" data-module-action="right" aria-label="Move ${item.label} right" title="Move right">→</button>
+          <button class="workspace-module-resize" type="button" aria-label="Resize ${item.label}" title="Resize">↔</button>
         `;
         item.element.appendChild(bar);
       }
@@ -109,9 +109,9 @@
     control.className = "builder-workspace-template-control";
     control.id = "builderWorkspaceControl";
     control.innerHTML = `
-      <button id="toggleWorkspaceCustomize" type="button" aria-pressed="true">Customize layout</button>
-      <button id="saveWorkspaceTemplate" type="button">Save space template</button>
-      <select id="workspaceTemplateSelect" aria-label="Apply builder space template"><option value="">Templates</option></select>
+      <button id="toggleWorkspaceCustomize" type="button" aria-pressed="true">Customize</button>
+      <button id="saveWorkspaceTemplate" type="button">Save layout</button>
+      <select id="workspaceTemplateSelect" aria-label="Apply builder space template"><option value="">Layouts</option></select>
       <button id="applyWorkspaceTemplate" type="button">Apply</button>
       <button id="resetWorkspaceLayout" type="button">Reset</button>
     `;
@@ -127,7 +127,7 @@
     const select = document.getElementById("workspaceTemplateSelect");
     if (!select) return;
     const templates = readTemplates();
-    select.innerHTML = `<option value="">Templates</option>${templates.map((template, index) => `<option value="${index}">${escapeOption(template.name)}</option>`).join("")}`;
+    select.innerHTML = `<option value="">Layouts</option>${templates.map((template, index) => `<option value="${index}">${escapeOption(template.name)}</option>`).join("")}`;
   }
 
   function escapeOption(value) {
