@@ -2,24 +2,27 @@
 
 ## Purpose
 
-This plan merges the current repository analysis with the feature roadmap for the Switchboard Agent web app. It is ordered for safe production-oriented stabilization: validate first, fix user-facing defects, then harden security, persistence, and observability.
+This plan merges the current repository analysis with the feature roadmap for the Switchboard Agent web app. It is ordered for safe production-oriented stabilization: validate first, fix user-facing defects, then harden security, persistence, observability, and maintainability.
 
 ## Priority Order
 
-1. Stabilize tests, git hygiene, lockfile behavior, and install validation.
-2. Fix UI mojibake and password-rule mismatches.
-3. Move `user.html` inline CSS and JavaScript into maintainable static files.
-4. Make seeded users safer and clearly documented.
-5. Improve database initialization and seed management.
-6. Expand user, audit, report, health, and review-flow tests.
-7. Improve AI response observability and saved-for-review UI.
-8. Add review-run locking, duplicate prevention, and diagnostics.
-9. Add Playground persistence only if it is approved as a real product feature.
+1. Use `docs/architecture/repository-structure.md` and `docs/maintenance/bug-checking-playbook.md` as the maintenance map before future checks or bug fixes.
+2. Stabilize tests, git hygiene, lockfile behavior, and install validation.
+3. Fix UI mojibake and password-rule mismatches.
+4. Move `user.html` inline CSS and JavaScript into maintainable static files.
+5. Make seeded users safer and clearly documented.
+6. Improve database initialization and seed management.
+7. Expand user, audit, report, health, and review-flow tests.
+8. Improve AI response observability and saved-for-review UI.
+9. Add review-run locking, duplicate prevention, and diagnostics.
+10. Add Playground persistence only if it is approved as a real product feature.
+11. Migrate runtime files into the target maintenance-first structure in small tested phases.
 
 ## Feature Plan
 
 | Feature | Current Capability | Improvements | Development Plan |
 | --- | --- | --- | --- |
+| Repository Structure | The app works from `web/`, but runtime files, public assets, docs, and tests are broad and not yet grouped by feature area. | Clear maintenance map, predictable places to look for bugs, and a phased target structure that avoids breaking Render. | Use `docs/architecture/repository-structure.md` as the source of truth for future structure; move files only in small phases with README, changelog, path updates, and passing checks. |
 | Repo Hygiene / Validation | The app installs and tests run, but the baseline has failing tests and a normal install creates untracked files. | Reproducible installs, clean working tree, green validation. | Add `.gitignore`; keep `web/package-lock.json` when generated in an environment with registry access; prefer `npm ci` once the lockfile exists; fix stale test contracts; run `npm test` and `npm run check`. |
 | Chat UI | Users can create chats, send messages, attach text files, view history, archive chats, and use storage-only mode when AI is unavailable. | Improve message UX, attachment previews, error recovery, archived chat visibility, and mobile polish. | Audit desktop/mobile chat flows; fix broken icon encoding; add clearer upload validation; improve failed-send recovery; test attachment limits and archived-chat behavior. |
 | AI Response Flow | Uses OpenAI when `OPENAI_API_KEY` exists; otherwise saves messages for review. | Better status messaging, model config visibility, retry handling, and AI failure observability. | Add structured AI error logging without secrets; surface saved-for-review state; add optional retry; document `OPENAI_MODEL`; test configured/unconfigured AI states. |
@@ -36,13 +39,14 @@ This plan merges the current repository analysis with the feature roadmap for th
 | System Health | `/health` and `/api/status` report storage, AI, and directory availability. | Deeper database and config checks. | Add database latency, schema readiness, storage mode diagnostics, and OpenAI presence without secret values; test database and config failure modes. |
 | Playground | Static workspace/task/project/board planning page. | Persistence only if approved. | Defer persistence until core stability; decide whether tasks/projects should be stored; if approved, add tables, CRUD APIs, frontend state, and drag/drop tests. |
 | Theme Support | Light/dark/system handling across chat/admin pages. | Less duplicated theme code and fixed icon encoding. | Extract shared theme script; replace mojibake icons; ensure live system-mode updates; test all page theme contracts. |
-| Testing | Node tests cover backend APIs and frontend contracts, but some tests are stale. | Align tests with intended behavior and cover real defects. | Fix app/test mismatches; add regression tests for mojibake, password rules, seeded users, audit events, user modal behavior, reports states, and health failure modes. |
-| Documentation | README documents routes, setup, env vars, tests, deployment, and maintenance rules. | Update after behavior, seed, and folder changes. | Add seeded account policy; document password policy; update folder structure and database initialization notes; update `change-log.md`; never expose real secrets. |
+| Testing | Node tests cover backend APIs and frontend contracts, but some tests are stale. | Align tests with intended behavior and cover real defects. | Fix app/test mismatches; add regression tests for mojibake, password rules, seeded users, audit events, user modal behavior, reports states, and health failure modes; later group tests under `web/test/api/` and `web/test/contracts/`. |
+| Documentation | README documents routes, setup, env vars, tests, deployment, and maintenance rules. | Update after behavior, seed, and folder changes. | Add seeded account policy; document password policy; keep repository structure and bug-checking guides current; update `change-log.md`; never expose real secrets. |
 
 ## Current Confirmed Fixes Started
 
 - Added `.gitignore` to keep dependencies, env files, logs, coverage, caches, and local artifacts out of source control.
 - Aligned `update-profile.html` new-password and confirmation fields with the backend 12-character password policy.
+- Added maintenance-first repository structure and bug-checking guides under `docs/`.
 
 ## Verification Notes
 
