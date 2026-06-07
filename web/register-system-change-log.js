@@ -40,6 +40,10 @@ function singularResource(value) {
   return titleCase(singular);
 }
 
+function isoOrNull(value) {
+  return value ? new Date(value).toISOString() : null;
+}
+
 function changeRow(row = {}) {
   return {
     id: row.id,
@@ -47,7 +51,10 @@ function changeRow(row = {}) {
     module: row.module || "System",
     summary: row.summary || "System change",
     actor: row.actor || "System",
-    createdAt: new Date(row.created_at || row.createdAt || Date.now()).toISOString()
+    createdAt: new Date(row.created_at || row.createdAt || Date.now()).toISOString(),
+    archivedAt: isoOrNull(row.archived_at || row.archivedAt),
+    implementedAt: isoOrNull(row.implemented_at || row.implementedAt),
+    revertRequestedAt: isoOrNull(row.revert_requested_at || row.revertRequestedAt)
   };
 }
 
@@ -75,7 +82,12 @@ async function ensureSchema() {
         actor TEXT NOT NULL DEFAULT 'System',
         created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
       );
+      ALTER TABLE system_change_log
+        ADD COLUMN IF NOT EXISTS archived_at TIMESTAMPTZ,
+        ADD COLUMN IF NOT EXISTS implemented_at TIMESTAMPTZ,
+        ADD COLUMN IF NOT EXISTS revert_requested_at TIMESTAMPTZ;
       CREATE INDEX IF NOT EXISTS system_change_log_created_at_idx ON system_change_log(created_at DESC);
+      CREATE INDEX IF NOT EXISTS system_change_log_active_created_at_idx ON system_change_log(archived_at, created_at DESC);
     `);
   }
   await schemaReady;
@@ -89,7 +101,10 @@ async function recordSystemChange(change = {}) {
     module: cleanString(change.module, "System", 120),
     summary: cleanString(change.summary, "System change", 280),
     actor: cleanString(change.actor, "System", 160),
-    createdAt: new Date().toISOString()
+    createdAt: new Date().toISOString(),
+    archivedAt: null,
+    implementedAt: null,
+    revertRequestedAt: null
   };
   const db = await ensureSchema();
   if (!db) {
@@ -104,12 +119,37 @@ async function recordSystemChange(change = {}) {
   return changeRow(result.rows[0]);
 }
 
-async function listSystemChanges(limit = 50) {
+async function listSystemChanges(limit = 50, options = {}) {
   const safeLimit = Math.max(1, Math.min(100, Number(limit) || 50));
+  const includeArchived = Boolean(options.includeArchived);
   const db = await ensureSchema();
-  if (!db) return memoryChanges.slice(0, safeLimit).map(changeRow);
-  const result = await db.query("SELECT * FROM system_change_log ORDER BY created_at DESC LIMIT $1", [safeLimit]);
+  if (!db) {
+    return memoryChanges
+      .filter((change) => includeArchived || !change.archivedAt)
+      .slice(0, safeLimit)
+      .map(changeRow);
+  }
+  const sql = includeArchived
+    ? "SELECT * FROM system_change_log ORDER BY created_at DESC LIMIT $1"
+    : "SELECT * FROM system_change_log WHERE archived_at IS NULL ORDER BY created_at DESC LIMIT $1";
+  const result = await db.query(sql, [safeLimit]);
   return result.rows.map(changeRow);
+}
+
+async function markSystemChange(changeId, field) {
+  const allowedFields = new Set(["archived_at", "implemented_at", "revert_requested_at"]);
+  if (!allowedFields.has(field)) return null;
+  const db = await ensureSchema();
+  if (!db) {
+    const change = memoryChanges.find((item) => item.id === changeId);
+    if (!change) return null;
+    if (field === "archived_at") change.archivedAt = new Date().toISOString();
+    if (field === "implemented_at") change.implementedAt = new Date().toISOString();
+    if (field === "revert_requested_at") change.revertRequestedAt = new Date().toISOString();
+    return changeRow(change);
+  }
+  const result = await db.query(`UPDATE system_change_log SET ${field} = NOW() WHERE id = $1 RETURNING *`, [changeId]);
+  return result.rows[0] ? changeRow(result.rows[0]) : null;
 }
 
 function suppliedToken(req, headerName) {
@@ -176,7 +216,7 @@ function attachSystemChangeRoutes(app) {
 
   app.get("/api/admin/system-change-log", requireAdmin, async (req, res, next) => {
     try {
-      res.json({ changes: await listSystemChanges(req.query.limit) });
+      res.json({ changes: await listSystemChanges(req.query.limit, { includeArchived: req.query.includeArchived === "true" }) });
     } catch (error) {
       next(error);
     }
@@ -186,6 +226,33 @@ function attachSystemChangeRoutes(app) {
     try {
       const change = await recordSystemChange(req.body || {});
       res.status(201).json({ change });
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  app.post("/api/admin/system-change-log/:changeId/archive", requireAdmin, async (req, res, next) => {
+    try {
+      const change = await markSystemChange(req.params.changeId, "archived_at");
+      change ? res.json({ change }) : res.status(404).json({ error: "System change log entry not found." });
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  app.post("/api/admin/system-change-log/:changeId/implement", requireAdmin, async (req, res, next) => {
+    try {
+      const change = await markSystemChange(req.params.changeId, "implemented_at");
+      change ? res.json({ change }) : res.status(404).json({ error: "System change log entry not found." });
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  app.post("/api/admin/system-change-log/:changeId/revert-request", requireAdmin, async (req, res, next) => {
+    try {
+      const change = await markSystemChange(req.params.changeId, "revert_requested_at");
+      change ? res.json({ change }) : res.status(404).json({ error: "System change log entry not found." });
     } catch (error) {
       next(error);
     }
