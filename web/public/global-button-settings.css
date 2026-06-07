@@ -1,0 +1,146 @@
+:root {
+  --global-button-radius: var(--radius);
+  --global-button-min-width: 0px;
+  --global-button-min-height: 38px;
+  --global-button-padding-x: 12px;
+  --global-button-font-size: 1rem;
+  --global-button-font-weight: 800;
+  --global-button-text-transform: none;
+  --global-button-transition: background 160ms ease, border-color 160ms ease, color 160ms ease, transform 160ms ease, box-shadow 160ms ease;
+  --global-button-hover-transform: none;
+  --global-button-active-transform: translateY(1px);
+  --global-button-hover-shadow: none;
+}
+
+button {
+  transition: var(--global-button-transition);
+}
+
+button:active:not(:disabled) {
+  transform: var(--global-button-active-transform);
+}
+
+:where(.admin-panel button:not(.profile-settings), .secondary-action, .primary-action, .theme-toggle, .mobile-new-chat, .mobile-admin-menu-button) {
+  min-width: var(--global-button-min-width);
+  min-height: var(--global-button-min-height);
+  padding-inline: var(--global-button-padding-x);
+  border-radius: var(--global-button-radius);
+  border-color: var(--global-button-border, var(--line));
+  background: var(--global-button-bg, var(--panel-soft));
+  color: var(--global-button-text, var(--text));
+  font-size: var(--global-button-font-size);
+  font-weight: var(--global-button-font-weight);
+  letter-spacing: 0;
+  text-transform: var(--global-button-text-transform);
+}
+
+:where(.admin-panel button:not(.profile-settings), .secondary-action, .primary-action, .theme-toggle, .mobile-new-chat, .mobile-admin-menu-button):hover:not(:disabled),
+:where(.admin-panel button:not(.profile-settings), .secondary-action, .primary-action, .theme-toggle, .mobile-new-chat, .mobile-admin-menu-button):focus-visible:not(:disabled) {
+  border-color: var(--global-button-border, var(--composer-border));
+  background: var(--global-button-hover-bg, var(--sidebar-card));
+  color: var(--global-button-hover-text, var(--global-button-text, var(--text)));
+  box-shadow: var(--global-button-hover-shadow);
+  transform: var(--global-button-hover-transform);
+}
+
+:where(.admin-panel button:not(.profile-settings), .secondary-action, .primary-action, .theme-toggle, .mobile-new-chat, .mobile-admin-menu-button):active:not(:disabled) {
+  background: var(--global-button-active-bg, var(--global-button-hover-bg, var(--sidebar-card)));
+  transform: var(--global-button-active-transform);
+}
+
+.button-style-settings-row {
+  align-items: start;
+  grid-template-columns: minmax(0, 1fr) minmax(320px, 540px);
+}
+
+.button-style-control {
+  width: min(540px, 100%);
+  justify-self: end;
+  display: grid;
+  gap: 12px;
+}
+
+.button-style-fields {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.button-style-field {
+  min-width: 0;
+  display: grid;
+  gap: 6px;
+  color: var(--text);
+  font-size: 0.76rem;
+  font-weight: 850;
+}
+
+.button-style-field input,
+.button-style-field select {
+  min-height: 36px;
+}
+
+.button-style-field input[type="range"] {
+  padding: 0;
+}
+
+.button-style-field input[type="color"] {
+  min-height: 38px;
+  padding: 4px;
+}
+
+.button-style-preview-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding-top: 2px;
+}
+
+.button-style-preview-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.button-style-summary {
+  color: var(--muted);
+  font-size: 0.78rem;
+  line-height: 1.35;
+  text-align: right;
+}
+
+@media (max-width: 900px) {
+  .button-style-fields {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 760px) {
+  .button-style-settings-row {
+    grid-template-columns: 1fr;
+  }
+
+  .button-style-control {
+    justify-self: stretch;
+  }
+
+  .button-style-summary {
+    text-align: left;
+  }
+}
+
+@media (max-width: 520px) {
+  .button-style-fields {
+    grid-template-columns: 1fr;
+  }
+
+  .button-style-preview-row {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .button-style-preview-actions {
+    display: grid;
+  }
+}
