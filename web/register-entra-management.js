@@ -89,6 +89,7 @@ express.application.listen = function patchedListen(...args) {
       attachPlaygroundRoutes(this, {
         requireAdmin,
         userStore,
+        systemChangeLog: this.locals.systemChangeLog,
         databaseUrl: process.env.DATABASE_URL,
         databaseSsl: process.env.DATABASE_SSL,
         makeId: () => crypto.randomUUID(),
