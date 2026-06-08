@@ -573,17 +573,8 @@ setInterval(() => refreshCurrentSession().catch(() => {}), refreshIntervalMs);
 resizeInput();
 
 window.addEventListener("load", () => {
-  const scripts = [
-    "runtime-stability-guard.js?v=20260608-observer-guard",
-    "bubble-color.js?v=20260607-chat-scope",
-    "chat-media-fix.js?v=20260607-camera-fix",
-    "start-page-polish.js?v=20260608-secure-room-ui",
-    "secure-room-bugfix.js?v=20260608-video-bugfix"
-  ];
-
-  for (const src of scripts) {
+  for (const src of ["bubble-color.js?v=20260607-chat-scope", "chat-media-fix.js?v=20260607-camera-fix"]) {
     const script = document.createElement("script");
-    script.async = false;
     script.src = src;
     document.body.appendChild(script);
   }

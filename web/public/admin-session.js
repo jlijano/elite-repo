@@ -33,7 +33,7 @@
     { href: "/playground-projects.html", label: "Projects", icon: "▣" },
     { href: "/playground-tasks.html", label: "Tasks", icon: "☑" },
     { href: "/playground-notes.html", label: "Notes", icon: "✎" },
-    { href: "/playground-automation.html", label: "Automations", icon: "⚙" }
+    { href: "/playground-automation.html", label: "Automation", icon: "⚙" }
   ];
 
   function storedSessionToken() {
@@ -106,7 +106,6 @@
       const link = document.createElement("a");
       link.className = `nav-item${page.href === path ? " active" : ""}`;
       link.href = page.href;
-      link.dataset.navKey = page.href;
       if (page.href === path) link.setAttribute("aria-current", "page");
       const icon = document.createElement("span");
       icon.setAttribute("aria-hidden", "true");
@@ -135,165 +134,6 @@
     if (!anchor) return;
     tasksLink?.remove();
     anchor.replaceWith(nestedAdminNav({ className: "playground-nav", summaryLabel: "Playground", itemLabel: "Playground navigation", pages: playgroundPages }));
-  }
-
-  function syncActiveNav() {
-    const path = currentPath();
-    document.querySelectorAll(".admin-shell .nav-item, .mobile-admin-menu-link").forEach((link) => {
-      const href = link.getAttribute("href") || link.dataset.navKey || "";
-      const active = href === path;
-      link.classList.toggle("active", active);
-      if (active) link.setAttribute("aria-current", "page");
-      else link.removeAttribute("aria-current");
-    });
-    document.querySelectorAll(".reports-summary").forEach((summary) => {
-      summary.classList.toggle("active", Boolean(summary.closest("details")?.querySelector(".nav-item.active")));
-    });
-  }
-
-  function protectRealPlaygroundLinks() {
-    document.addEventListener("click", (event) => {
-      const link = event.target?.closest?.('a[href="/playground.html"]');
-      if (!link || currentPath() === "/playground.html") return;
-      event.preventDefault();
-      event.stopImmediatePropagation();
-      window.sessionStorage?.removeItem?.("switchboard-admin-clicked-nav");
-      window.location.assign(link.href);
-    }, true);
-  }
-
-  function resetAdminScrollPosition() {
-    if (!onAdminPage()) return;
-    if ("scrollRestoration" in window.history) window.history.scrollRestoration = "manual";
-    requestAnimationFrame(() => {
-      window.scrollTo(0, 0);
-      document.querySelectorAll(".admin-scroll, .builder-canvas-frame, .builder-list, .builder-form").forEach((element) => {
-        element.scrollTop = 0;
-        element.scrollLeft = 0;
-      });
-    });
-  }
-
-  function normalizePlaygroundLabels() {
-    document.querySelectorAll('a[href="/playground-automation.html"]').forEach((link) => {
-      const label = "Automations";
-      const icon = link.querySelector('span[aria-hidden="true"]');
-      if (icon) {
-        link.textContent = "";
-        link.append(icon, label);
-      } else {
-        link.textContent = label;
-      }
-      link.title = label;
-    });
-  }
-
-  function normalizeQuickActions() {
-    const adminPage = String(document.body?.dataset.adminPage || "");
-    if (!adminPage.startsWith("playground")) return;
-    const actions = document.querySelector(".admin-header .header-actions");
-    if (!actions || actions.dataset.normalizedPlaygroundActions === "true") return;
-    const profileMenu = actions.querySelector(".profile-menu");
-    actions.querySelectorAll("a.secondary-action").forEach((link) => {
-      if (playgroundPages.some((page) => page.href === link.getAttribute("href"))) link.remove();
-    });
-    for (const page of playgroundPages) {
-      const link = document.createElement("a");
-      link.className = "secondary-action";
-      link.href = page.href;
-      link.textContent = page.label;
-      link.title = page.label;
-      if (page.href === currentPath()) {
-        link.classList.add("active");
-        link.setAttribute("aria-current", "page");
-        link.setAttribute("aria-disabled", "true");
-      }
-      if (profileMenu) actions.insertBefore(link, profileMenu);
-      else actions.appendChild(link);
-    }
-    actions.dataset.normalizedPlaygroundActions = "true";
-  }
-
-  function annotateDisabledRefreshButtons() {
-    document.querySelectorAll('button:disabled').forEach((button) => {
-      if (!/refresh/i.test(button.textContent || "")) return;
-      const message = "Refresh is unavailable until this page has a live data source or pending request to reload.";
-      button.title = message;
-      button.setAttribute("aria-label", `${button.textContent.trim()}. ${message}`);
-    });
-  }
-
-  function polishUserManagementLayout() {
-    if (document.body?.dataset.adminPage !== "user") return;
-    const search = document.getElementById("userSearch");
-    if (search) {
-      search.placeholder = "Search name, email, or username";
-      search.title = "Search name, email, or username";
-    }
-    if (document.getElementById("userManagementResponsivePatch")) return;
-    const style = document.createElement("style");
-    style.id = "userManagementResponsivePatch";
-    style.textContent = `
-      body[data-admin-page="user"] .user-toolbar input {
-        min-width: 240px;
-        text-overflow: ellipsis;
-      }
-      body[data-admin-page="user"] .users-table-wrap {
-        width: 100%;
-        overflow-x: auto;
-        scrollbar-width: thin;
-      }
-      body[data-admin-page="user"] .users-table {
-        min-width: 0 !important;
-        table-layout: fixed;
-      }
-      body[data-admin-page="user"] .users-table th,
-      body[data-admin-page="user"] .users-table td {
-        overflow-wrap: anywhere;
-      }
-      body[data-admin-page="user"] .users-table th:nth-child(1),
-      body[data-admin-page="user"] .users-table td:nth-child(1) { width: 20%; }
-      body[data-admin-page="user"] .users-table th:nth-child(2),
-      body[data-admin-page="user"] .users-table td:nth-child(2) { width: 27%; }
-      body[data-admin-page="user"] .users-table th:nth-child(3),
-      body[data-admin-page="user"] .users-table td:nth-child(3) { width: 12%; }
-      body[data-admin-page="user"] .users-table th:nth-child(4),
-      body[data-admin-page="user"] .users-table td:nth-child(4) { width: 12%; }
-      body[data-admin-page="user"] .users-table th:nth-child(5),
-      body[data-admin-page="user"] .users-table td:nth-child(5) { width: 14%; }
-      body[data-admin-page="user"] .users-table th:nth-child(6),
-      body[data-admin-page="user"] .users-table td:nth-child(6) { width: 15%; }
-      body[data-admin-page="user"] .users-table td:last-child {
-        min-width: 140px;
-        padding-left: 12px;
-      }
-      body[data-admin-page="user"] .users-table .actions {
-        justify-content: flex-end;
-        flex-wrap: wrap !important;
-        gap: 8px;
-      }
-      @media (max-width: 900px) {
-        body[data-admin-page="user"] .users-table {
-          min-width: 720px !important;
-          table-layout: auto;
-        }
-      }
-      @media (max-width: 720px) {
-        body[data-admin-page="user"] .users-table td:last-child {
-          min-width: 0;
-          padding-left: 0;
-        }
-      }
-    `;
-    document.head.appendChild(style);
-  }
-
-  function runLayoutPolish() {
-    syncActiveNav();
-    normalizePlaygroundLabels();
-    normalizeQuickActions();
-    annotateDisabledRefreshButtons();
-    polishUserManagementLayout();
   }
 
   function updateRoleAwareMenu(user) {
@@ -352,11 +192,8 @@
   }
 
   const nativeFetch = window.fetch.bind(window);
-  protectRealPlaygroundLinks();
-  resetAdminScrollPosition();
   initPlaygroundNav();
   initEntraNav();
-  runLayoutPolish();
 
   window.fetch = async (input, options = {}) => {
     const url = typeof input === "string" ? input : input?.url || "";
@@ -386,14 +223,11 @@
     document.addEventListener("DOMContentLoaded", bootstrapSession, { once: true });
     document.addEventListener("DOMContentLoaded", initPlaygroundNav, { once: true });
     document.addEventListener("DOMContentLoaded", initEntraNav, { once: true });
-    document.addEventListener("DOMContentLoaded", runLayoutPolish, { once: true });
-    document.addEventListener("DOMContentLoaded", resetAdminScrollPosition, { once: true });
     document.addEventListener("DOMContentLoaded", loadUserOrgFields, { once: true });
     document.addEventListener("DOMContentLoaded", loadPlaygroundCrud, { once: true });
   } else {
     bootstrapSession();
     loadUserOrgFields();
     loadPlaygroundCrud();
-    runLayoutPolish();
   }
 })();

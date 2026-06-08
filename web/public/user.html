@@ -32,50 +32,33 @@
       body[data-admin-page="user"] .users-table tr.active td { box-shadow: inset 3px 0 0 var(--primary); }
       body[data-admin-page="user"] .users-table .muted-cell { color: var(--muted); }
       body[data-admin-page="user"] .users-table .actions { justify-content: flex-end; flex-wrap: nowrap; }
-
-      body[data-admin-page="user"] .modal-backdrop { position: fixed; inset: 0; width: min(560px, calc(100vw - 28px)); max-height: min(720px, calc(100dvh - 28px)); margin: auto; padding: 0; border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel); color: var(--text); box-shadow: 0 24px 80px rgba(0, 0, 0, 0.42); }
+      body[data-admin-page="user"] .modal-backdrop { position: fixed; inset: 0; width: min(680px, calc(100vw - 28px)); max-height: min(720px, calc(100dvh - 28px)); margin: auto; padding: 0; border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel); color: var(--text); box-shadow: 0 24px 80px rgba(0, 0, 0, 0.42); }
       body[data-admin-page="user"] .modal-backdrop::backdrop { background: rgba(0, 0, 0, 0.58); }
       body[data-admin-page="user"] .modal-content { display: grid; max-height: min(720px, calc(100dvh - 28px)); overflow: hidden; }
-      body[data-admin-page="user"] .modal-head { min-height: 46px; display: flex; align-items: center; justify-content: flex-end; padding: 8px 10px 0; background: var(--panel); }
-      body[data-admin-page="user"] .modal-head h2 { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
-      body[data-admin-page="user"] .modal-close { width: 36px; height: 36px; min-height: 36px; padding: 0; border-radius: 50%; font-size: 1.25rem; line-height: 1; }
-      body[data-admin-page="user"] .user-dialog-body { max-height: calc(100dvh - 74px); overflow: auto; padding: 8px 28px 24px; }
-      body[data-admin-page="user"] .management-form.user-form-layout { display: grid; grid-template-columns: 1fr; gap: 12px; align-items: start; border: 0; padding: 0; }
-      body[data-admin-page="user"] .user-form-layout .form-heading { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
-      body[data-admin-page="user"] .user-form-layout label { margin: 0; }
-      body[data-admin-page="user"] .user-form-layout label span,
-      body[data-admin-page="user"] .photo-field-label { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
-      body[data-admin-page="user"] .user-form-layout input,
-      body[data-admin-page="user"] .user-form-layout select { min-height: 34px; border-radius: 0; }
-      body[data-admin-page="user"] .user-form-top-row { display: grid; grid-template-columns: 150px minmax(0, 1fr); gap: 18px 22px; align-items: start; width: 100%; }
-      body[data-admin-page="user"] .user-form-top-fields { display: grid; gap: 12px; min-width: 0; }
-      body[data-admin-page="user"] .photo-field { display: grid; justify-items: start; align-content: start; gap: 8px; min-width: 0; color: var(--text); font-weight: 800; }
-      body[data-admin-page="user"] .photo-drop-zone { width: 112px; height: 112px; min-height: 112px; display: grid; grid-template-columns: 1fr; place-items: center; padding: 0; border: 2px solid var(--line); border-radius: 50%; background: var(--panel-soft); color: var(--muted); cursor: pointer; }
+      body[data-admin-page="user"] .modal-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 14px; border-bottom: 1px solid var(--line); background: var(--panel-soft); }
+      body[data-admin-page="user"] .modal-head h2 { margin: 0; font-size: 1rem; }
+      body[data-admin-page="user"] .modal-close { width: 38px; height: 38px; padding: 0; font-size: 1.1rem; }
+      body[data-admin-page="user"] .user-dialog-body { max-height: calc(100dvh - 104px); overflow: auto; padding: 12px; }
+      body[data-admin-page="user"] .management-form { border: 0; padding: 0; }
+      body[data-admin-page="user"] .photo-field { min-width: 0; display: grid; gap: 8px; color: var(--text); font-weight: 800; }
+      body[data-admin-page="user"] .photo-field-label { font-size: 0.82rem; }
+      body[data-admin-page="user"] .photo-drop-zone { min-height: 118px; display: grid; grid-template-columns: 82px minmax(0, 1fr); gap: 12px; align-items: center; padding: 12px; border: 1px dashed var(--line); border-radius: var(--radius); background: var(--panel-soft); color: var(--muted); }
       body[data-admin-page="user"] .photo-drop-zone.drag-active { border-color: var(--primary); background: rgba(16, 163, 127, 0.14); box-shadow: inset 0 0 0 1px rgba(16, 163, 127, 0.22); }
-      body[data-admin-page="user"] .photo-preview { width: 100%; height: 100%; display: grid; place-items: center; overflow: hidden; border: 0; border-radius: 50%; background: transparent; color: var(--muted); font-size: 0.9rem; text-align: center; }
+      body[data-admin-page="user"] .photo-preview { width: 72px; height: 72px; display: grid; place-items: center; overflow: hidden; border: 1px solid var(--line); border-radius: 50%; background: var(--panel); color: var(--muted); font-size: 1.6rem; }
       body[data-admin-page="user"] .photo-preview img { width: 100%; height: 100%; object-fit: cover; }
-      body[data-admin-page="user"] .photo-preview span { padding: 0 10px; }
-      body[data-admin-page="user"] .photo-drop-copy { display: none; }
+      body[data-admin-page="user"] .photo-drop-copy { min-width: 0; display: grid; gap: 6px; }
+      body[data-admin-page="user"] .photo-drop-copy strong { color: var(--text); font-size: 0.92rem; }
+      body[data-admin-page="user"] .photo-drop-copy small { color: var(--muted); line-height: 1.35; }
+      body[data-admin-page="user"] .photo-upload-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+      body[data-admin-page="user"] .photo-upload-row button { min-height: 34px; }
       body[data-admin-page="user"] .photo-file-input { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
-      body[data-admin-page="user"] .photo-upload-status { max-width: 112px; color: var(--muted); font-size: 0.68rem; line-height: 1.25; text-align: center; overflow-wrap: anywhere; }
-      body[data-admin-page="user"] .user-role-status-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(88px, 0.28fr); gap: 12px; }
-      body[data-admin-page="user"] .form-actions { display: flex; justify-content: flex-end; padding-top: 2px; }
-      body[data-admin-page="user"] .form-actions button { min-width: 104px; min-height: 36px; border-radius: 999px; }
-
       @media (max-width: 760px) {
         body[data-admin-page="user"] .user-card-head { align-items: stretch; flex-direction: column; }
         body[data-admin-page="user"] .user-toolbar { width: 100%; min-width: 0; flex-direction: column; align-items: stretch; }
         body[data-admin-page="user"] .user-toolbar input,
         body[data-admin-page="user"] .user-toolbar button { flex: 0 0 auto; max-width: none; }
         body[data-admin-page="user"] .users-table { min-width: 680px; }
-      }
-      @media (max-width: 560px) {
-        body[data-admin-page="user"] .user-dialog-body { padding: 8px 14px 18px; }
-        body[data-admin-page="user"] .management-form.user-form-layout { gap: 10px; }
-        body[data-admin-page="user"] .user-form-top-row { grid-template-columns: 92px minmax(0, 1fr); gap: 10px; }
-        body[data-admin-page="user"] .photo-drop-zone { width: 78px; height: 78px; min-height: 78px; }
-        body[data-admin-page="user"] .photo-upload-status { max-width: 78px; }
-        body[data-admin-page="user"] .user-role-status-row { grid-template-columns: minmax(0, 1fr) minmax(96px, 0.46fr); }
+        body[data-admin-page="user"] .photo-drop-zone { grid-template-columns: 1fr; justify-items: start; }
       }
       @media (max-width: 520px) {
         body[data-admin-page="user"] .users-table-wrap { overflow-x: visible; }
@@ -99,18 +82,13 @@
         body[data-admin-page="user"] .users-table .actions { justify-content: stretch; flex-wrap: wrap; }
         body[data-admin-page="user"] .users-table .actions button { flex: 1 1 120px; }
       }
-      @media (max-width: 380px) {
-        body[data-admin-page="user"] .user-form-top-row,
-        body[data-admin-page="user"] .user-role-status-row { grid-template-columns: 1fr; }
-        body[data-admin-page="user"] .photo-field { justify-items: start; }
-      }
       @media (max-width: 340px), (max-height: 420px) and (max-width: 740px) {
         body[data-admin-page="user"] .users-table tr { padding: 8px; }
         body[data-admin-page="user"] .users-table td { grid-template-columns: 62px minmax(0, 1fr); gap: 6px; font-size: 0.78rem; }
         body[data-admin-page="user"] .users-table td::before { font-size: 0.64rem; }
         body[data-admin-page="user"] .modal-backdrop { width: calc(100vw - 12px); max-height: calc(100dvh - 12px); }
-        body[data-admin-page="user"] .modal-head { min-height: 40px; padding: 5px 6px 0; }
-        body[data-admin-page="user"] .user-dialog-body { max-height: calc(100dvh - 52px); padding: 6px; }
+        body[data-admin-page="user"] .modal-head { padding: 8px; }
+        body[data-admin-page="user"] .user-dialog-body { max-height: calc(100dvh - 66px); padding: 8px; }
       }
     </style>
   </head>
@@ -186,77 +164,60 @@
           <button class="modal-close" id="closeUserModalButton" type="button" aria-label="Close user form">×</button>
         </div>
         <div class="user-dialog-body">
-          <form class="management-form user-form-layout" id="userForm" autocomplete="off">
+          <form class="management-form" id="userForm" autocomplete="off">
             <div class="form-heading">
               <h3 id="userFormTitle">Create user</h3>
               <button id="cancelUserEditButton" type="button" hidden>Cancel edit</button>
             </div>
-            <div class="user-form-top-row">
-              <div class="photo-field">
-                <label class="photo-field-label" for="userPhotoUrl">Photo</label>
-                <div class="photo-drop-zone" id="photoDropZone" role="button" tabindex="0" aria-label="Upload profile photo by dropping an image or choosing a file">
-                  <div class="photo-preview" id="photoPreview" aria-hidden="true"><span id="photoPreviewText">Photo</span><img id="photoPreviewImage" alt="" hidden /></div>
-                  <div class="photo-drop-copy">
-                    <strong>Drop a photo here</strong>
-                    <small>PNG, JPG, GIF, or WebP up to 512 KB.</small>
-                    <div class="photo-upload-row"><button id="choosePhotoButton" type="button">Choose photo</button></div>
+            <label>
+              <span>Name</span>
+              <input id="userName" name="name" type="text" autocomplete="name" required />
+            </label>
+            <label>
+              <span>Email address</span>
+              <input id="userEmail" name="email" type="email" autocomplete="email" required />
+            </label>
+            <div class="photo-field">
+              <label class="photo-field-label" for="userPhotoUrl">Profile photo</label>
+              <div class="photo-drop-zone" id="photoDropZone" role="button" tabindex="0" aria-label="Upload profile photo by dropping an image or choosing a file">
+                <div class="photo-preview" id="photoPreview" aria-hidden="true"><span id="photoPreviewText">+</span><img id="photoPreviewImage" alt="" hidden /></div>
+                <div class="photo-drop-copy">
+                  <strong>Drop a photo here</strong>
+                  <small>PNG, JPG, GIF, or WebP up to 512 KB. You can also paste a hosted image URL below.</small>
+                  <div class="photo-upload-row">
+                    <button id="choosePhotoButton" type="button">Choose photo</button>
+                    <small id="photoUploadStatus" aria-live="polite">No photo selected.</small>
                   </div>
                 </div>
-                <input class="photo-file-input" id="photoFileInput" type="file" accept="image/png,image/jpeg,image/gif,image/webp" />
-                <small class="photo-upload-status" id="photoUploadStatus" aria-live="polite">No photo selected.</small>
               </div>
-              <div class="user-form-top-fields">
-                <label class="company-field">
-                  <span>Company Name</span>
-                  <input id="userCompany" name="company" type="text" placeholder="COMPANY NAME" autocomplete="organization" />
-                </label>
-                <label class="title-field">
-                  <span>Title</span>
-                  <input id="userTitle" name="department" type="text" placeholder="Title" autocomplete="organization-title" />
-                </label>
-              </div>
+              <input class="photo-file-input" id="photoFileInput" type="file" accept="image/png,image/jpeg,image/gif,image/webp" />
+              <input id="userPhotoUrl" name="photoUrl" type="url" placeholder="https://example.com/photo.jpg" autocomplete="off" />
             </div>
-            <label class="full-name-field">
-              <span>Full Name</span>
-              <input id="userName" name="name" type="text" placeholder="Full Name" autocomplete="name" required />
-            </label>
-            <label class="group-field">
-              <span>Group</span>
-              <input id="userGroup" name="group" type="text" placeholder="Group" autocomplete="off" />
-            </label>
-            <label class="email-field">
-              <span>Email</span>
-              <input id="userEmail" name="email" type="email" placeholder="email" autocomplete="email" required />
-            </label>
-            <label class="password-field">
-              <span>Password</span>
-              <input id="userPassword" name="password" type="password" autocomplete="new-password" minlength="8" placeholder="password" />
-            </label>
-            <label class="photo-url-field">
-              <span>Photo URL</span>
-              <input id="userPhotoUrl" name="photoUrl" type="url" placeholder="Photo URL" autocomplete="off" />
-            </label>
-            <div class="form-row user-role-status-row">
+            <div class="form-row">
               <label>
                 <span>Role</span>
-                <select id="userRole" name="role" aria-label="Role">
-                  <option value="viewer">Role: Viewer</option>
-                  <option value="member">Role: Member</option>
-                  <option value="admin">Role: Admin</option>
-                  <option value="owner">Role: Owner</option>
+                <select id="userRole" name="role">
+                  <option value="viewer">Viewer</option>
+                  <option value="member">Member</option>
+                  <option value="admin">Admin</option>
+                  <option value="owner">Owner</option>
                 </select>
               </label>
               <label>
                 <span>Status</span>
-                <select id="userStatus" name="status" aria-label="Status">
-                  <option value="active">status</option>
-                  <option value="invited">invited</option>
-                  <option value="disabled">disabled</option>
+                <select id="userStatus" name="status">
+                  <option value="active">Active</option>
+                  <option value="invited">Invited</option>
+                  <option value="disabled">Disabled</option>
                 </select>
               </label>
             </div>
+            <label>
+              <span>Password</span>
+              <input id="userPassword" name="password" type="password" autocomplete="new-password" minlength="8" placeholder="Leave blank unless setting a password" />
+            </label>
             <div class="form-actions">
-              <button id="saveUserButton" type="submit">save</button>
+              <button id="saveUserButton" type="submit">Create user</button>
             </div>
           </form>
         </div>
@@ -281,34 +242,8 @@
         const photoPreviewImage = document.getElementById("photoPreviewImage");
         const photoPreviewText = document.getElementById("photoPreviewText");
         const photoUploadStatus = document.getElementById("photoUploadStatus");
-        const userCompany = document.getElementById("userCompany");
-        const userTitle = document.getElementById("userTitle");
-        const userGroup = document.getElementById("userGroup");
         const maxPhotoBytes = 512 * 1024;
         let transformingUsers = false;
-
-        const originalFetch = window.fetch.bind(window);
-        window.fetch = (resource, options = {}) => {
-          const url = typeof resource === "string" ? resource : resource?.url || "";
-          const path = new URL(url, window.location.origin).pathname;
-          const method = String(options.method || "GET").toUpperCase();
-          const isUserSave = /^\/api\/admin\/users(?:\/[^/]+)?$/.test(path) && ["POST", "PATCH"].includes(method);
-          if (isUserSave && typeof options.body === "string") {
-            try {
-              const payload = JSON.parse(options.body || "{}");
-              options = {
-                ...options,
-                body: JSON.stringify({
-                  ...payload,
-                  company: userCompany?.value || "",
-                  department: userTitle?.value || "",
-                  group: userGroup?.value || ""
-                })
-              };
-            } catch (error) {}
-          }
-          return originalFetch(resource, options);
-        };
 
         function renderPhotoPreview(value = photoInput?.value || "") {
           const photoValue = String(value || "").trim();
@@ -411,16 +346,6 @@
           transformingUsers = false;
         }
 
-        function fillOrganizationFields(userId) {
-          try {
-            const user = usersCache.find((item) => item.id === userId);
-            if (!user) return;
-            if (userCompany) userCompany.value = user.company || "";
-            if (userTitle) userTitle.value = user.department || "";
-            if (userGroup) userGroup.value = user.group || "";
-          } catch (error) {}
-        }
-
         addButton?.addEventListener("click", () => window.setTimeout(openUserDialog, 0));
         closeButton?.addEventListener("click", closeUserDialog);
         cancelEditButton?.addEventListener("click", closeUserDialog);
@@ -432,19 +357,12 @@
           }, 700);
         });
         usersContainer?.addEventListener("click", (event) => {
-          const editButton = event.target.closest("[data-user-edit]");
-          if (editButton) {
-            window.setTimeout(() => {
-              fillOrganizationFields(editButton.dataset.userEdit);
-              openUserDialog();
-            }, 0);
-          }
+          if (event.target.closest("[data-user-edit]")) window.setTimeout(openUserDialog, 0);
         }, true);
         dialog?.addEventListener("click", (event) => {
           if (event.target === dialog) closeUserDialog();
         });
         choosePhotoButton?.addEventListener("click", () => photoFileInput?.click());
-        photoDropZone?.addEventListener("click", () => photoFileInput?.click());
         photoFileInput?.addEventListener("change", () => applyPhotoFile(photoFileInput.files?.[0]));
         photoInput?.addEventListener("input", () => renderPhotoPreview());
         photoDropZone?.addEventListener("keydown", (event) => {
