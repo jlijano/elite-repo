@@ -1,49 +1,169 @@
 const reportsAdminTokenStorageKey = "switchboard-admin-token";
 const reportsSessionTokenStorageKey = "switchboard-session-token";
-const reportsEntraPages = [
-  { href: "/company.html", label: "Company", icon: "▣" },
-  { href: "/department.html", label: "Department", icon: "◇" },
-  { href: "/group.html", label: "Group", icon: "▦" },
-  { href: "/user.html", label: "User", icon: "◉" }
-];
+const reportsNavGroups = {
+  entra: {
+    className: "entra-nav",
+    label: "ENTRA",
+    icon: "◉",
+    itemLabel: "ENTRA navigation",
+    pages: [
+      { href: "/company.html", label: "Company", icon: "▣" },
+      { href: "/department.html", label: "Department", icon: "◇" },
+      { href: "/group.html", label: "Group", icon: "▦" },
+      { href: "/user.html", label: "User", icon: "◉" }
+    ]
+  },
+  playground: {
+    className: "playground-nav",
+    label: "PLAYGROUND",
+    icon: "▦",
+    itemLabel: "PLAYGROUND navigation",
+    pages: [
+      { href: "/playground.html", label: "Board", icon: "▦" },
+      { href: "/playground-projects.html", label: "Projects", icon: "▣" },
+      { href: "/playground-tasks.html", label: "Tasks", icon: "☑" },
+      { href: "/playground-notes.html", label: "Notes", icon: "✎" },
+      { href: "/playground-automation.html", label: "Automation", icon: "⚙" }
+    ]
+  },
+  settings: {
+    className: "settings-nav",
+    label: "Settings",
+    icon: "⚙",
+    itemLabel: "Settings navigation",
+    pages: [
+      { href: "/settings.html", label: "Settings", icon: "⚙" },
+      { href: "/builder.html", label: "Builder", icon: "🛠" }
+    ]
+  },
+  reports: {
+    className: "reports-nav",
+    label: "REPORTS",
+    icon: "▣",
+    itemLabel: "REPORTS navigation",
+    pages: [
+      { href: "/reports.html", label: "Overview", icon: "▣" },
+      { href: "/logs.html", label: "Logs", icon: "≡" },
+      { href: "/review-runs.html", label: "Review runs", icon: "↻" },
+      { href: "/system-health.html", label: "System health", icon: "✚" },
+      { href: "/user-audit.html", label: "User audit", icon: "◎" }
+    ]
+  }
+};
 let reportsAuditCache = [];
 
-function initReportsEntraNav() {
-  const nav = document.querySelector(".primary-nav");
-  const userLink = nav?.querySelector('a.nav-item[href="/user.html"]');
-  if (!nav || !userLink || nav.querySelector(".entra-nav")) return;
+function reportsCurrentPath() {
+  return window.location.pathname || "/";
+}
 
-  const path = window.location.pathname || "/";
-  const isEntraPage = reportsEntraPages.some((page) => page.href === path);
+function createReportsNavIcon(value) {
+  const icon = document.createElement("span");
+  icon.className = "nav-icon";
+  icon.setAttribute("aria-hidden", "true");
+  icon.textContent = value;
+  return icon;
+}
+
+function createReportsNavLink({ href, label, icon, className = "" }) {
+  const path = reportsCurrentPath();
+  const link = document.createElement("a");
+  link.className = `nav-item${className ? ` ${className}` : ""}${href === path ? " active" : ""}`;
+  link.href = href;
+  link.dataset.navKey = href;
+  if (href === path) link.setAttribute("aria-current", "page");
+  link.append(createReportsNavIcon(icon), label);
+  return link;
+}
+
+function createReportsBackLink() {
+  const link = createReportsNavLink({ href: "/", label: "", icon: "←", className: "nav-back" });
+  link.setAttribute("aria-label", "Back to chat");
+  link.title = "Back to chat";
+  const label = document.createElement("span");
+  label.className = "sr-only";
+  label.textContent = "Back to chat";
+  link.appendChild(label);
+  return link;
+}
+
+function createReportsNestedNav(group) {
+  const path = reportsCurrentPath();
+  const active = group.pages.some((page) => page.href === path);
   const details = document.createElement("details");
-  details.className = "admin-section-list reports-nav entra-nav";
+  details.className = `admin-section-list reports-nav ${group.className}`;
   details.open = true;
 
   const summary = document.createElement("summary");
-  summary.className = `reports-summary${isEntraPage ? " active" : ""}`;
-  summary.innerHTML = '<span class="reports-summary-label"><span aria-hidden="true">◉</span>Entra</span><span class="reports-summary-chevron" aria-hidden="true">⌄</span>';
+  summary.className = `reports-summary${active ? " active" : ""}`;
+  summary.setAttribute("aria-label", `${group.label} menu`);
+  const label = document.createElement("span");
+  label.className = "reports-summary-label";
+  label.append(createReportsNavIcon(group.icon), group.label);
+  const chevron = document.createElement("span");
+  chevron.className = "reports-summary-chevron";
+  chevron.setAttribute("aria-hidden", "true");
+  chevron.textContent = "⌄";
+  summary.append(label, chevron);
 
   const items = document.createElement("div");
-  items.className = "reports-nav-items entra-nav-items";
-  items.setAttribute("aria-label", "Entra navigation");
-
-  for (const page of reportsEntraPages) {
-    const link = document.createElement("a");
-    link.className = `nav-item${page.href === path ? " active" : ""}`;
-    link.href = page.href;
-    if (page.href === path) link.setAttribute("aria-current", "page");
-    const icon = document.createElement("span");
-    icon.setAttribute("aria-hidden", "true");
-    icon.textContent = page.icon;
-    link.append(icon, page.label);
-    items.appendChild(link);
-  }
+  items.className = `reports-nav-items ${group.className}-items`;
+  items.setAttribute("aria-label", group.itemLabel);
+  group.pages.forEach((page) => items.appendChild(createReportsNavLink(page)));
 
   details.append(summary, items);
-  userLink.replaceWith(details);
+  return details;
 }
 
-initReportsEntraNav();
+function makeReportsBrandStatic() {
+  const topbar = document.querySelector(".sidebar-topbar");
+  const existingBrand = topbar?.querySelector(".brand-lockup");
+  if (!topbar || !existingBrand || existingBrand.dataset.brandStatic === "true") return;
+  const brand = document.createElement("div");
+  brand.className = "brand-lockup brand-lockup-static";
+  brand.dataset.brandStatic = "true";
+  brand.setAttribute("role", "img");
+  brand.setAttribute("aria-label", "Switchboard app");
+  brand.append(createReportsNavIcon("⌘"), document.createTextNode("Switchboard"));
+  brand.querySelector(".nav-icon").className = "brand-mark";
+  existingBrand.replaceWith(brand);
+}
+
+function injectReportsSidebarStyles() {
+  if (document.getElementById("canonicalSidebarNavStyles")) return;
+  const style = document.createElement("style");
+  style.id = "canonicalSidebarNavStyles";
+  style.textContent = `
+    .brand-lockup-static { cursor: default; user-select: none; }
+    .admin-shell .nav-back { width: 42px; min-height: 38px; justify-content: center; padding: 0; border: 1px solid var(--sidebar-line); border-radius: 50%; }
+    .admin-shell .nav-back .nav-icon { margin: 0; font-size: 1.15rem; }
+    .admin-shell .nav-back .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
+    .admin-shell .reports-summary.active { background: var(--sidebar-card); color: var(--sidebar-text); box-shadow: inset 3px 0 0 var(--primary); }
+    .reports-summary-label { min-width: 0; display: inline-flex; align-items: center; gap: 12px; }
+    .reports-summary-label .nav-icon { width: 22px; flex: 0 0 22px; color: var(--sidebar-muted); text-align: center; font-size: 1.05rem; }
+    .reports-summary.active .reports-summary-label .nav-icon { color: var(--primary); }
+    .reports-nav-items .nav-item { min-height: 36px; padding-left: 18px; font-size: 0.92rem; }
+    @media (max-width: 900px) { .admin-shell .nav-back { width: 36px; min-height: 36px; } .reports-nav-items .nav-item { padding-left: 10px; } }
+  `;
+  document.head.appendChild(style);
+}
+
+function initReportsSidebarNav() {
+  const nav = document.querySelector(".primary-nav");
+  if (!nav) return;
+  makeReportsBrandStatic();
+  injectReportsSidebarStyles();
+  nav.replaceChildren(
+    createReportsBackLink(),
+    createReportsNavLink({ href: "/chat.html", label: "Chat", icon: "□" }),
+    createReportsNavLink({ href: "/knowledge.html", label: "Knowledge base", icon: "◇" }),
+    createReportsNestedNav(reportsNavGroups.entra),
+    createReportsNestedNav(reportsNavGroups.playground),
+    createReportsNestedNav(reportsNavGroups.settings),
+    createReportsNestedNav(reportsNavGroups.reports)
+  );
+}
+
+initReportsSidebarNav();
 
 const reportsEls = {
   status: document.getElementById("status"),
