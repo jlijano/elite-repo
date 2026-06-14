@@ -20,21 +20,60 @@
     "/review-runs.html",
     "/system-health.html",
     "/user-audit.html",
-    "/settings.html"
+    "/settings.html",
+    "/builder.html"
   ]);
-  const entraPages = [
-    { href: "/company.html", label: "Company", icon: "▣" },
-    { href: "/department.html", label: "Department", icon: "◇" },
-    { href: "/group.html", label: "Group", icon: "▦" },
-    { href: "/user.html", label: "User", icon: "◉" }
-  ];
-  const playgroundPages = [
-    { href: "/playground.html", label: "Board", icon: "▦" },
-    { href: "/playground-projects.html", label: "Projects", icon: "▣" },
-    { href: "/playground-tasks.html", label: "Tasks", icon: "☑" },
-    { href: "/playground-notes.html", label: "Notes", icon: "✎" },
-    { href: "/playground-automation.html", label: "Automations", icon: "⚙" }
-  ];
+  const navGroups = {
+    entra: {
+      className: "entra-nav",
+      label: "ENTRA",
+      icon: "◉",
+      itemLabel: "ENTRA navigation",
+      pages: [
+        { href: "/company.html", label: "Company", icon: "▣" },
+        { href: "/department.html", label: "Department", icon: "◇" },
+        { href: "/group.html", label: "Group", icon: "▦" },
+        { href: "/user.html", label: "User", icon: "◉" }
+      ]
+    },
+    playground: {
+      className: "playground-nav",
+      label: "PLAYGROUND",
+      icon: "▦",
+      itemLabel: "PLAYGROUND navigation",
+      pages: [
+        { href: "/playground.html", label: "Board", icon: "▦" },
+        { href: "/playground-projects.html", label: "Projects", icon: "▣" },
+        { href: "/playground-tasks.html", label: "Tasks", icon: "☑" },
+        { href: "/playground-notes.html", label: "Notes", icon: "✎" },
+        { href: "/playground-automation.html", label: "Automation", icon: "⚙" }
+      ]
+    },
+    settings: {
+      className: "settings-nav",
+      label: "Settings",
+      icon: "⚙",
+      itemLabel: "Settings navigation",
+      pages: [
+        { href: "/settings.html", label: "Settings", icon: "⚙" },
+        { href: "/builder.html", label: "Builder", icon: "🛠" }
+      ]
+    },
+    reports: {
+      className: "reports-nav",
+      label: "REPORTS",
+      icon: "▣",
+      itemLabel: "REPORTS navigation",
+      pages: [
+        { href: "/reports.html", label: "Overview", icon: "▣" },
+        { href: "/logs.html", label: "Logs", icon: "≡" },
+        { href: "/review-runs.html", label: "Review runs", icon: "↻" },
+        { href: "/system-health.html", label: "System health", icon: "✚" },
+        { href: "/user-audit.html", label: "User audit", icon: "◎" }
+      ]
+    }
+  };
+  const playgroundPages = navGroups.playground.pages;
 
   function storedSessionToken() {
     return sessionStorage.getItem(sessionTokenStorageKey) || "";
@@ -86,55 +125,116 @@
     return { ...options, headers };
   }
 
-  function nestedAdminNav({ className, summaryLabel, summaryIcon = "", itemLabel, pages }) {
+  function createIcon(value) {
+    const icon = document.createElement("span");
+    icon.className = "nav-icon";
+    icon.setAttribute("aria-hidden", "true");
+    icon.textContent = value;
+    return icon;
+  }
+
+  function createNavLink({ href, label, icon, className = "" }) {
     const path = currentPath();
-    const active = pages.some((page) => page.href === path);
+    const link = document.createElement("a");
+    link.className = `nav-item${className ? ` ${className}` : ""}${href === path ? " active" : ""}`;
+    link.href = href;
+    link.dataset.navKey = href;
+    if (href === path) link.setAttribute("aria-current", "page");
+    link.append(createIcon(icon), label);
+    return link;
+  }
+
+  function createBackLink() {
+    const link = createNavLink({ href: "/", label: "", icon: "←", className: "nav-back" });
+    link.setAttribute("aria-label", "Back to chat");
+    link.title = "Back to chat";
+    const label = document.createElement("span");
+    label.className = "sr-only";
+    label.textContent = "Back to chat";
+    link.appendChild(label);
+    return link;
+  }
+
+  function createNestedNav(group) {
+    const path = currentPath();
+    const active = group.pages.some((page) => page.href === path);
     const details = document.createElement("details");
-    details.className = `admin-section-list reports-nav ${className}`;
-    details.open = true;
+    details.className = `admin-section-list reports-nav ${group.className}`;
+    details.open = active || true;
 
     const summary = document.createElement("summary");
     summary.className = `reports-summary${active ? " active" : ""}`;
-    const iconMarkup = summaryIcon ? `<span aria-hidden="true">${summaryIcon}</span>` : "";
-    summary.innerHTML = `<span class="reports-summary-label">${iconMarkup}${summaryLabel}</span><span class="reports-summary-chevron" aria-hidden="true">⌄</span>`;
+    summary.setAttribute("aria-label", `${group.label} menu`);
+    const label = document.createElement("span");
+    label.className = "reports-summary-label";
+    label.append(createIcon(group.icon), group.label);
+    const chevron = document.createElement("span");
+    chevron.className = "reports-summary-chevron";
+    chevron.setAttribute("aria-hidden", "true");
+    chevron.textContent = "⌄";
+    summary.append(label, chevron);
 
     const items = document.createElement("div");
-    items.className = `reports-nav-items ${className}-items`;
-    items.setAttribute("aria-label", itemLabel);
-
-    for (const page of pages) {
-      const link = document.createElement("a");
-      link.className = `nav-item${page.href === path ? " active" : ""}`;
-      link.href = page.href;
-      link.dataset.navKey = page.href;
-      if (page.href === path) link.setAttribute("aria-current", "page");
-      const icon = document.createElement("span");
-      icon.setAttribute("aria-hidden", "true");
-      icon.textContent = page.icon;
-      link.append(icon, page.label);
-      items.appendChild(link);
-    }
+    items.className = `reports-nav-items ${group.className}-items`;
+    items.setAttribute("aria-label", group.itemLabel);
+    group.pages.forEach((page) => items.appendChild(createNavLink(page)));
 
     details.append(summary, items);
     return details;
   }
 
-  function initEntraNav() {
-    const nav = document.querySelector(".primary-nav");
-    const userLink = nav?.querySelector('a.nav-item[href="/user.html"]');
-    if (!nav || !userLink || nav.querySelector(".entra-nav")) return;
-    userLink.replaceWith(nestedAdminNav({ className: "entra-nav", summaryLabel: "Entra", summaryIcon: "◉", itemLabel: "Entra navigation", pages: entraPages }));
+  function makeBrandStatic() {
+    const topbar = document.querySelector(".sidebar-topbar");
+    const existingBrand = topbar?.querySelector(".brand-lockup");
+    if (!topbar || !existingBrand || existingBrand.dataset.brandStatic === "true") return;
+    const brand = document.createElement("div");
+    brand.className = "brand-lockup brand-lockup-static";
+    brand.dataset.brandStatic = "true";
+    brand.setAttribute("role", "img");
+    brand.setAttribute("aria-label", "Switchboard app");
+    brand.append(createIcon("⌘"), document.createTextNode("Switchboard"));
+    const icon = brand.querySelector(".nav-icon");
+    icon.className = "brand-mark";
+    existingBrand.replaceWith(brand);
   }
 
-  function initPlaygroundNav() {
+  function injectCanonicalSidebarStyles() {
+    if (document.getElementById("canonicalSidebarNavStyles")) return;
+    const style = document.createElement("style");
+    style.id = "canonicalSidebarNavStyles";
+    style.textContent = `
+      .brand-lockup-static { cursor: default; user-select: none; }
+      .brand-lockup-static:focus { outline: none; }
+      .admin-shell .nav-back { width: 42px; min-height: 38px; justify-content: center; padding: 0; border: 1px solid var(--sidebar-line); border-radius: 50%; }
+      .admin-shell .nav-back .nav-icon { margin: 0; font-size: 1.15rem; }
+      .admin-shell .nav-back .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
+      .admin-shell .reports-summary.active { background: var(--sidebar-card); color: var(--sidebar-text); box-shadow: inset 3px 0 0 var(--primary); }
+      .reports-summary-label { min-width: 0; display: inline-flex; align-items: center; gap: 12px; }
+      .reports-summary-label .nav-icon { width: 22px; flex: 0 0 22px; color: var(--sidebar-muted); text-align: center; font-size: 1.05rem; }
+      .reports-summary.active .reports-summary-label .nav-icon { color: var(--primary); }
+      .reports-nav-items .nav-item { min-height: 36px; padding-left: 18px; font-size: 0.92rem; }
+      @media (max-width: 900px) {
+        .admin-shell .nav-back { width: 36px; min-height: 36px; }
+        .reports-nav-items .nav-item { padding-left: 10px; }
+      }
+    `;
+    document.head.appendChild(style);
+  }
+
+  function renderCanonicalSidebarNav() {
     const nav = document.querySelector(".primary-nav");
-    if (!nav || nav.querySelector(".playground-nav")) return;
-    const playgroundLink = nav.querySelector('a.nav-item[href="/playground.html"]');
-    const tasksLink = nav.querySelector('a.nav-item[href="/playground-tasks.html"]');
-    const anchor = playgroundLink || tasksLink;
-    if (!anchor) return;
-    tasksLink?.remove();
-    anchor.replaceWith(nestedAdminNav({ className: "playground-nav", summaryLabel: "Playground", itemLabel: "Playground navigation", pages: playgroundPages }));
+    if (!nav) return;
+    makeBrandStatic();
+    injectCanonicalSidebarStyles();
+    nav.replaceChildren(
+      createBackLink(),
+      createNavLink({ href: "/chat.html", label: "Chat", icon: "□" }),
+      createNavLink({ href: "/knowledge.html", label: "Knowledge base", icon: "◇" }),
+      createNestedNav(navGroups.entra),
+      createNestedNav(navGroups.playground),
+      createNestedNav(navGroups.settings),
+      createNestedNav(navGroups.reports)
+    );
   }
 
   function syncActiveNav() {
@@ -176,8 +276,8 @@
 
   function normalizePlaygroundLabels() {
     document.querySelectorAll('a[href="/playground-automation.html"]').forEach((link) => {
-      const label = "Automations";
-      const icon = link.querySelector('span[aria-hidden="true"]');
+      const label = "Automation";
+      const icon = link.querySelector('span[aria-hidden="true"], .nav-icon');
       if (icon) {
         link.textContent = "";
         link.append(icon, label);
@@ -234,61 +334,26 @@
     const style = document.createElement("style");
     style.id = "userManagementResponsivePatch";
     style.textContent = `
-      body[data-admin-page="user"] .user-toolbar input {
-        min-width: 240px;
-        text-overflow: ellipsis;
-      }
-      body[data-admin-page="user"] .users-table-wrap {
-        width: 100%;
-        overflow-x: auto;
-        scrollbar-width: thin;
-      }
-      body[data-admin-page="user"] .users-table {
-        min-width: 0 !important;
-        table-layout: fixed;
-      }
-      body[data-admin-page="user"] .users-table th,
-      body[data-admin-page="user"] .users-table td {
-        overflow-wrap: anywhere;
-      }
-      body[data-admin-page="user"] .users-table th:nth-child(1),
-      body[data-admin-page="user"] .users-table td:nth-child(1) { width: 20%; }
-      body[data-admin-page="user"] .users-table th:nth-child(2),
-      body[data-admin-page="user"] .users-table td:nth-child(2) { width: 27%; }
-      body[data-admin-page="user"] .users-table th:nth-child(3),
-      body[data-admin-page="user"] .users-table td:nth-child(3) { width: 12%; }
-      body[data-admin-page="user"] .users-table th:nth-child(4),
-      body[data-admin-page="user"] .users-table td:nth-child(4) { width: 12%; }
-      body[data-admin-page="user"] .users-table th:nth-child(5),
-      body[data-admin-page="user"] .users-table td:nth-child(5) { width: 14%; }
-      body[data-admin-page="user"] .users-table th:nth-child(6),
-      body[data-admin-page="user"] .users-table td:nth-child(6) { width: 15%; }
-      body[data-admin-page="user"] .users-table td:last-child {
-        min-width: 140px;
-        padding-left: 12px;
-      }
-      body[data-admin-page="user"] .users-table .actions {
-        justify-content: flex-end;
-        flex-wrap: wrap !important;
-        gap: 8px;
-      }
-      @media (max-width: 900px) {
-        body[data-admin-page="user"] .users-table {
-          min-width: 720px !important;
-          table-layout: auto;
-        }
-      }
-      @media (max-width: 720px) {
-        body[data-admin-page="user"] .users-table td:last-child {
-          min-width: 0;
-          padding-left: 0;
-        }
-      }
+      body[data-admin-page="user"] .user-toolbar input { min-width: 240px; text-overflow: ellipsis; }
+      body[data-admin-page="user"] .users-table-wrap { width: 100%; overflow-x: auto; scrollbar-width: thin; }
+      body[data-admin-page="user"] .users-table { min-width: 0 !important; table-layout: fixed; }
+      body[data-admin-page="user"] .users-table th, body[data-admin-page="user"] .users-table td { overflow-wrap: anywhere; }
+      body[data-admin-page="user"] .users-table th:nth-child(1), body[data-admin-page="user"] .users-table td:nth-child(1) { width: 20%; }
+      body[data-admin-page="user"] .users-table th:nth-child(2), body[data-admin-page="user"] .users-table td:nth-child(2) { width: 27%; }
+      body[data-admin-page="user"] .users-table th:nth-child(3), body[data-admin-page="user"] .users-table td:nth-child(3) { width: 12%; }
+      body[data-admin-page="user"] .users-table th:nth-child(4), body[data-admin-page="user"] .users-table td:nth-child(4) { width: 12%; }
+      body[data-admin-page="user"] .users-table th:nth-child(5), body[data-admin-page="user"] .users-table td:nth-child(5) { width: 14%; }
+      body[data-admin-page="user"] .users-table th:nth-child(6), body[data-admin-page="user"] .users-table td:nth-child(6) { width: 15%; }
+      body[data-admin-page="user"] .users-table td:last-child { min-width: 140px; padding-left: 12px; }
+      body[data-admin-page="user"] .users-table .actions { justify-content: flex-end; flex-wrap: wrap !important; gap: 8px; }
+      @media (max-width: 900px) { body[data-admin-page="user"] .users-table { min-width: 720px !important; table-layout: auto; } }
+      @media (max-width: 720px) { body[data-admin-page="user"] .users-table td:last-child { min-width: 0; padding-left: 0; } }
     `;
     document.head.appendChild(style);
   }
 
   function runLayoutPolish() {
+    renderCanonicalSidebarNav();
     syncActiveNav();
     normalizePlaygroundLabels();
     normalizeQuickActions();
@@ -354,8 +419,6 @@
   const nativeFetch = window.fetch.bind(window);
   protectRealPlaygroundLinks();
   resetAdminScrollPosition();
-  initPlaygroundNav();
-  initEntraNav();
   runLayoutPolish();
 
   window.fetch = async (input, options = {}) => {
@@ -384,8 +447,6 @@
 
   if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", bootstrapSession, { once: true });
-    document.addEventListener("DOMContentLoaded", initPlaygroundNav, { once: true });
-    document.addEventListener("DOMContentLoaded", initEntraNav, { once: true });
     document.addEventListener("DOMContentLoaded", runLayoutPolish, { once: true });
     document.addEventListener("DOMContentLoaded", resetAdminScrollPosition, { once: true });
     document.addEventListener("DOMContentLoaded", loadUserOrgFields, { once: true });
