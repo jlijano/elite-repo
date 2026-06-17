@@ -2,6 +2,24 @@ const express = require("express");
 
 const originalSend = express.response.send;
 const globalButtonScript = '<script src="/button-design-global-v2.js" defer></script>';
+const loadingStyleTag = '<link rel="stylesheet" href="/loading-screen.css?v=20260617-red-black" />';
+const loadingScriptTag = '<script src="/loading-screen.js?v=20260617-red-black" defer></script>';
+const loadingMarkup = `<div id="oligarchyLoadingScreen" role="status" aria-live="polite" aria-label="Oligarchy Services is loading">
+      <div class="oligarchy-loader-frame" aria-hidden="true"></div>
+      <div class="oligarchy-loader-kicker">[ Loading experience ]</div>
+      <div class="oligarchy-loader-brand" aria-hidden="true">
+        <div class="oligarchy-loader-mark">★</div>
+        <div class="oligarchy-loader-wordmark">
+          <strong>Oligarchy</strong>
+          <span>Services</span>
+        </div>
+      </div>
+      <div class="oligarchy-loader-marquee" aria-hidden="true">
+        <span>Red system online</span><span>Motion-first interface</span><span>Secure room loading</span>
+        <span>Red system online</span><span>Motion-first interface</span><span>Secure room loading</span>
+      </div>
+      <div class="oligarchy-loader-percent"><span data-loader-percent>0%</span></div>
+    </div>`;
 const heroTypographyScript = `<script>
   (() => {
     function polishHeroTypography() {
@@ -24,6 +42,17 @@ function shouldInject(req, body) {
     && typeof body === "string"
     && body.includes("<html")
     && !body.includes("button-design-global-v2.js");
+}
+
+function injectLoadingScreen(html) {
+  if (html.includes("oligarchyLoadingScreen")) return html;
+  let output = html.includes("/loading-screen.css")
+    ? html
+    : html.replace("</head>", `  ${loadingStyleTag}\n</head>`);
+  output = output.replace(/<body([^>]*)>/i, (match) => `${match}\n    ${loadingMarkup}`);
+  return output.includes("/loading-screen.js")
+    ? output
+    : output.replace("</body>", `  ${loadingScriptTag}\n</body>`);
 }
 
 function injectGlobalDesign(html) {
@@ -74,9 +103,10 @@ function injectGlobalDesign(html) {
     .builder-public-section button:active { background: var(--global-button-click-bg, #111); }
   </style>`;
   const withStyle = html.includes("</head>") ? html.replace("</head>", `${style}</head>`) : `${style}${html}`;
+  const withLoader = injectLoadingScreen(withStyle);
   const scripts = `  ${heroTypographyScript}\n  ${globalButtonScript}\n`;
-  if (withStyle.includes("</body>")) return withStyle.replace("</body>", `${scripts}</body>`);
-  return `${withStyle}\n${scripts}`;
+  if (withLoader.includes("</body>")) return withLoader.replace("</body>", `${scripts}</body>`);
+  return `${withLoader}\n${scripts}`;
 }
 
 if (!express.response.__builderPublicDesignPatched) {
