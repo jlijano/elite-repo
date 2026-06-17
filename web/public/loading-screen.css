@@ -5,11 +5,17 @@
   display: grid;
   place-items: center;
   overflow: hidden;
+  --loader-bg: var(--global-button-bg, #f2f2ee);
+  --loader-surface: var(--global-button-hover-bg, #e8e8e3);
+  --loader-text: var(--global-button-text, #202123);
+  --loader-muted: var(--global-button-hover-text, #202123);
+  --loader-border: var(--global-button-border, #d9d9d9);
+  --loader-accent: var(--global-button-click-bg, #d8d8d2);
+  --loader-accent-rgb: 216, 216, 210;
+  --loader-text-rgb: 32, 33, 35;
   background:
-    radial-gradient(circle at 18% 18%, rgba(212, 0, 0, 0.34), transparent 26%),
-    radial-gradient(circle at 82% 82%, rgba(128, 0, 0, 0.26), transparent 30%),
-    linear-gradient(135deg, #050505 0%, #130000 54%, #000000 100%);
-  color: #ffffff;
+    linear-gradient(135deg, var(--loader-bg) 0%, var(--loader-surface) 62%, var(--loader-bg) 100%);
+  color: var(--loader-text);
   font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   isolation: isolate;
 }
@@ -24,17 +30,16 @@
 
 #oligarchyLoadingScreen::before {
   background:
-    linear-gradient(110deg, transparent 0 39%, rgba(255, 0, 0, 0.84) 40% 48%, transparent 49% 100%),
-    linear-gradient(110deg, transparent 0 58%, rgba(90, 0, 0, 0.72) 59% 65%, transparent 66% 100%);
+    linear-gradient(110deg, transparent 0 39%, rgba(var(--loader-accent-rgb), 0.62) 40% 48%, transparent 49% 100%),
+    linear-gradient(110deg, transparent 0 58%, rgba(var(--loader-text-rgb), 0.12) 59% 65%, transparent 66% 100%);
   animation: oligarchyLoaderSweep 1.85s cubic-bezier(0.76, 0, 0.24, 1) infinite;
-  mix-blend-mode: screen;
-  opacity: 0.82;
+  opacity: 0.72;
 }
 
 #oligarchyLoadingScreen::after {
   background-image:
-    linear-gradient(rgba(255, 255, 255, 0.045) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.035) 1px, transparent 1px);
+    linear-gradient(rgba(var(--loader-text-rgb), 0.055) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(var(--loader-text-rgb), 0.045) 1px, transparent 1px);
   background-size: 56px 56px;
   mask-image: radial-gradient(circle at center, #000 0 48%, transparent 76%);
 }
@@ -42,7 +47,8 @@
 .oligarchy-loader-frame {
   position: absolute;
   inset: clamp(16px, 3vw, 34px);
-  border: 1px solid rgba(255, 255, 255, 0.17);
+  border: 1px solid var(--loader-border);
+  opacity: 0.78;
 }
 
 .oligarchy-loader-kicker,
@@ -50,7 +56,7 @@
 .oligarchy-loader-marquee {
   position: absolute;
   z-index: 2;
-  color: rgba(255, 255, 255, 0.82);
+  color: var(--loader-muted);
   font-size: clamp(0.72rem, 1.2vw, 0.9rem);
   font-weight: 850;
   letter-spacing: 0;
@@ -84,15 +90,16 @@
   place-items: center;
   width: clamp(76px, 14vw, 132px);
   height: clamp(76px, 14vw, 132px);
-  border: 1px solid rgba(255, 255, 255, 0.88);
+  border: 1px solid var(--loader-border);
   border-radius: 50%;
-  color: #ffffff;
+  background: rgba(var(--loader-text-rgb), 0.035);
+  color: var(--loader-text);
   font-size: clamp(2.2rem, 6vw, 4.8rem);
   font-weight: 950;
   line-height: 1;
   box-shadow:
-    0 0 0 10px rgba(255, 255, 255, 0.035),
-    0 24px 80px rgba(211, 0, 0, 0.42);
+    0 0 0 10px rgba(var(--loader-text-rgb), 0.035),
+    0 24px 80px rgba(var(--loader-text-rgb), 0.18);
 }
 
 .oligarchy-loader-wordmark {
@@ -101,7 +108,7 @@
 }
 
 .oligarchy-loader-wordmark strong {
-  color: #ffffff;
+  color: var(--loader-text);
   font-size: clamp(1.25rem, 4vw, 3.15rem);
   font-weight: 950;
   line-height: 0.96;
@@ -109,7 +116,7 @@
 }
 
 .oligarchy-loader-wordmark span {
-  color: rgba(255, 255, 255, 0.72);
+  color: var(--loader-muted);
   font-size: clamp(0.72rem, 1.4vw, 0.92rem);
   font-weight: 850;
   text-transform: uppercase;
@@ -128,7 +135,8 @@
 }
 
 .oligarchy-loader-marquee span {
-  color: rgba(255, 255, 255, 0.58);
+  color: var(--loader-muted);
+  opacity: 0.72;
 }
 
 #oligarchyLoadingScreen.is-hiding {
