@@ -2,6 +2,21 @@ const express = require("express");
 
 const originalSend = express.response.send;
 const globalButtonScript = '<script src="/button-design-global-v2.js" defer></script>';
+const heroTypographyScript = `<script>
+  (() => {
+    function polishHeroTypography() {
+      document.querySelectorAll(".builder-public-hero h1").forEach((heading) => {
+        const normalized = heading.textContent.replace(/\\s+/g, " ").trim().toLowerCase();
+        if (normalized !== "technology + people") return;
+        heading.dataset.heroLineBreak = "technology-people";
+        heading.innerHTML = "<span>Technology</span><br><span>+</span><br><span>People</span>";
+      });
+    }
+
+    if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", polishHeroTypography, { once: true });
+    else polishHeroTypography();
+  })();
+</script>`;
 
 function shouldInject(req, body) {
   const path = String(req?.path || req?.originalUrl || "");
@@ -25,7 +40,17 @@ function injectGlobalDesign(html) {
       overflow-wrap: normal !important;
       word-break: normal !important;
       hyphens: manual !important;
+      line-height: 0.96;
       text-wrap: balance;
+    }
+    .builder-public-hero h1[data-hero-line-break="technology-people"] span {
+      display: inline-block;
+      font: inherit;
+    }
+    .builder-public-hero > div {
+      max-width: 48ch;
+      font-size: clamp(0.88rem, 1.1vw, 1.05rem);
+      line-height: 1.45;
     }
     .builder-public-section a,
     .builder-public-section button {
@@ -49,8 +74,9 @@ function injectGlobalDesign(html) {
     .builder-public-section button:active { background: var(--global-button-click-bg, #111); }
   </style>`;
   const withStyle = html.includes("</head>") ? html.replace("</head>", `${style}</head>`) : `${style}${html}`;
-  if (withStyle.includes("</body>")) return withStyle.replace("</body>", `  ${globalButtonScript}\n</body>`);
-  return `${withStyle}\n${globalButtonScript}\n`;
+  const scripts = `  ${heroTypographyScript}\n  ${globalButtonScript}\n`;
+  if (withStyle.includes("</body>")) return withStyle.replace("</body>", `${scripts}</body>`);
+  return `${withStyle}\n${scripts}`;
 }
 
 if (!express.response.__builderPublicDesignPatched) {
