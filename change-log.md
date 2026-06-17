@@ -2,6 +2,7 @@
 
 ## [Unreleased]
 
+- Removed duplicate Builder public hero body text when it repeats the main heading, matching the referenced hero cleanup.
 - Updated published Builder hero typography so `Technology + People` renders as three equal-size lines and the supporting operations line is smaller.
 - Fixed published Builder hero headings so large words wrap at spaces instead of splitting inside the word on narrow layouts.
 - Fixed the admin left sidebar navigation on narrow screens by removing text-glyph icon fallbacks, stabilizing accordion chevrons, reducing hover emphasis, and preventing right-edge clipping in the sidebar and mobile menu.
