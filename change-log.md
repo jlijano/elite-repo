@@ -2,6 +2,7 @@
 
 ## [Unreleased]
 
+- Fixed published Builder hero headings so large words wrap at spaces instead of splitting inside the word on narrow layouts.
 - Fixed the admin left sidebar navigation on narrow screens by removing text-glyph icon fallbacks, stabilizing accordion chevrons, reducing hover emphasis, and preventing right-edge clipping in the sidebar and mobile menu.
 - Made the Builder Application pages registry editable by rendering every listed app page with Edit, Preview, and Open actions that create or load the page draft in the existing Builder canvas.
 - Polished the admin Chat page with a dedicated scoped stylesheet for reference-matched dark spacing, card surfaces, chat rows, search controls, and attachment empty states while preserving the existing page structure and scripts.
