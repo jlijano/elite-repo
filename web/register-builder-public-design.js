@@ -20,6 +20,13 @@ function injectGlobalDesign(html) {
     }
     body { font-family: var(--builder-font); }
     .builder-public-section { padding: var(--builder-layout-spacing) max(24px, 8vw); }
+    .builder-public-hero h1 {
+      max-width: min(12ch, 100%);
+      overflow-wrap: normal !important;
+      word-break: normal !important;
+      hyphens: manual !important;
+      text-wrap: balance;
+    }
     .builder-public-section a,
     .builder-public-section button {
       border-radius: var(--global-button-radius, var(--builder-radius));
