@@ -2,8 +2,8 @@ const express = require("express");
 
 const originalSend = express.response.send;
 const globalButtonScript = '<script src="/button-design-global-v2.js" defer></script>';
-const loadingStyleTag = '<link rel="stylesheet" href="/loading-screen.css?v=20260617-palette" />';
-const loadingScriptTag = '<script src="/loading-screen.js?v=20260617-palette" defer></script>';
+const loadingStyleTag = '<link rel="stylesheet" href="/loading-screen.css?v=20260617-color-peg" />';
+const loadingScriptTag = '<script src="/loading-screen.js?v=20260617-color-peg" defer></script>';
 const loadingMarkup = `<div id="oligarchyLoadingScreen" role="status" aria-live="polite" aria-label="Oligarchy Services is loading">
       <div class="oligarchy-loader-frame" aria-hidden="true"></div>
       <div class="oligarchy-loader-kicker">[ Loading palette ]</div>
