@@ -20,6 +20,16 @@
     return [0, 2, 4].map((index) => parseInt(hex.slice(index, index + 2), 16));
   }
 
+  function rgbToHex(channels) {
+    return `#${channels.map((value) => Math.round(value).toString(16).padStart(2, "0")).join("")}`;
+  }
+
+  function mixColors(color, overlay, amount) {
+    const base = hexToRgb(color);
+    const tint = hexToRgb(overlay);
+    return rgbToHex(base.map((value, index) => value + ((tint[index] - value) * amount)));
+  }
+
   function luminance(color) {
     const channels = hexToRgb(color).map((value) => {
       const normalized = value / 255;
@@ -38,16 +48,17 @@
     try {
       const style = JSON.parse(localStorage.getItem(storageKey) || "{}");
       const background = safeColor(style.background, "#f2f2ee");
-      const text = safeColor(style.text, readableTextFor(background));
-      const hoverBackground = safeColor(style.hoverBackground, background);
-      const hoverText = safeColor(style.hoverText, text);
+      const readableText = readableTextFor(background);
+      const text = safeColor(style.text, readableText);
+      const contrast = luminance(background) > 0.48 ? "#000000" : "#ffffff";
       return {
         background,
         text,
-        hoverBackground,
-        hoverText,
-        border: safeColor(style.border, "#d9d9d9"),
-        clickBackground: safeColor(style.clickBackground, hoverBackground)
+        hoverBackground: safeColor(style.hoverBackground, mixColors(background, contrast, 0.07)),
+        hoverText: safeColor(style.hoverText, text),
+        border: safeColor(style.border, mixColors(background, contrast, 0.16)),
+        clickBackground: safeColor(style.clickBackground, mixColors(background, text, 0.18)),
+        contrast
       };
     } catch (error) {
       return {
@@ -56,7 +67,8 @@
         hoverBackground: "#e8e8e3",
         hoverText: "#202123",
         border: "#d9d9d9",
-        clickBackground: "#d8d8d2"
+        clickBackground: "#d8d8d2",
+        contrast: "#000000"
       };
     }
   }
@@ -73,8 +85,12 @@
     loader.style.setProperty("--loader-muted", palette.hoverText);
     loader.style.setProperty("--loader-border", palette.border);
     loader.style.setProperty("--loader-accent", palette.clickBackground);
+    setRgbVariable("--loader-bg-rgb", palette.background);
+    setRgbVariable("--loader-surface-rgb", palette.hoverBackground);
+    setRgbVariable("--loader-border-rgb", palette.border);
     setRgbVariable("--loader-accent-rgb", palette.clickBackground);
     setRgbVariable("--loader-text-rgb", palette.text);
+    setRgbVariable("--loader-contrast-rgb", palette.contrast);
   }
 
   function setProgress(value) {
