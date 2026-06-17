@@ -22,9 +22,21 @@ const loadingMarkup = `<div id="oligarchyLoadingScreen" role="status" aria-live=
     </div>`;
 const heroTypographyScript = `<script>
   (() => {
+    function normalizeHeroText(value) {
+      return String(value || "").replace(/\s+/g, " ").replace(/\s*\+\s*/g, " + ").trim();
+    }
+
+    function removeDuplicateHeroBody(hero, headingText) {
+      const body = Array.from(hero.children).find((child) => child.tagName === "DIV");
+      if (!body) return;
+      if (normalizeHeroText(body.textContent).toLowerCase() === headingText) body.remove();
+    }
+
     function polishHeroTypography() {
       document.querySelectorAll(".builder-public-hero h1").forEach((heading) => {
-        const normalized = heading.textContent.replace(/\s+/g, " ").trim().toLowerCase();
+        const normalized = normalizeHeroText(heading.textContent).toLowerCase();
+        const hero = heading.closest(".builder-public-hero");
+        if (hero) removeDuplicateHeroBody(hero, normalized);
         if (normalized !== "technology + people") return;
         heading.dataset.heroLineBreak = "technology-people";
         heading.innerHTML = "<span>Technology</span><br><span>+</span><br><span>People</span>";
