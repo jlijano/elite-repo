@@ -2,11 +2,11 @@ const express = require("express");
 
 const originalSend = express.response.send;
 const globalButtonScript = '<script src="/button-design-global-v2.js" defer></script>';
-const loadingStyleTag = '<link rel="stylesheet" href="/loading-screen.css?v=20260617-red-black" />';
-const loadingScriptTag = '<script src="/loading-screen.js?v=20260617-red-black" defer></script>';
+const loadingStyleTag = '<link rel="stylesheet" href="/loading-screen.css?v=20260617-palette" />';
+const loadingScriptTag = '<script src="/loading-screen.js?v=20260617-palette" defer></script>';
 const loadingMarkup = `<div id="oligarchyLoadingScreen" role="status" aria-live="polite" aria-label="Oligarchy Services is loading">
       <div class="oligarchy-loader-frame" aria-hidden="true"></div>
-      <div class="oligarchy-loader-kicker">[ Loading experience ]</div>
+      <div class="oligarchy-loader-kicker">[ Loading palette ]</div>
       <div class="oligarchy-loader-brand" aria-hidden="true">
         <div class="oligarchy-loader-mark">★</div>
         <div class="oligarchy-loader-wordmark">
@@ -15,8 +15,8 @@ const loadingMarkup = `<div id="oligarchyLoadingScreen" role="status" aria-live=
         </div>
       </div>
       <div class="oligarchy-loader-marquee" aria-hidden="true">
-        <span>Red system online</span><span>Motion-first interface</span><span>Secure room loading</span>
-        <span>Red system online</span><span>Motion-first interface</span><span>Secure room loading</span>
+        <span>Palette loading</span><span>Interface warming up</span><span>Design system online</span>
+        <span>Palette loading</span><span>Interface warming up</span><span>Design system online</span>
       </div>
       <div class="oligarchy-loader-percent"><span data-loader-percent>0%</span></div>
     </div>`;
@@ -24,7 +24,7 @@ const heroTypographyScript = `<script>
   (() => {
     function polishHeroTypography() {
       document.querySelectorAll(".builder-public-hero h1").forEach((heading) => {
-        const normalized = heading.textContent.replace(/\\s+/g, " ").trim().toLowerCase();
+        const normalized = heading.textContent.replace(/\s+/g, " ").trim().toLowerCase();
         if (normalized !== "technology + people") return;
         heading.dataset.heroLineBreak = "technology-people";
         heading.innerHTML = "<span>Technology</span><br><span>+</span><br><span>People</span>";
