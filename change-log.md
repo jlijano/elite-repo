@@ -2,12 +2,13 @@
 
 ## [Unreleased]
 
+- Updated published Builder hero typography so `Technology + People` renders as three equal-size lines and the supporting operations line is smaller.
 - Fixed published Builder hero headings so large words wrap at spaces instead of splitting inside the word on narrow layouts.
 - Fixed the admin left sidebar navigation on narrow screens by removing text-glyph icon fallbacks, stabilizing accordion chevrons, reducing hover emphasis, and preventing right-edge clipping in the sidebar and mobile menu.
 - Made the Builder Application pages registry editable by rendering every listed app page with Edit, Preview, and Open actions that create or load the page draft in the existing Builder canvas.
 - Polished the admin Chat page with a dedicated scoped stylesheet for reference-matched dark spacing, card surfaces, chat rows, search controls, and attachment empty states while preserving the existing page structure and scripts.
 - Added a notification bell icon to the admin top header next to the profile menu across admin pages.
-- Added a Kanban/List/Calendar view switcher to Playground Projects, keeping Kanban as the default and staging responsive placeholders for future List and Calendar views.
+- Added a Kanban/List/Calendar view switcher to Playground Projects, keeping Kanban as the default and staging responsive placeholders for future List/Calendar views.
 - Reordered the Playground navigation hierarchy to Board, Projects, Tasks, Notes, and Automation across the Playground pages.
 - Changed Company, Department, Group, and User management action controls from text buttons to compact icon-only buttons with accessible labels and hover titles.
 - Updated the Playground left sidebar so Playground renders as an Entra-style text dropdown with Board and Tasks as nested modules.
