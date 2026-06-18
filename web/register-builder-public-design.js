@@ -2,6 +2,7 @@ const express = require("express");
 
 const originalSend = express.response.send;
 const globalButtonScript = '<script src="/button-design-global-v2.js" defer></script>';
+const footerLogoScript = '<script src="/oligarchy-footer-logo.js?v=20260618-official" defer></script>';
 const loadingStyleTag = '<link rel="stylesheet" href="/loading-screen.css?v=20260617-color-peg" />';
 const loadingScriptTag = '<script src="/loading-screen.js?v=20260617-color-peg" defer></script>';
 const loadingMarkup = `<div id="oligarchyLoadingScreen" role="status" aria-live="polite" aria-label="Oligarchy Services is loading">
@@ -116,7 +117,7 @@ function injectGlobalDesign(html) {
   </style>`;
   const withStyle = html.includes("</head>") ? html.replace("</head>", `${style}</head>`) : `${style}${html}`;
   const withLoader = injectLoadingScreen(withStyle);
-  const scripts = `  ${heroTypographyScript}\n  ${globalButtonScript}\n`;
+  const scripts = `  ${heroTypographyScript}\n  ${globalButtonScript}\n  ${footerLogoScript}\n`;
   if (withLoader.includes("</body>")) return withLoader.replace("</body>", `${scripts}</body>`);
   return `${withLoader}\n${scripts}`;
 }
